@@ -1,0 +1,440 @@
+# ==============================================================================
+# PeeBot - Production Environment
+# Django Modular Monolith with TimescaleDB
+# ==============================================================================
+# Usage: docker compose -f docker/prod/docker-compose.yml up -d
+#
+# IMPORTANT: This is a production configuration template.
+# Before deploying:
+#   1. Generate strong random passwords for all services
+#   2. Configure TLS certificates for PgBouncer and TimescaleDB
+#   3. Set up Docker secrets for sensitive data
+#   4. Configure firewall rules and network isolation
+#   5. Set up monitoring and alerting
+#   6. Test backup and recovery procedures
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # TimescaleDB - PostgreSQL with Time-Series Extension
+  # ----------------------------------------------------------------------------
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: peebot_timescaledb_prod
+    restart: unless-stopped
+
+    environment:
+      # Database credentials (use Docker secrets in production)
+      POSTGRES_DB: ${POSTGRES_DB:-peebot}
+      POSTGRES_USER: ${POSTGRES_USER:-peebot_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}  # Required - no default in prod
+
+      # PostgreSQL production configuration
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+
+      # Performance tuning for production (adjust based on server resources)
+      POSTGRES_SHARED_BUFFERS: "2GB"           # 25% of system RAM (for 8GB server)
+      POSTGRES_EFFECTIVE_CACHE_SIZE: "6GB"     # 75% of system RAM
+      POSTGRES_WORK_MEM: "64MB"                # Per-operation memory
+      POSTGRES_MAINTENANCE_WORK_MEM: "512MB"   # For VACUUM, CREATE INDEX
+      POSTGRES_MAX_CONNECTIONS: "100"          # Total connection limit
+
+    ports:
+      - "5432:5432"  # Expose for direct admin access (restrict via firewall)
+
+    volumes:
+      # Persistent data storage (use named volume or bind mount to SSD)
+      - postgres_data:/var/lib/postgresql/data
+
+      # Initialization scripts (runs on first start only)
+      - ../../docker/scripts/init-timescale.sql:/docker-entrypoint-initdb.d/01-init-timescale.sql:ro
+
+      # Production PostgreSQL configuration (optional)
+      # - ./postgresql.conf:/etc/postgresql/postgresql.conf:ro
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-peebot_user} -d ${POSTGRES_DB:-peebot}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '2'
+          memory: 4G
+
+    networks:
+      - peebot_network
+
+  # ----------------------------------------------------------------------------
+  # PgBouncer - Connection Pooler (Session Mode)
+  # ----------------------------------------------------------------------------
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.24.1-p1
+    container_name: peebot_pgbouncer_prod
+    restart: unless-stopped
+
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+
+    environment:
+      # Allow PgBouncer to discover database credentials
+      POSTGRES_DB: ${POSTGRES_DB:-peebot}
+      POSTGRES_USER: ${POSTGRES_USER:-peebot_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    ports:
+      - "6432:6432"  # PgBouncer port (restrict to app containers via firewall)
+
+    volumes:
+      - ../../docker/prod/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ../../docker/prod/pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro
+      # Mount TLS certificates (required for production)
+      # - ./certs:/etc/pgbouncer/certs:ro
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+    networks:
+      - peebot_network
+
+  # ----------------------------------------------------------------------------
+  # Redis - Celery Broker & Result Backend
+  # ----------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: peebot_redis_prod
+    restart: unless-stopped
+
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+
+    ports:
+      - "6379:6379"  # Expose for monitoring (restrict via firewall)
+
+    volumes:
+      # Persistent data for Celery results (optional)
+      - redis_data:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+    networks:
+      - peebot_network
+
+  # ----------------------------------------------------------------------------
+  # Django Web - Gunicorn WSGI Server
+  # ----------------------------------------------------------------------------
+  web:
+    build:
+      context: ../..
+      dockerfile: docker/prod/Dockerfile
+    container_name: peebot_web_prod
+    restart: unless-stopped
+
+    command: >-
+      sh -c "uv sync --frozen &&
+             uv run gunicorn config.wsgi:application
+             --bind 0.0.0.0:8000
+             --workers 8
+             --worker-class sync
+             --worker-connections 1000
+             --max-requests 1000
+             --max-requests-jitter 100
+             --timeout 60
+             --graceful-timeout 30
+             --keep-alive 5
+             --access-logfile -
+             --error-logfile -
+             --log-level info"
+
+    env_file:
+      - ../../.env
+
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:6432/${POSTGRES_DB}?application_name=django-web
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      REDIS_URL: redis://redis:6379/0
+
+    volumes:
+      - ../..:/workspace
+      - static_files:/workspace/staticfiles
+      - media_files:/workspace/media
+      - uv_cache:/root/.cache/uv
+
+    ports:
+      - "8000:8000"
+
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 4G
+        reservations:
+          cpus: '2'
+          memory: 2G
+
+    networks:
+      - peebot_network
+
+  # ----------------------------------------------------------------------------
+  # Daphne - ASGI Server for WebSockets
+  # ----------------------------------------------------------------------------
+  daphne:
+    build:
+      context: ../..
+      dockerfile: docker/prod/Dockerfile
+    container_name: peebot_daphne_prod
+    restart: unless-stopped
+
+    command: >-
+      sh -c "uv sync --frozen &&
+             uv run daphne config.asgi:application
+             --bind 0.0.0.0
+             --port 8001
+             --verbosity 1
+             --access-log -"
+
+    env_file:
+      - ../../.env
+
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:6432/${POSTGRES_DB}?application_name=django-daphne
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      REDIS_URL: redis://redis:6379/0
+
+    volumes:
+      - ../..:/workspace
+      - uv_cache:/root/.cache/uv
+
+    ports:
+      - "8001:8001"
+
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+    networks:
+      - peebot_network
+
+  # ----------------------------------------------------------------------------
+  # Celery Worker - Background Processing
+  # ----------------------------------------------------------------------------
+  worker:
+    build:
+      context: ../..
+      dockerfile: docker/prod/Dockerfile
+    container_name: peebot_worker_prod
+    restart: unless-stopped
+
+    command: >-
+      sh -c "uv sync --frozen &&
+             uv run celery -A config worker
+             --loglevel=info
+             --concurrency=4
+             --max-tasks-per-child=1000
+             --time-limit=300
+             --soft-time-limit=270
+             --hostname=worker@%h"
+
+    env_file:
+      - ../../.env
+
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:6432/${POSTGRES_DB}?application_name=django-worker
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      REDIS_URL: redis://redis:6379/0
+
+    volumes:
+      - ../..:/workspace
+      - uv_cache:/root/.cache/uv
+
+    depends_on:
+      web:
+        condition: service_started
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+    networks:
+      - peebot_network
+
+  # ----------------------------------------------------------------------------
+  # Celery Beat - Periodic Scheduler
+  # ----------------------------------------------------------------------------
+  beat:
+    build:
+      context: ../..
+      dockerfile: docker/prod/Dockerfile
+    container_name: peebot_beat_prod
+    restart: unless-stopped
+
+    command: >-
+      sh -c "uv sync --frozen &&
+             uv run celery -A config beat
+             --loglevel=info
+             --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+
+    env_file:
+      - ../../.env
+
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:6432/${POSTGRES_DB}?application_name=django-beat
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      REDIS_URL: redis://redis:6379/0
+
+    volumes:
+      - ../..:/workspace
+      - uv_cache:/root/.cache/uv
+
+    depends_on:
+      worker:
+        condition: service_started
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+    networks:
+      - peebot_network
+
+# ==============================================================================
+# Volumes - Persistent Data Storage
+# ==============================================================================
+volumes:
+  postgres_data:
+    name: peebot_postgres_data_prod
+    driver: local
+    # Use SSD-backed storage for production performance
+    # driver_opts:
+    #   type: none
+    #   device: /mnt/ssd/peebot/postgres
+    #   o: bind
+
+  redis_data:
+    name: peebot_redis_data_prod
+    driver: local
+
+  static_files:
+    name: peebot_static_files_prod
+    driver: local
+
+  media_files:
+    name: peebot_media_files_prod
+    driver: local
+
+  uv_cache:
+    name: peebot_uv_cache_prod
+    driver: local
+
+# ==============================================================================
+# Networks - Isolated Container Communication
+# ==============================================================================
+networks:
+  peebot_network:
+    name: peebot_network_prod
+    driver: bridge
+    # Enable IPv6 if needed
+    # enable_ipv6: true
+    # ipam:
+    #   driver: default
+    #   config:
+    #     - subnet: 172.28.0.0/16
+
+# ==============================================================================
+# Production Deployment Checklist
+# ==============================================================================
+# Before deploying to production:
+#
+# [ ] Replace all default passwords with strong random values
+# [ ] Generate and configure TLS certificates
+# [ ] Set up Docker secrets for sensitive data
+# [ ] Configure firewall rules (restrict ports 5432, 6379)
+# [ ] Set up Nginx reverse proxy with SSL termination
+# [ ] Configure log aggregation (ELK, Loki, CloudWatch)
+# [ ] Set up monitoring (Prometheus + Grafana)
+# [ ] Configure alerting (PagerDuty, Opsgenie)
+# [ ] Test backup and restore procedures
+# [ ] Document disaster recovery plan
+# [ ] Run security scan (trivy, clair)
+# [ ] Performance test with expected load
+# [ ] Set up CI/CD pipeline
+# [ ] Configure health checks (liveness, readiness)
+# [ ] Set resource limits appropriate for your server
+# ==============================================================================

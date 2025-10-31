@@ -20,3 +20,31 @@ dependencies = [
     "redis>=6.4.0",
     "ruff>=0.14.1",
 ]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+disallow_untyped_decorators = false
+plugins = ["mypy_django_plugin.main"]
+
+[[tool.mypy.overrides]]
+module = "django_celery_beat.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "django_celery_results.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "django.contrib.gis.*"
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = "django.contrib.postgres.*"
+ignore_errors = false
+
+[tool.django-stubs]
+django_settings_module = "config.settings"

@@ -1,21 +1,45 @@
 # ==============================================================================
-# PeeBot - ISS Telemetry Data Analytics System
+# PeeBot - Docker Build Context Exclusions
 # Django Modular Monolith with TimescaleDB
+# ==============================================================================
+# This file defines what should NOT be sent to Docker daemon during build
+# Goal: Reduce build context size, improve build speed, prevent secret leaks
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# Python
+# Version Control
+# ------------------------------------------------------------------------------
+.git
+.gitignore
+.gitattributes
+.github
+
+# ------------------------------------------------------------------------------
+# Documentation & Planning
+# ------------------------------------------------------------------------------
+*.md
+!requirements.md
+LICENSE
+docs/
+obsidian/
+
+# ------------------------------------------------------------------------------
+# Python Development
 # ------------------------------------------------------------------------------
 # Byte-compiled / optimized / DLL files
 __pycache__/
-*.py[codz]
+*.py[cod]
 *$py.class
-
-# C extensions
 *.so
 
-# Distribution / packaging
+# Virtual environments (installed during build)
+.venv/
+venv/
+env/
+ENV/
 .Python
+
+# Distribution / packaging
 build/
 develop-eggs/
 dist/
@@ -28,7 +52,6 @@ parts/
 sdist/
 var/
 wheels/
-share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
@@ -43,78 +66,60 @@ pip-log.txt
 pip-delete-this-directory.txt
 
 # ------------------------------------------------------------------------------
-# Django
-# ------------------------------------------------------------------------------
-# Logs
-*.log
-
-# Local settings (use .env instead)
-local_settings.py
-
-# SQLite databases (project uses TimescaleDB)
-db.sqlite3
-db.sqlite3-journal
-
-# Static files (collected by Django)
-/staticfiles/
-/static_root/
-/static/
-
-# Media files (user uploads)
-/media/
-/mediafiles/
-
-# Django migrations __pycache__
-**/migrations/__pycache__/
-
-# ------------------------------------------------------------------------------
-# Environment & Secrets
+# Environment & Secrets (CRITICAL - DO NOT INCLUDE IN IMAGE)
 # ------------------------------------------------------------------------------
 .env
 .env.local
 .env.*.local
 .envrc
 
-# Keep .env.example for reference (DO NOT IGNORE)
+# Keep template for reference
 !.env.example
 
 # ------------------------------------------------------------------------------
-# Virtual Environments
+# Django Development
 # ------------------------------------------------------------------------------
-.venv
-venv/
-env/
-ENV/
-env.bak/
-venv.bak/
+# Logs (generate fresh in container)
+*.log
+
+# Local settings
+local_settings.py
+
+# SQLite (project uses TimescaleDB)
+db.sqlite3
+db.sqlite3-journal
+
+# Static files (collected during build/runtime)
+/static/
+/staticfiles/
+/static_root/
+
+# Media files (mounted as volume in production)
+/media/
+/mediafiles/
 
 # ------------------------------------------------------------------------------
-# Docker & Database
+# Docker & Database Volumes
 # ------------------------------------------------------------------------------
-# Docker Compose overrides (local dev customizations)
+# Docker Compose overrides (local dev only)
 docker-compose.override.yml
 
-# Local database volumes (TimescaleDB data)
+# Local database volumes
 postgres_data/
 timescaledb_data/
-/db_data/
+db_data/
 
 # Redis data
 redis_data/
 
-# Database dumps and backups
+# Database dumps
 *.sql
 *.dump
 *.backup
 
-# Keep initialization scripts (DO NOT IGNORE)
-!**/init*.sql
+# Keep initialization scripts
+!docker/**/init*.sql
 !**/migrations/*.sql
-
-# PgBouncer userlist (contains plaintext passwords in production)
-# Development userlist.txt is committed with dev credentials
-# Production userlist.txt should never be committed
-**/prod/**/userlist.txt
 
 # ------------------------------------------------------------------------------
 # Celery
@@ -126,48 +131,43 @@ celery_worker.state
 worker*.state
 
 # ------------------------------------------------------------------------------
-# Testing & Coverage
+# Testing & Coverage (exclude if not running tests in container)
 # ------------------------------------------------------------------------------
+.pytest_cache/
+.coverage
+.coverage.*
 htmlcov/
 .tox/
 .nox/
-.coverage
-.coverage.*
-.cache
 nosetests.xml
 coverage.xml
 *.cover
-*.py.cover
+*.py,cover
 .hypothesis/
-.pytest_cache/
-cover/
+
+# If you need to run tests in container, comment out above and use:
+# !tests/
+# !pytest.ini
 
 # ------------------------------------------------------------------------------
 # Type Checking & Linting
 # ------------------------------------------------------------------------------
-# mypy
 .mypy_cache/
 .dmypy.json
 dmypy.json
-
-# Ruff
 .ruff_cache/
-
-# Pyre
 .pyre/
-
-# pytype
 .pytype/
 
 # ------------------------------------------------------------------------------
 # IDEs & Editors
 # ------------------------------------------------------------------------------
-# PyCharm / IntelliJ
-.idea/
-
 # VSCode
 .vscode/
 *.code-workspace
+
+# PyCharm / IntelliJ
+.idea/
 
 # Cursor
 .cursorignore
@@ -197,14 +197,14 @@ dmypy.json
 # ------------------------------------------------------------------------------
 # Project-Specific
 # ------------------------------------------------------------------------------
-# Temporary work directory (from CLAUDE.md)
+# Temporary work directory (per CLAUDE.md)
 _work-tmp/
 
-# Local development scripts
-/scripts/local/
+# Local development scripts (not for production)
+scripts/local/
 
 # Jupyter Notebooks
-.ipynb_checkpoints
+.ipynb_checkpoints/
 *.ipynb
 
 # IPython
@@ -217,35 +217,18 @@ ipython_config.py
 # PEP 582
 __pypackages__/
 
-# PyPI
+# PyPI (credentials)
 .pypirc
-
-# ------------------------------------------------------------------------------
-# Documentation Build
-# ------------------------------------------------------------------------------
-docs/_build/
-/site
 
 # ------------------------------------------------------------------------------
 # Misc
 # ------------------------------------------------------------------------------
 # Rope
-.ropeproject
+.ropeproject/
 
-# Cython
+# Cython debug
 cython_debug/
 
-# Translations (unless needed)
+# Translations (if using, remove this)
 *.mo
 *.pot
-
-# Abstra
-.abstra/
-
-# Marimo
-marimo/_static/
-marimo/_lsp/
-__marimo__/
-
-# Obsidian Vault
-obsidian

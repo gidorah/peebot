@@ -1,0 +1,230 @@
+# ==============================================================================
+# PeeBot - Development Environment
+# Django Modular Monolith with TimescaleDB
+# ==============================================================================
+# Usage: docker compose -f docker/dev/docker-compose.yml up -d
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # PgBouncer - Connection Pooler (Session Mode)
+  # ----------------------------------------------------------------------------
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.24.1-p1
+    container_name: peebot_pgbouncer_dev
+    restart: unless-stopped
+
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+
+    environment:
+      # Allow PgBouncer to discover database credentials
+      POSTGRES_DB: ${POSTGRES_DB:-peebot}
+      POSTGRES_USER: ${POSTGRES_USER:-peebot_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+
+    ports:
+      - "6432:6432"
+
+    volumes:
+      - ../../docker/dev/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ../../docker/dev/pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    networks:
+      - peebot_network
+
+  # ----------------------------------------------------------------------------
+  # TimescaleDB - PostgreSQL with Time-Series Extension
+  # ----------------------------------------------------------------------------
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: peebot_timescaledb_dev
+    restart: unless-stopped
+
+    environment:
+      # Database credentials (override via .env)
+      POSTGRES_DB: ${POSTGRES_DB:-peebot}
+      POSTGRES_USER: ${POSTGRES_USER:-peebot_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      # PostgreSQL configuration - They are overkill but good for tests and guide the prod config.
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      # Persistent data storage
+      - postgres_data:/var/lib/postgresql/data
+      # Initialization scripts (runs on first start only)
+      - ../../docker/scripts/init-timescale.sql:/docker-entrypoint-initdb.d/01-init-timescale.sql:ro
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-peebot_user} -d ${POSTGRES_DB:-peebot}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    networks:
+      - peebot_network
+
+  # ----------------------------------------------------------------------------
+  # Redis - Celery Broker & Result Backend
+  # ----------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: peebot_redis_dev
+    restart: unless-stopped
+
+    ports:
+      - "6379:6379"
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+    networks:
+      - peebot_network
+
+  # ----------------------------------------------------------------------------
+  # Django Web - Development Server (uv-managed environment)
+  # ----------------------------------------------------------------------------
+  web:
+    build:
+      context: ../..
+      dockerfile: docker/dev/Dockerfile
+    container_name: peebot_web_dev
+    restart: unless-stopped
+
+    command: >-
+      sh -c "uv sync --frozen --dev && uv run python manage.py runserver 0.0.0.0:8000"
+
+    env_file:
+      - ../../.env
+
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-peebot_user}:${POSTGRES_PASSWORD:-password}@pgbouncer:6432/${POSTGRES_DB:-peebot}?application_name=django-web
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      REDIS_URL: redis://redis:6379/0
+
+    volumes:
+      - ../..:/workspace
+      - uv_cache:/root/.cache/uv
+
+    ports:
+      - "8000:8000"
+
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    networks:
+      - peebot_network
+
+  # ----------------------------------------------------------------------------
+  # Celery Worker - Background Processing
+  # ----------------------------------------------------------------------------
+  worker:
+    build:
+      context: ../..
+      dockerfile: docker/dev/Dockerfile
+    container_name: peebot_worker_dev
+    restart: unless-stopped
+
+    command: >-
+      sh -c "uv sync --frozen --dev && uv run celery -A config worker --loglevel=info --hostname=worker@%h"
+
+    env_file:
+      - ../../.env
+
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-peebot_user}:${POSTGRES_PASSWORD:-password}@pgbouncer:6432/${POSTGRES_DB:-peebot}?application_name=django-worker
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      REDIS_URL: redis://redis:6379/0
+
+    volumes:
+      - ../..:/workspace
+      - uv_cache:/root/.cache/uv
+
+    depends_on:
+      web:
+        condition: service_started
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    networks:
+      - peebot_network
+
+  # ----------------------------------------------------------------------------
+  # Celery Beat - Periodic Scheduler
+  # ----------------------------------------------------------------------------
+  beat:
+    build:
+      context: ../..
+      dockerfile: docker/dev/Dockerfile
+    container_name: peebot_beat_dev
+    restart: unless-stopped
+
+    command: >-
+      sh -c "uv sync --frozen --dev && uv run celery -A config beat --loglevel=info"
+
+    env_file:
+      - ../../.env
+
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-peebot_user}:${POSTGRES_PASSWORD:-password}@pgbouncer:6432/${POSTGRES_DB:-peebot}?application_name=django-beat
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      REDIS_URL: redis://redis:6379/0
+
+    volumes:
+      - ../..:/workspace
+      - uv_cache:/root/.cache/uv
+
+    depends_on:
+      worker:
+        condition: service_started
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    networks:
+      - peebot_network
+
+# ==============================================================================
+# Volumes - Persistent Data Storage
+# ==============================================================================
+volumes:
+  postgres_data:
+    name: peebot_postgres_data_dev
+    driver: local
+  uv_cache:
+    name: peebot_uv_cache_dev
+    driver: local
+
+# ==============================================================================
+# Networks - Isolated Container Communication
+# ==============================================================================
+networks:
+  peebot_network:
+    name: peebot_network_dev
+    driver: bridge

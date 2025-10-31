@@ -141,6 +141,158 @@ telemetry_ingestion       event_processors
 
 The application will be available at `http://localhost:8000`
 
+## Containerized Development (PgBouncer pooling)
+
+To run the full stack in containers with PgBouncer session pooling:
+
+1. Copy `.env.example` to `.env` and adjust credentials if needed. The defaults match the compose setup (TimescaleDB on `localhost:5432`, PgBouncer on `localhost:6432`).
+2. Build and start the services:
+   ```bash
+   docker compose -f docker/dev/docker-compose.yml up --build -d timescaledb pgbouncer redis
+   docker compose -f docker/dev/docker-compose.yml up --build web worker beat
+   ```
+3. Run database migrations (one-off):
+   ```bash
+   docker compose -f docker/dev/docker-compose.yml run --rm web uv run python manage.py migrate
+   ```
+4. The Django dev server listens on `http://localhost:8000`, PgBouncer exposes `localhost:6432`, and TimescaleDB remains reachable directly via `localhost:5432` for tools like `psql` or Postgres GUIs.
+   > If you change the database name or credentials, update both `.env` and `docker/dev/pgbouncer/pgbouncer.ini` so PgBouncer can route connections correctly.
+
+### PgBouncer Configuration
+
+PgBouncer acts as a connection pooler between Django and TimescaleDB, optimizing resource usage and performance.
+
+#### Pool Parameters (Development)
+
+- **pool_mode=session** – Each client gets a dedicated backend connection for their entire session. Required for Django ORM compatibility (supports prepared statements, temp tables, locks).
+- **server_reset_query=DISCARD ALL** – Clears prepared statements, temp tables, advisory locks, and session GUC changes before returning connections to the pool. Prevents state bleed between Django requests.
+- **auth_type=scram-sha-256 + auth_query** – Hybrid authentication: `pgbouncer_auth` superuser in `userlist.txt`, application users validated via `SELECT usename, passwd FROM pg_shadow WHERE usename=$1`.
+- **default_pool_size=10** – Backend connections per database (optimized for dev: web + worker + beat + manual ops)
+- **min_pool_size=2** – Warm connections for instant query response
+- **reserve_pool_size=3** – Emergency pool for burst traffic
+- **max_client_conn=50** – Max total client connections (5x typical usage for easy leak detection)
+- **max_db_connections=15** – Hard limit to PostgreSQL (10 + 3 + 2 buffer)
+- **server_idle_timeout=600s** – Close idle backend after 10 min
+- **server_lifetime=3600s** – Recycle connections hourly
+- **query_timeout=30s** – Kill queries running >30s (catch bad code early)
+- **idle_transaction_timeout=60s** – Kill idle transactions after 60s
+
+#### Pool Sizing: Development vs Production
+
+| Parameter | Development | Production | Rationale |
+|-----------|-------------|------------|-----------|
+| `default_pool_size` | 10 | 25 | Dev: web(2) + worker(2) + beat(1) + ops(3) ≈ 10<br/>Prod: web(8) + worker(4) + daphne(4) + beat(1) + ops(3) ≈ 25 |
+| `min_pool_size` | 2 | 5 | Warm connections for faster response |
+| `reserve_pool_size` | 3 | 10 | Larger burst handling in production |
+| `max_client_conn` | 50 | 200 | More concurrent clients in production |
+| `max_db_connections` | 15 | 40 | Hard limit scales with pool size |
+| `query_timeout` | 30s | 60s | Tighter in dev to catch bad queries |
+
+#### Password Management
+
+**⚠️ IMPORTANT**: When using `auth_query`, the `pgbouncer_auth` password must be stored in **plaintext** in `userlist.txt`. This is a PgBouncer requirement because SCRAM-SHA-256 authentication needs the actual password to compute challenge responses. See [PgBouncer documentation](https://www.pgbouncer.org/config.html#auth_file) for details.
+
+**Why plaintext is required**: PgBouncer must authenticate to PostgreSQL using SCRAM-SHA-256 challenge-response protocol, which cannot be computed from password hashes. This is still more secure than the alternative (storing all user passwords in plaintext), as only one password is in plaintext while all application users authenticate dynamically against PostgreSQL.
+
+**⚠️ CRITICAL**: Three locations must stay synchronized:
+1. `docker/dev/pgbouncer/userlist.txt` - **Plaintext password**
+2. `.env` file - `PGBOUNCER_AUTH_PASSWORD` variable
+3. `docker/scripts/init-timescale.sql` - `CREATE ROLE` password
+
+**To update passwords**:
+```bash
+# 1. Update userlist.txt with plaintext password
+echo '"pgbouncer_auth" "your_new_password"' > docker/dev/pgbouncer/userlist.txt
+
+# 2. Update .env
+echo "PGBOUNCER_AUTH_PASSWORD=your_new_password" >> .env
+
+# 3. Update init-timescale.sql (line 42 - inside EXECUTE block)
+
+# 4. Rebuild containers
+docker compose -f docker/dev/docker-compose.yml down
+docker compose -f docker/dev/docker-compose.yml up --build -d
+```
+
+#### Monitoring & Admin Console
+
+Access the PgBouncer admin console:
+```bash
+# Show pool statistics
+psql postgresql://postgres:password@localhost:6432/pgbouncer -c "SHOW POOLS;"
+
+# Show detailed statistics
+psql postgresql://postgres:password@localhost:6432/pgbouncer -c "SHOW STATS;"
+
+# Show active server connections
+psql postgresql://postgres:password@localhost:6432/pgbouncer -c "SHOW SERVERS;"
+
+# Show client connections
+psql postgresql://postgres:password@localhost:6432/pgbouncer -c "SHOW CLIENTS;"
+
+# Reload configuration without restart
+psql postgresql://postgres:password@localhost:6432/pgbouncer -c "RELOAD;"
+```
+
+**Understanding SHOW POOLS output**:
+- `cl_active`: Active client connections
+- `cl_waiting`: Clients waiting for a connection
+- `sv_active`: Active server (PostgreSQL) connections
+- `sv_idle`: Idle server connections in pool
+- `maxwait`: Max time a client waited for connection (should be 0)
+
+#### Two Ways to Access the Database
+
+1. **Via PgBouncer (port 6432)** - RECOMMENDED for application code
+   - Connection pooling and management
+   - Optimized for Django web/worker/beat processes
+   - URL: `postgresql://user:password@localhost:6432/peebot`
+
+2. **Direct to TimescaleDB (port 5432)** - For admin/tooling only
+   - Direct PostgreSQL access
+   - For psql, pgAdmin, database migrations, manual queries
+   - URL: `postgresql://user:password@localhost:5432/peebot`
+
+#### Troubleshooting
+
+**Connection Refused**:
+```bash
+# Check PgBouncer is running
+docker ps | grep pgbouncer
+
+# Check PgBouncer logs
+docker logs peebot_pgbouncer_dev
+
+# Verify health check
+docker compose -f docker/dev/docker-compose.yml ps
+```
+
+**Pool Exhausted (maxwait > 0)**:
+```bash
+# Check who's holding connections
+psql postgresql://postgres:password@localhost:6432/pgbouncer -c "SHOW CLIENTS;"
+
+# Increase pool size in pgbouncer.ini temporarily
+# Or investigate connection leaks in Django code
+```
+
+**Authentication Failed**:
+```bash
+# Verify passwords are in sync
+docker exec peebot_timescaledb_dev psql -U postgres -d peebot -c "SELECT rolname FROM pg_roles WHERE rolname='pgbouncer_auth';"
+
+# Regenerate userlist.txt hash
+./docker/dev/pgbouncer/generate_userlist.sh pgbouncer_auth <password>
+```
+
+**Slow Queries**:
+```bash
+# Check for long-running queries
+psql postgresql://postgres:password@localhost:6432/pgbouncer -c "SHOW POOLS;" | grep maxwait
+
+# Lower query_timeout in pgbouncer.ini for faster failure
+```
+
 ### Environment Configuration
 
 The `.env` file contains configuration for your environment. Key variables:
