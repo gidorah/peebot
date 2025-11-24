@@ -5,6 +5,7 @@ This module initializes the Celery application and configures it to work
 with Django settings. It auto-discovers tasks from all installed apps.
 """
 
+from typing import Any
 import os
 
 from celery import Celery
@@ -25,6 +26,6 @@ app.autodiscover_tasks()
 
 
 @app.task(bind=True, ignore_result=True)
-def debug_task(self):
+def debug_task(self: Any) -> None:
     """Debug task to test Celery is working correctly."""
     print(f"Request: {self.request!r}")
