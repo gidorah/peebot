@@ -1,5 +1,5 @@
 # Development automation recipes for PeeBot
-set shell := ["zsh", "-c"]
+set shell := ["bash", "-c"]
 set dotenv-load := true
 
 dev-compose := "docker compose -f docker/dev/docker-compose.yml"
