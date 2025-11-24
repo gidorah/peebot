@@ -14,6 +14,7 @@ dependencies = [
     "model-bakery>=1.20.5",
     "mypy>=1.18.2",
     "psycopg[binary,pool]>=3.2.11",
+    "pyrefly>=0.42.3",
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",
     "pytest-django>=4.11.1",
@@ -47,4 +48,35 @@ module = "django.contrib.postgres.*"
 ignore_errors = false
 
 [tool.django-stubs]
-django_settings_module = "config.settings"
+django_settings_module = "config.settings.development"
+[[tool.mypy.overrides]]
+module = "celery.*"
+ignore_missing_imports = true
+
+[tool.pyrefly]
+project-includes = ["**/*.py"]
+project-excludes = ["**/.[!/.]*", "**/*venv/**"]
+search-path = ["."]
+ignore-errors-in-generated-code = true
+python-version = "3.13.0"
+untyped-def-behavior = "check-and-infer-return-any"
+ignore-missing-imports = [
+    "django_celery_beat.*",
+    "django_celery_results.*",
+    "celery.*",
+    "environ.*",
+]
+
+[tool.pyrefly.errors]
+untyped-import = true
+bad-override = true
+bad-param-name-override = true
+redundant-cast = true
+redundant-condition = true
+unused-coroutine = true
+deprecated = true
+implicit-import = true
+
+[[tool.mypy.overrides]]
+module = "environ.*"
+ignore_missing_imports = true
