@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/onur/Dev/peebot/docs/**)",
+      "WebSearch",
+      "Read(//Users/onur/Dev/peebot/obsidian/plan/**)",
+      "WebFetch(domain:github.com)",
+      "Bash(cat:*)",
+      "Bash(xargs:*)"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "outputStyle": "default"
+}
