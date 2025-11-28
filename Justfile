@@ -28,6 +28,14 @@ dev-logs service="web":
 dev-shell service="web":
 	{{dev-compose}} exec {{service}} /bin/bash
 
+# Open the Django shell
+dev-django-shell:
+	{{dev-compose}} run --rm web uv run python manage.py shell
+
+# Run a Python script or command inside the web container
+dev-python *args:
+	{{dev-compose}} run --rm web uv run python {{args}}
+
 # Apply database migrations via the web container
 dev-migrate:
 	{{dev-compose}} run --rm web uv run python manage.py migrate
