@@ -4,7 +4,7 @@
 
 Establish the foundational architecture for the ISS Telemetry system as a Django modular monolith. Focus on project structure, core infrastructure, and development environment.
 
-**Status**: Not Started
+**Status**: In Progress
 **Duration**: 2-3 days
 **Prerequisites**: Python 3.14, uv, Docker Desktop
 
@@ -79,7 +79,11 @@ iss_telemetry_project/
 │   └── dashboards/           # Phase 5: Web UI
 │
 ├── tests/                    # Project-wide tests
-├── docker-compose.yml        # Local TimescaleDB + Redis
+├── docker/
+│   ├── dev/
+│   │   └── docker-compose.yml # Local TimescaleDB + Redis + PgBouncer
+│   └── scripts/
+│       └── init-timescale.sql
 └── .env                      # Environment config
 ```
 
@@ -149,14 +153,17 @@ iss_telemetry_project/
 
 **Docker Compose Structure**:
 ```yaml
+# See docker/dev/docker-compose.yml for full configuration
 services:
   timescaledb:
     image: timescale/timescaledb:latest-pg15
-    environment: POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD
-    volumes: init-timescale.sql (creates extension)
-
+    # ...
   redis:
     image: redis:7-alpine
+    # ...
+  pgbouncer:
+    image: edoburu/pgbouncer
+    # ...
 ```
 
 **Critical Points**:
@@ -535,7 +542,7 @@ After Phase 1 completion:
 **Essential Commands**:
 ```bash
 # Start development environment
-docker-compose up -d
+docker compose -f docker/dev/docker-compose.yml up -d
 uv run python manage.py runserver
 
 # Run Celery (separate terminals)
@@ -556,5 +563,5 @@ uv run python manage.py dbshell
 - Config: `config/settings/base.py`
 - Environment: `.env`
 - Dependencies: `pyproject.toml`
-- Docker: `docker-compose.yml`
+- Docker: `docker/dev/docker-compose.yml`
 - Tests: `pytest.ini`, `tests/conftest.py`
