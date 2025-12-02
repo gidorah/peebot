@@ -213,6 +213,47 @@ services:
     networks:
       - peebot_network
 
+
+
+  # ----------------------------------------------------------------------------
+  # Flower - Celery Monitoring
+  # ----------------------------------------------------------------------------
+  flower:
+    build:
+      context: ../..
+      dockerfile: docker/dev/Dockerfile
+    container_name: peebot_flower_dev
+    restart: unless-stopped
+
+    command: >-
+      sh -c "uv sync --frozen --dev && uv run celery -A config flower"
+
+    env_file:
+      - ../../.env
+
+    user: "${UID:-1000}:${GID:-1000}"
+
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-peebot_user}:${POSTGRES_PASSWORD:-password}@pgbouncer:6432/${POSTGRES_DB:-peebot}?application_name=django-flower
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      REDIS_URL: redis://redis:6379/0
+
+    volumes:
+      - ../..:/workspace
+
+    ports:
+      - "5555:5555"
+
+    depends_on:
+      redis:
+        condition: service_healthy
+      worker:
+        condition: service_started
+
+    networks:
+      - peebot_network
+
 # ==============================================================================
 # Volumes - Persistent Data Storage
 # ==============================================================================
