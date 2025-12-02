@@ -30,7 +30,7 @@ dev-shell service="web":
 
 # Open the Django shell
 dev-django-shell:
-	{{dev-compose}} run --rm web uv run python manage.py shell
+	{{dev-compose}} exec web uv run python manage.py shell
 
 # Run a Python script or command inside the web container
 dev-python *args:

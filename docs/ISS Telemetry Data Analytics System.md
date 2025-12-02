@@ -51,10 +51,12 @@ This document outlines the architecture for the ISS Telemetry system as a **Djan
         |                                          |
         +------------------------------------------+
                     |              |
+                    |              |
                     v              v
-            [TimescaleDB]      [Redis]
-           (Single Source)  (Celery Queue)
+            [TimescaleDB]      [Redis] <---- [Flower]
+           (Single Source)  (Celery Queue)  (Monitoring)
               of Truth
+
 ```
 
 ### Data Flow Philosophy

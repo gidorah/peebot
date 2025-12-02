@@ -422,6 +422,11 @@ uv run celery -A config worker --loglevel=info
 
 # Run Celery Beat scheduler
 uv run celery -A config beat --loglevel=info
+
+# Run Flower monitoring dashboard
+uv run celery -A config flower
+# Dashboard available at http://localhost:5555
+
 ```
 
 ### Testing
