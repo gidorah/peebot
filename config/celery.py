@@ -5,10 +5,11 @@ This module initializes the Celery application and configures it to work
 with Django settings. It auto-discovers tasks from all installed apps.
 """
 
-from typing import Any
 import os
 
-from celery import Celery
+from celery import Celery, Task
+from celery.app import shared_task
+from celery.worker.request import Request
 
 # Set the default Django settings module for the 'celery' program.
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.base")
@@ -25,7 +26,14 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
 
 
-@app.task(bind=True, ignore_result=True)
-def debug_task(self: Any) -> None:
+@shared_task(bind=True)
+def debug_task(self: Task) -> None:
     """Debug task to test Celery is working correctly."""
-    print(f"Request: {self.request!r}")
+
+    request: Request = self.request
+    task_id: str = request.id
+
+    if task_id.count("a") > 0:
+        raise TypeError
+
+    print("Celery is working correctly!")
