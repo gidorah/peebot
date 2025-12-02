@@ -33,14 +33,14 @@ Establish the foundational architecture for the ISS Telemetry system as a Django
 │  │   Core   │  │ Storage   │  │Ingestion│  │Processors│     │
 │  │(Shared)  │  │(Models)   │  │(Phase 2)│  │(Phase 4) │     │
 │  └────┬─────┘  └─────┬─────┘  └────┬────┘  └────┬─────┘     │
-│       │              │              │            │          │
-│       └──────────────┴──────────────┴────────────┘          │
+│       │              │             │            │           │
+│       └──────────────┴─────────────┴────────────┘           │
 │                          │                                  │
 │                          │ Repository Pattern               │
 │                          ▼                                  │
 └──────────────────────────┼──────────────────────────────────┘
                            │
-          ┌────────────────┴────────────────┐
+          ┌────────────────┴───────────────-─┐
           │                                  │
           ▼                                  ▼
     ┌─────────-─┐                      ┌──────────┐
@@ -257,14 +257,14 @@ Create `apps/core/serializers.py`:
 ```
 Django App                    Celery Workers              Redis
    │                               │                        │
-   │──── task.delay() ───────────>│                        │
-   │                               │──── enqueue ─────────>│
+   │──── task.delay() ───────-────>│                        │
+   │                               │──── enqueue ─────────->│
    │                               │                        │
    │                               │<──── dequeue ──────────│
    │                               │                        │
    │                               │ (execute task)         │
    │                               │                        │
-   │<──── result (optional) ───────│──── store result ────>│
+   │<──── result (optional) ───────│──── store result ───-─>│
 ```
 
 **Tasks**:

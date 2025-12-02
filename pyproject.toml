@@ -81,3 +81,16 @@ implicit-import = true
 [[tool.mypy.overrides]]
 module = "environ.*"
 ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 88
+exclude = [
+    "migrations",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+"config/settings/*" = ["F403", "F405"]
