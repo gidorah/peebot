@@ -1099,6 +1099,3 @@ Use separate test database with TimescaleDB enabled. Configure Django to create 
 4. Set up SSL certificates
 5. Configure systemd services
 6. Test production deployment
-
-
----
