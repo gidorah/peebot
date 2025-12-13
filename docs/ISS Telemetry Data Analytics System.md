@@ -1005,6 +1005,11 @@ For dashboard to query data:
 
 ## Testing Strategy
 
+### Test Organization
+
+*   **Unit Tests**: Located in `apps/<module>/tests/`. Test individual components in isolation.
+*   **Integration/System Tests**: Located in `tests/`. Test interaction between multiple components and full system flows.
+
 ### Unit Tests
 
 **Scope**: Test individual components in isolation

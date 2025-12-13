@@ -435,6 +435,9 @@ uv run celery -A config flower
 # Run all tests
 uv run pytest
 
+# Note: Unit tests are located in apps/<module>/tests/
+# Integration tests are in tests/
+
 # Run specific test file
 uv run pytest tests/test_processors.py
 

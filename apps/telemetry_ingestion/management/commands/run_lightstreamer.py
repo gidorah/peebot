@@ -15,9 +15,11 @@ class Command(BaseCommand):
         asyncio.run(self.run_async())
 
     async def run_async(self) -> None:
-        async def on_message_received(message: Any) -> None:
-            print("Message received! Pipeline will process the message")
+        async def on_data_received(incoming_data: dict[str, dict]) -> None:
+            print("Message received! Pipeline will process the data")
+            print(f"timestamp: {incoming_data}")
 
-        client = LightstreamerClientService(callback=on_message_received)
+        client = LightstreamerClientService(callback=on_data_received)
         await client.connect()
         await asyncio.Event().wait()
+        print("event loop exited")

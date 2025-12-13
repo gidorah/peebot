@@ -144,11 +144,13 @@ The `LightstreamerService` acts as the central **orchestrator**.
 ## 6. Testing Strategy
 
 ### 6.1 Unit Tests
+**Location**: `apps/telemetry_ingestion/tests/`
 *   **Validators**: Test Serializer with edge cases. Benchmark performance to ensure acceptable overhead.
 *   **Enricher**: Verify UUID generation and timestamp addition.
 *   **Service Logic**: Test backoff calculation logic.
 
 ### 6.2 Integration Tests
+**Location**: `tests/` (Project Root)
 *   **Mock Lightstreamer**: Use `unittest.mock` to simulate incoming LS messages.
 *   **DB Integration**: Verify `abulk_create` correctly writes to TimescaleDB.
 *   **Performance**: Simple load test to verify validation speed.
