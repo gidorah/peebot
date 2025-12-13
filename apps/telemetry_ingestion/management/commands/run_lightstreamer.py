@@ -15,7 +15,7 @@ class Command(BaseCommand):
         asyncio.run(self.run_async())
 
     async def run_async(self) -> None:
-        async def on_data_received(incoming_data: dict[str, dict]) -> None:
+        async def on_data_received(incoming_data: dict[str, dict[str, Any]]) -> None:
             print("Message received! Pipeline will process the data")
             print(f"timestamp: {incoming_data}")
 
