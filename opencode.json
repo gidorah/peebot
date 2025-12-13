@@ -1,4 +1,5 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "instructions": [".gemini/GEMINI.md"]
+  "instructions": [".gemini/GEMINI.md"],
+  "plugin": ["opencode-beads"]
 }
