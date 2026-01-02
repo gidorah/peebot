@@ -346,7 +346,7 @@ This approach provides modularity while avoiding the overhead of inter-service c
 =================================================
 
 TelemetryReading (Hypertable)
-  - id: BigAutoField (primary key)
+  - id: UUIDv7 (primary key)
   - channel: ForeignKey -> TelemetryChannel
   - timestamp: DateTimeField (indexed)
   - value: DecimalField
@@ -354,9 +354,7 @@ TelemetryReading (Hypertable)
   - status_class: CharField - ?
   - status_indicator: CharField - ?
   - status_color: CharField - ?
-  - event_id: UUIDField (unique)
   - ingested_at: DateTimeField
-  - metadata: JSONField
 
   Indexes:
     * (channel, timestamp) - Primary query pattern
@@ -372,9 +370,10 @@ TelemetryReading (Hypertable)
 
 TelemetryChannel (Regular Table)
   - id: AutoField (primary key)
-  - item_id: CharField (unique, e.g., "NODE3000004")
-  - description: TextField
-  - module_name: CharField
+  - public_pui: CharField (unique, e.g., "NODE3000004") (Public Program Unique Identifier)
+  - description: CharField
+  - ops_nom: CharField (Operations Nomenclature)
+  - eng_nom: CharField (Engineering Nomenclature)
   - unit: CharField
   - is_active: BooleanField
   - created_at: DateTimeField
@@ -1005,6 +1004,11 @@ For dashboard to query data:
 
 ## Testing Strategy
 
+### Test Organization
+
+*   **Unit Tests**: Located in `apps/<module>/tests/`. Test individual components in isolation.
+*   **Integration/System Tests**: Located in `tests/`. Test interaction between multiple components and full system flows.
+
 ### Unit Tests
 
 **Scope**: Test individual components in isolation
@@ -1099,6 +1103,3 @@ Use separate test database with TimescaleDB enabled. Configure Django to create 
 4. Set up SSL certificates
 5. Configure systemd services
 6. Test production deployment
-
-
----

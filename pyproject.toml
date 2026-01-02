@@ -12,6 +12,7 @@ dependencies = [
     "django-stubs>=5.2.7",
     "djangorestframework>=3.16.1",
     "flower>=2.0.1",
+    "lightstreamer-client-lib>=2.2.2",
     "model-bakery>=1.20.5",
     "mypy>=1.18.2",
     "psycopg[binary,pool]>=3.2.11",
@@ -50,9 +51,15 @@ ignore_errors = false
 
 [tool.django-stubs]
 django_settings_module = "config.settings.development"
+
 [[tool.mypy.overrides]]
 module = "celery.*"
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "lightstreamer.*"
+ignore_missing_imports = true
+
 
 [tool.pyrefly]
 project-includes = ["**/*.py"]
@@ -94,3 +101,8 @@ ignore = []
 
 [tool.ruff.lint.per-file-ignores]
 "config/settings/*" = ["F403", "F405"]
+
+[dependency-groups]
+dev = [
+    "debugpy>=1.8.18",
+]
