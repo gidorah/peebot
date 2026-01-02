@@ -346,7 +346,7 @@ This approach provides modularity while avoiding the overhead of inter-service c
 =================================================
 
 TelemetryReading (Hypertable)
-  - id: BigAutoField (primary key)
+  - id: UUIDv7 (primary key)
   - channel: ForeignKey -> TelemetryChannel
   - timestamp: DateTimeField (indexed)
   - value: DecimalField
@@ -354,9 +354,7 @@ TelemetryReading (Hypertable)
   - status_class: CharField - ?
   - status_indicator: CharField - ?
   - status_color: CharField - ?
-  - event_id: UUIDField (unique)
   - ingested_at: DateTimeField
-  - metadata: JSONField
 
   Indexes:
     * (channel, timestamp) - Primary query pattern
@@ -372,9 +370,10 @@ TelemetryReading (Hypertable)
 
 TelemetryChannel (Regular Table)
   - id: AutoField (primary key)
-  - item_id: CharField (unique, e.g., "NODE3000004")
-  - description: TextField
-  - module_name: CharField
+  - public_pui: CharField (unique, e.g., "NODE3000004") (Public Program Unique Identifier)
+  - description: CharField
+  - ops_nom: CharField (Operations Nomenclature)
+  - eng_nom: CharField (Engineering Nomenclature)
   - unit: CharField
   - is_active: BooleanField
   - created_at: DateTimeField

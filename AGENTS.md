@@ -1,82 +1,71 @@
-# PeeBot Project Context
+# PEEBOT KNOWLEDGE BASE
 
-## Project Overview
-PeeBot is a Django modular monolith for ISS telemetry analytics (TimescaleDB), specifically detecting Urine Processor Assembly activity (`NODE3000004`) to post humorous tweets.
+**Generated:** 2026-01-02
+**Architecture:** Django Modular Monolith (TimescaleDB)
+**State:** SCAFFOLDING (Infrastructure ready, Domain logic pending)
 
-## Architecture & Core Principles
-- **Pattern:** Modular Monolith. **Single Source of Truth:** TimescaleDB. **Redis:** Ephemeral (Queue/Cache).
-- **Polling:** Analytics modules poll DB via Celery Beat (decoupled ingestion/analytics). Allows sliding window analysis & replay.
-- **TimescaleDB:** `TelemetryReading` is a hypertable (1-day chunks, 7-day compression, 30-day retention).
+## OVERVIEW
+PeeBot is a modular monolith for ISS telemetry analytics. It ingests real-time data from Lightstreamer, stores it in TimescaleDB (`TelemetryReading`), and uses polling-based analytics to detect events (e.g., UPA activity) and trigger actions (tweets).
 
-### Module Ownership (Strict)
-- **`core`**: Shared utils, base models, serializers.
-- **`telemetry_storage`**: **OWNS** `TelemetryReading`, `TelemetryChannel`.
-- **`telemetry_ingestion`**: Imports models from `telemetry_storage`. **NO** model definitions.
-- **`event_processors`**: **OWNS** `DetectedEvent`. Queries `telemetry_storage`.
-- **`dashboards`**: Web UI. Queries all models.
+**Key Tech**: Python 3.14+, Django 5.2, TimescaleDB, Celery/Redis, `uv` (pkg manager), `just` (runner).
 
-**Dependency Flow:** `ingestion` → `storage` ← `processors` → `dashboards`
-
-## Critical Implementation Rules
-1.  **Model Imports:** `telemetry_ingestion` MUST import from `apps.telemetry_storage.models`. Never define storage models in ingestion.
-2.  **Repository Pattern:** Use `apps.telemetry_storage.repositories` for DB operations.
-3.  **Async:** Use Django async views for ingestion and async ORM for writes.
-4.  **Lightstreamer:** Runs as an async management command.
-
-## Development Cheatsheet
-
-### Package Management (uv)
-- `uv sync`: Sync dependencies.
-- `uv add <pkg> [--dev]`: Add package.
-- `uv run <cmd>`: Run in venv (e.g., `uv run python manage.py ...`).
-
-### Services & Commands
-- **Start Stack:** `just dev-up` / `just dev-down`
-- **Dev Server:** `uv run python manage.py runserver`
-- **Ingestion:** `uv run python manage.py run_lightstreamer`
-- **Celery Worker:** `uv run celery -A config worker --loglevel=info`
-- **Celery Scheduler:** `uv run celery -A config beat --loglevel=info`
-- **DB Shell:** `uv run python manage.py dbshell`
-
-### Quality & Testing
-- **Test:** `uv run pytest`
-- **Coverage:** `uv run pytest --cov=apps`
-- **Lint:** `uv run ruff check .`
-- **Type Check:** `uv run mypy apps/`
-
-## Common Patterns
-
-### New Analytics Module
-1. Inherit `BaseProcessor` in `event_processors/processors/`.
-2. Implement sliding window logic (query `TelemetryReading`).
-3. Schedule in `config/celery.py`.
-
-### Time-Series Query (Sliding Window)
-```python
-from apps.telemetry_storage.models import TelemetryReading
-# Example: Last 10 minutes for Node 3
-readings = TelemetryReading.objects.filter(
-    channel__item_id='NODE3000004',
-    timestamp__gte=timezone.now() - timedelta(minutes=10)
-).order_by('timestamp')
+## STRUCTURE
+```
+peebot/
+├── apps/                  # DOMAIN MODULES (Strict Boundaries)
+│   ├── core/              # Shared utils, BaseModels (TimeStamped, UUID)
+│   ├── telemetry_storage/ # OWNS Data (Readings, Channels). Repository Pattern.
+│   ├── telemetry_ingestion/# Ingestion Service. NO Models. Imports from storage.
+│   ├── event_processors/  # Analytics Logic. OWNS DetectedEvent. Polling tasks.
+│   └── dashboards/        # UI/WebSockets. Reads all, owns none.
+├── config/                # Django Settings (Base, Dev, Prod)
+├── docker/                # Infrastructure (PgBouncer, Timescale, Redis)
+└── Justfile               # Task runner definitions
 ```
 
-## Testing & Deployment Guidelines
-- **Testing Strategy:**
-  - Use `model_bakery` for test data factories.
-  - **Mock external APIs** (Lightstreamer, Twitter) in tests.
-  - Use a separate test database with TimescaleDB enabled.
-- **Deployment Stack:** Single VPS with Coolify. Nginx (Proxy) → Gunicorn (HTTP) / Daphne (WSGI/ASGI).
+## WHERE TO LOOK
+| Task | Location | Notes |
+|------|----------|-------|
+| **Core Logic** | `apps/core` | Base classes, shared utils |
+| **Storage** | `apps/telemetry_storage` | DB Models, Repositories |
+| **Ingestion** | `apps/telemetry_ingestion` | Lightstreamer client, Validation |
+| **Analytics** | `apps/event_processors` | Event detection, Polling tasks |
+| **UI** | `apps/dashboards` | Frontend, WebSockets |
 
-## Task Management
-- **GitHub Issues:** Primary source for task management and tracking.
-- **Tooling:** Use `gh` CLI for interactions (e.g., `gh issue list`, `gh issue create`, `gh issue view <id>`).
+## STRICT LAWS (NON-NEGOTIABLE)
+1.  **Module Ownership**:
+    - `telemetry_ingestion` MUST NOT define models. It imports from `telemetry_storage`.
+    - `event_processors` OWNS `DetectedEvent`.
+    - `telemetry_storage` OWNS `TelemetryReading`.
+2.  **Data Access**:
+    - Use `apps.telemetry_storage.repositories` for DB ops (Future).
+    - Ingestion MUST use Async ORM / Bulk creates.
+3.  **Ingestion Pattern**:
+    - **Bridge**: `LightstreamerClient` (Sync) → `asyncio.run_coroutine_threadsafe` → Django Async.
+4.  **Analytics Pattern**:
+    - **Polling**: Celery Beat triggers tasks. No signals.
+    - **Sliding Window**: Query `TelemetryReading` for last N minutes.
+5.  **Tooling**:
+    - **`uv`**: ALWAYS use `uv run`, `uv sync`.
+    - **`ruff`**: No linting workarounds. Fix the root cause.
+    - **`mypy`**: Strict mode enabled.
 
-## Directory Structure
-- `apps/core`: Shared utils, base exceptions.
-- `apps/telemetry_storage`: DB Models (`TelemetryReading`), Repositories.
-- `apps/telemetry_ingestion`: Lightstreamer client, Validation.
-- `apps/event_processors`: Analytics logic (`DetectedEvent`), Tasks.
-- `apps/dashboards`: UI/WebSockets.
-- `config/`: Django settings (`celery.py`).
-- `docker/`: Docker configs (`init-timescale.sql`).
+## DEV COMMANDS
+```bash
+just dev-up        # Start full stack (Docker)
+just dev-down      # Stop stack
+just test          # Run tests (pytest)
+uv run python manage.py runserver # Dev server
+uv run python manage.py run_lightstreamer # Ingestion
+```
+
+## CURRENT STATE (SCAFFOLDING)
+- **Infrastructure**: CI/CD, Docker, PgBouncer, Linting are ACTIVE.
+- **Ingestion**: Lightstreamer client connected. Validation/Storage pending.
+- **Storage**: Models (`TelemetryReading`) are DEFINED IN DOCS but EMPTY in code.
+- **Processors**: Analytics logic (`PeeBot`) is DEFINED IN DOCS but EMPTY in code.
+
+## SECURITY & CONFIG
+- **Secrets**: `userlist.txt` passwords must match `.env`.
+- **PgBouncer**: Internal port `6432`. Hybrid Auth.
+- **Git**: Use `/commit` command. Never commit `.env`.

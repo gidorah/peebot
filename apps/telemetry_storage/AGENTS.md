@@ -1,0 +1,36 @@
+# AGENT CONTEXT: telemetry_storage
+
+**Role**: Single Source of Truth (SSoT) for ISS telemetry data.
+**Ownership**: `TelemetryChannel`, `TelemetryReading`.
+
+## ARCHITECTURE
+- **Pattern**: Repository Pattern. DO NOT access models directly from other modules; use `apps.telemetry_storage.repositories`.
+- **Database**: TimescaleDB. `TelemetryReading` is a hypertable.
+- **Dependency Flow**: `telemetry_ingestion` (Writer) -> `telemetry_storage` (Owner) <- `event_processors` (Reader).
+
+## MODELS (MATCH README SPEC)
+1. **TelemetryChannel**:
+   - `item_id`: Unique ISS identifier (e.g., 'NODE3000004').
+   - Metadata: `description`, `module_name`, `unit`, `is_active`.
+2. **TelemetryReading**:
+   - Time-series data: `timestamp` (Primary Partition Key), `value`, `calibrated_data`.
+   - Traceability: `event_id` (UUID), `ingested_at`, `metadata` (JSONB).
+   - Relations: `channel` (ForeignKey to TelemetryChannel).
+
+## TIMESCALEDB SCHEMA (MANDATORY)
+- **Hypertable**: `create_hypertable('telemetry_reading', 'timestamp')`.
+- **Chunks**: 1-day intervals.
+- **Compression**: Enabled after 7 days (Segment by `channel_id`).
+- **Retention**: Drop chunks older than 30 days.
+
+## IMPLEMENTATION STATUS
+- **Status**: PENDING.
+- **Tasks**:
+  1. Define `TelemetryChannel` and `TelemetryReading` in `models.py`.
+  2. Implement `repositories.py` with `abulk_create` support.
+  3. Create migration with `RunSQL` for TimescaleDB setup (hypertables/compression).
+
+## DEV COMMANDS
+- `uv run python manage.py makemigrations telemetry_storage`
+- `uv run python manage.py migrate`
+- `uv run python manage.py dbshell` (Check hypertable status via `\dx`)
