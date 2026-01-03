@@ -9,19 +9,11 @@ dependencies = [
     "django>=5.2.7",
     "django-celery-beat>=2.8.1",
     "django-environ>=0.12.0",
-    "django-stubs>=5.2.7",
     "djangorestframework>=3.16.1",
     "flower>=2.0.1",
     "lightstreamer-client-lib>=2.2.2",
-    "model-bakery>=1.20.5",
-    "mypy>=1.18.2",
     "psycopg[binary,pool]>=3.2.11",
-    "pyrefly>=0.42.3",
-    "pytest>=8.4.2",
-    "pytest-asyncio>=1.2.0",
-    "pytest-django>=4.11.1",
     "redis>=6.4.0",
-    "ruff>=0.14.1",
 ]
 
 [tool.mypy]
@@ -30,7 +22,6 @@ strict = true
 warn_unused_ignores = true
 warn_redundant_casts = true
 warn_unused_configs = true
-disallow_untyped_decorators = false
 plugins = ["mypy_django_plugin.main"]
 
 [[tool.mypy.overrides]]
@@ -50,59 +41,62 @@ module = "django.contrib.postgres.*"
 ignore_errors = false
 
 [tool.django-stubs]
-django_settings_module = "config.settings.development"
-
-[[tool.mypy.overrides]]
-module = "celery.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "lightstreamer.*"
-ignore_missing_imports = true
-
-
-[tool.pyrefly]
-project-includes = ["**/*.py"]
-project-excludes = ["**/.[!/.]*", "**/*venv/**"]
-search-path = ["."]
-ignore-errors-in-generated-code = true
-python-version = "3.13.0"
-untyped-def-behavior = "check-and-infer-return-any"
-ignore-missing-imports = [
-    "django_celery_beat.*",
-    "django_celery_results.*",
-    "celery.*",
-    "environ.*",
-]
-
-[tool.pyrefly.errors]
-untyped-import = true
-bad-override = true
-bad-param-name-override = true
-redundant-cast = true
-redundant-condition = true
-unused-coroutine = true
-deprecated = true
-implicit-import = true
-
-[[tool.mypy.overrides]]
-module = "environ.*"
-ignore_missing_imports = true
+django_settings_module = "config.settings"
 
 [tool.ruff]
+target-version = "py313"
 line-length = 88
-exclude = [
-    "migrations",
-]
 
 [tool.ruff.lint]
-select = ["E", "F", "W"]
-ignore = []
+select = ["E4", "E7", "F", "I", "UP"]
+ignore = ["E501", "F403"]
+exclude = [
+    "migrations/**",
+    "**/migrations/**",
+    ".git",
+    "**/__pycache__/**",
+    "*.egg-info/**",
+    ".ruff_cache/**",
+    "htmlcov/**",
+    "manage.py",
+]
 
 [tool.ruff.lint.per-file-ignores]
 "config/settings/*" = ["F403", "F405"]
 
+[tool.ruff.format]
+indent-style = "space"
+quote-style = "double"
+line-ending = "auto"
+exclude = [
+    "migrations/**",
+    "**/migrations/**",
+    ".git",
+    "**/__pycache__/**",
+    "*.egg-info/**",
+    ".ruff_cache/**",
+    "htmlcov/**",
+    "manage.py",
+]
+
+[tool.ty.rules]
+# Make ty ignore the things mypy will catch later
+unresolved-attribute = "warn"
+unresolved-import = "warn"
+
+
 [dependency-groups]
 dev = [
     "debugpy>=1.8.18",
+    "django-stubs>=5.2.7",
+    "model-bakery>=1.20.5",
+    "mypy>=1.18.2",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+    "pytest-django>=4.11.1",
+    "ruff>=0.14.1",
 ]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.development"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
