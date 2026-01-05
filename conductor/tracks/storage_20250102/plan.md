@@ -17,15 +17,15 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Models & Migrations' (Protocol in workflow.md)
 
 ## Phase 2: Seeding & Data Population
-- [ ] Task: Create Seeding Command
-    - [ ] Subtask: Implement `apps/telemetry_storage/management/commands/seed_channels.py`.
-    - [ ] Subtask: Logic to parse `docs/PUIList.xml` and map XML tags to model fields (`Public_PUI` -> `public_pui`, `OPS_NOM` -> `ops_nom`, etc.).
-    - [ ] Subtask: Logic to set `is_active=True` ONLY for `NODE3000004`, False for others.
-    - [ ] Subtask: Logic to update existing records (idempotency).
-- [ ] Task: Test Seeding Command
-    - [ ] Subtask: Write test case verifying all channels are imported with correct field mapping.
-    - [ ] Subtask: Write test case verifying only UPA is active.
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Seeding & Data Population' (Protocol in workflow.md)
+- [x] Task: Create Seeding Command
+    - [x] Subtask: Implement `apps/telemetry_storage/management/commands/seed_channels.py`.
+    - [x] Subtask: Logic to parse `docs/PUIList.xml` and map XML tags to model fields (`Public_PUI` -> `public_pui`, `OPS_NOM` -> `ops_nom`, etc.).
+    - [x] Subtask: Logic to set `is_active=True` ONLY for `NODE3000004`, False for others (Implemented via `SoftDeleteModel.deleted_at`).
+    - [x] Subtask: Logic to update existing records (idempotency).
+- [x] Task: Test Seeding Command
+    - [x] Subtask: Write test case verifying all channels are imported with correct field mapping.
+    - [x] Subtask: Write test case verifying only UPA is active.
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Seeding & Data Population' (Protocol in workflow.md)
 
 ## Phase 3: Repository Layer
 - [ ] Task: Implement TelemetryRepository Interface

@@ -58,7 +58,7 @@ A robust, asynchronous wrapper around the Lightstreamer protocol.
     *   **AsyncIO**: Built on `asyncio` to handle high-concurrency I/O.
     *   **Connection Management**: Automatic reconnection with exponential backoff.
     *   **Subscription Management**:
-        *   **Source**: Loads active channels from `TelemetryChannel.objects.filter(is_active=True)` at startup.
+        *   **Source**: Loads active channels from `TelemetryChannel.objects.filter(deleted_at__isnull=True)` at startup.
         *   **Modes**: `MERGE` (most common for telemetry), `DISTINCT`.
     *   **Callback Handling**: Maps inbound `on_item_update` events to the processing pipeline.
 
@@ -69,7 +69,7 @@ Uses Django REST Framework (DRF) serializers for robust validation.
 
 *   **Class**: `IngestTelemetrySerializer`
 *   **Fields**:
-    *   `item_id` (Required, String)
+    *   `item_id` (Required, String) -> Maps to `public_pui`
     *   `timestamp` (Required, DateTime)
     *   `value` (Required, Numeric/String)
     *   `status` (Optional, Metadata)
@@ -85,8 +85,8 @@ Uses Django REST Framework (DRF) serializers for robust validation.
 Transforms raw, validated data into a domain object ready for storage.
 
 *   **Responsibilities**:
-    *   **ID Generation**: Generate deterministic or random `event_id` (UUIDv4).
-    *   **Timestamping**: Add `ingested_at` (Server UTC time).
+    *   **ID Generation**: Generate deterministic or random `id` (UUIDv7).
+    *   **Timestamping**: Add `created_at` (Server UTC time).
     *   **Normalization**: Convert Lightstreamer field names (e.g., `Value`, `TimeStamp`) to Snake Case (`value`, `timestamp`).
 
 ### 3.4 Management Command
