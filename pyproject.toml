@@ -64,6 +64,10 @@ exclude = [
 [tool.ruff.lint.per-file-ignores]
 "config/settings/*" = ["F403", "F405"]
 
+[tool.ruff.lint.isort]
+combine-as-imports = true
+known-first-party = ["peebot", "apps", "config"]
+
 [tool.ruff.format]
 indent-style = "space"
 quote-style = "double"
