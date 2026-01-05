@@ -1,4 +1,4 @@
-from uuid import uuid4
+import uuid
 
 from django.db import models
 from django.db.models.fields import DateTimeField, UUIDField
@@ -13,8 +13,15 @@ class TimeStampedModel(models.Model):
         abstract = True
 
 
-class UUIDModel(models.Model):
-    id: UUIDField = UUIDField(primary_key=True, default=uuid4, editable=False)
+class UUID7Model(models.Model):
+    """
+    Base model for Time-Series data requiring UUIDv7 (time-ordered).
+    Ideal for TimescaleDB Hypertables to ensure index locality.
+    """
+
+    id: UUIDField = UUIDField(
+        primary_key=True, default=uuid.uuid7, editable=False, serialize=False
+    )
 
     class Meta:
         abstract = True
