@@ -11,8 +11,8 @@ from apps.telemetry_storage.models import TelemetryChannel, TelemetryReading
 class ReadingData(TypedDict, total=False):
     channel: TelemetryChannel
     timestamp: datetime
-    value: float | Decimal | str
-    calibrated_data: float | Decimal | str | None
+    value: float | Decimal
+    calibrated_data: float | Decimal | None
     status_class: str | None
     status_indicator: str | None
     status_color: str | None
