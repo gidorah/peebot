@@ -1,20 +1,20 @@
 # Track Plan: Implement Telemetry Storage Module
 
 ## Phase 1: Models & Migrations
-- [ ] Task: Create TelemetryChannel Model
-    - [ ] Subtask: Write failing test for TelemetryChannel creation checking all fields from spec (`public_pui`, `ops_nom`, `eng_nom`, etc.) (TDD).
-    - [ ] Subtask: Implement TelemetryChannel model with correct schema from `ISS Telemetry Data Analytics System.md`.
-    - [ ] Subtask: Verify tests pass.
-- [ ] Task: Create TelemetryReading Model
-    - [ ] Subtask: Write failing test for TelemetryReading creation (TDD).
-    - [ ] Subtask: Implement TelemetryReading model using **UUIDv7** for `id` (PK) and explicit `timestamp` field. Include optional status fields (`status_class`, `status_indicator`, `status_color`).
-    - [ ] Subtask: Verify tests pass.
-- [ ] Task: Configure TimescaleDB Hypertable
-    - [ ] Subtask: Create custom migration to convert TelemetryReading table to Hypertable.
-    - [ ] Subtask: Add migration for compression policy (7 days).
-    - [ ] Subtask: Add migration for retention policy (30 days).
-    - [ ] Subtask: Add migration for indexes (channel, timestamp DESC) and (ingested_at).
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Models & Migrations' (Protocol in workflow.md)
+- [x] Task: Create TelemetryChannel Model
+    - [x] Subtask: Write failing test for TelemetryChannel creation checking all fields from spec (`public_pui`, `ops_nom`, `eng_nom`, etc.) (TDD).
+    - [x] Subtask: Implement TelemetryChannel model with correct schema from `ISS Telemetry Data Analytics System.md`.
+    - [x] Subtask: Verify tests pass.
+- [x] Task: Create TelemetryReading Model
+    - [x] Subtask: Write failing test for TelemetryReading creation (TDD).
+    - [x] Subtask: Implement TelemetryReading model using **UUIDv7** for `id` (PK) and explicit `timestamp` field. Include optional status fields (`status_class`, `status_indicator`, `status_color`).
+    - [x] Subtask: Verify tests pass.
+- [x] Task: Configure TimescaleDB Hypertable
+    - [x] Subtask: Create custom migration to convert TelemetryReading table to Hypertable.
+    - [x] Subtask: Add migration for compression policy (7 days).
+    - [x] Subtask: Add migration for retention policy (30 days).
+    - [x] Subtask: Add migration for indexes (channel, timestamp DESC) and (ingested_at).
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Models & Migrations' (Protocol in workflow.md)
 
 ## Phase 2: Seeding & Data Population
 - [ ] Task: Create Seeding Command
