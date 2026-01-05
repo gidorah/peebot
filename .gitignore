@@ -71,8 +71,7 @@ db.sqlite3-journal
 # Environment & Secrets
 # ------------------------------------------------------------------------------
 .env
-.env.local
-.env.*.local
+.env.*
 .envrc
 
 # Keep .env.example for reference (DO NOT IGNORE)

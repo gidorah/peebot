@@ -17,7 +17,7 @@
   - **File**: `apps/telemetry_ingestion/serializers.py`
 - [ ] Create the `EnrichmentService` class.
   - **File**: `apps/telemetry_ingestion/services/enricher.py`
-- [ ] Implement the `enrich` method to add `uuid`, `ingested_at`, and normalize keys.
+- [ ] Implement the `enrich` method to add `id` (UUIDv7), `created_at`, and normalize keys.
   - **File**: `apps/telemetry_ingestion/services/enricher.py`
 - [ ] Add unit tests for `IngestTelemetrySerializer` validation edge cases.
   - **File**: `apps/telemetry_ingestion/tests/test_serializers.py`

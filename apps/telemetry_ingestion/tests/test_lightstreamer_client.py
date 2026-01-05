@@ -1,6 +1,8 @@
 import asyncio
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
+
 from apps.telemetry_ingestion.services.lightstreamer_client import (
     LightstreamerClientService,
     SubListener,

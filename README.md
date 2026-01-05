@@ -533,13 +533,12 @@ Analytics modules use a **polling pattern**:
 
 Stores individual telemetry readings with time-based partitioning:
 
-- `id`: BigAutoField
+- `id`: UUIDField (UUIDv7)
 - `channel`: ForeignKey -> TelemetryChannel
 - `timestamp`: DateTimeField (indexed)
 - `value`: DecimalField
 - `calibrated_data`: DecimalField
-- `event_id`: UUIDField (unique)
-- `ingested_at`: DateTimeField
+- `created_at`: DateTimeField (Ingestion time)
 - `metadata`: JSONField
 
 **Optimizations**:
@@ -553,11 +552,12 @@ Stores individual telemetry readings with time-based partitioning:
 Metadata for ~400 ISS telemetry channels:
 
 - `id`: AutoField
-- `item_id`: CharField (unique, e.g., "NODE3000004")
+- `public_pui`: CharField (unique, e.g., "NODE3000004")
 - `description`: TextField
-- `module_name`: CharField
+- `ops_nom`: CharField
+- `eng_nom`: CharField
 - `unit`: CharField
-- `is_active`: BooleanField
+- `deleted_at`: DateTimeField (Soft-delete for active state)
 - `created_at`, `updated_at`: DateTimeField
 
 ### DetectedEvent

@@ -1,10 +1,11 @@
-from typing import Any
 import asyncio
+from typing import Any
 
 from lightstreamer.client import LightstreamerClient, Subscription, SubscriptionListener
 from lightstreamer.client.ls_python_client_haxe import (
     com_lightstreamer_client_internal_update_ItemUpdateBase as ItemUpdate,
 )
+
 from apps.telemetry_ingestion.services.identifiers import IDENTIFIERS
 
 

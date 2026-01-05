@@ -57,9 +57,10 @@ class TelemetryRepository:
     
     async def get_or_create_channel(self, item_id: str) -> TelemetryChannel:
         # Django 5+ supports aget_or_create
-        channel, created = await TelemetryChannel.objects.aget_or_create(
-            item_id=item_id,
-            defaults={'is_active': True}
+        # Use all_objects to check for soft-deleted channels
+        channel, created = await TelemetryChannel.all_objects.aget_or_create(
+            public_pui=item_id,
+            defaults={'deleted_at': None}
         )
         return channel
 
@@ -129,10 +130,10 @@ class EnrichmentService:
         data = validated_data.copy()
         
         # 1. Add Traceability
-        data['event_id'] = uuid.uuid4()
+        data['id'] = uuid.uuid4()  # Will be UUIDv7 in production
         
         # 2. Add Ingestion Timestamp (Server Time)
-        data['ingested_at'] = timezone.now()
+        data['created_at'] = timezone.now()
         
         # 3. Any other normalization (e.g., unit conversion)
         # data['value'] = data['value'] * 100 

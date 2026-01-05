@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 import environ
@@ -26,7 +27,9 @@ env = environ.Env(
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # Read .env file
-environ.Env.read_env(BASE_DIR / ".env")
+env_file = os.environ.get("DOTENV_PATH", BASE_DIR / ".env")
+print(f"env file path: {env_file}")
+environ.Env.read_env(env_file)
 
 
 # Quick-start development settings - unsuitable for production
@@ -152,9 +155,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Celery broker and result backend configuration
 CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="redis://localhost:6379/0")
-CELERY_RESULT_BACKEND = env(
-    "CELERY_RESULT_BACKEND", default="redis://localhost:6379/0"
-)
+CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default="redis://localhost:6379/0")
 
 # Task serialization
 CELERY_TASK_SERIALIZER = "json"

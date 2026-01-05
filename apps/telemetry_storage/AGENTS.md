@@ -10,11 +10,12 @@
 
 ## MODELS (MATCH README SPEC)
 1. **TelemetryChannel**:
-   - `item_id`: Unique ISS identifier (e.g., 'NODE3000004').
-   - Metadata: `description`, `module_name`, `unit`, `is_active`.
+   - `public_pui`: Unique ISS identifier (e.g., 'NODE3000004').
+   - Metadata: `description`, `ops_nom`, `eng_nom`, `unit`.
+   - **Active State**: Managed via `SoftDeleteModel`. Active = `deleted_at IS NULL`.
 2. **TelemetryReading**:
    - Time-series data: `timestamp` (Primary Partition Key), `value`, `calibrated_data`.
-   - Traceability: `event_id` (UUID), `ingested_at`, `metadata` (JSONB).
+   - Traceability: `id` (UUIDv7), `created_at` (Ingestion Time), `metadata` (JSONB).
    - Relations: `channel` (ForeignKey to TelemetryChannel).
 
 ## TIMESCALEDB SCHEMA (MANDATORY)
@@ -24,11 +25,12 @@
 - **Retention**: Drop chunks older than 30 days.
 
 ## IMPLEMENTATION STATUS
-- **Status**: PENDING.
+- **Status**: IN_PROGRESS.
 - **Tasks**:
-  1. Define `TelemetryChannel` and `TelemetryReading` in `models.py`.
-  2. Implement `repositories.py` with `abulk_create` support.
-  3. Create migration with `RunSQL` for TimescaleDB setup (hypertables/compression).
+  1. [x] Define `TelemetryChannel` and `TelemetryReading` in `models.py`.
+  2. [x] Implement `seed_channels` command to populate channels from XML.
+  3. [ ] Implement `repositories.py` with `abulk_create` support.
+  4. [ ] Create migration with `RunSQL` for TimescaleDB setup (hypertables/compression).
 
 ## DEV COMMANDS
 - `uv run python manage.py makemigrations telemetry_storage`
