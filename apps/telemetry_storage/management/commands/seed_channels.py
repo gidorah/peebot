@@ -141,5 +141,5 @@ class Command(BaseCommand):
                 )
 
         except Exception as e:
-            self.stderr.write(self.style.ERROR(f"Error seeding channels: {str(e)}"))
-            raise e
+            self.stderr.write(self.style.ERROR(f"Error seeding channels: {e!s}"))
+            raise
