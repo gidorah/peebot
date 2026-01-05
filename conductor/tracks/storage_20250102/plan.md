@@ -28,19 +28,19 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Seeding & Data Population' (Protocol in workflow.md)
 
 ## Phase 3: Repository Layer
-- [ ] Task: Implement TelemetryRepository Interface
-    - [ ] Subtask: Define the abstract base class or interface.
-    - [ ] Subtask: Implement `get_active_channels` method.
-- [ ] Task: Implement Bulk Ingestion
-    - [ ] Subtask: Write failing test for bulk ingestion performance/correctness (TDD).
-    - [ ] Subtask: Implement `abulk_create_readings` method in repository using async ORM.
-    - [ ] Subtask: Verify tests pass.
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Repository Layer' (Protocol in workflow.md)
+- [x] Task: Implement TelemetryRepository Interface
+    - [x] Subtask: Define the abstract base class or interface.
+    - [x] Subtask: Implement `get_active_channels` method.
+- [x] Task: Implement Bulk Ingestion
+    - [x] Subtask: Write failing test for bulk ingestion performance/correctness (TDD).
+    - [x] Subtask: Implement `abulk_create_readings` method in repository using async ORM (Uses `ReadingData` DTO for decoupling).
+    - [x] Subtask: Verify tests pass.
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Repository Layer' (Protocol in workflow.md)
 
 ## Phase 4: Integration & Cleanup
-- [ ] Task: Expose Public API
-    - [ ] Subtask: Define `__all__` in `apps/telemetry_storage/__init__.py`.
-- [ ] Task: Final Polish
-    - [ ] Subtask: Run full test suite and ensure >80% coverage.
-    - [ ] Subtask: Run mypy and ruff.
-- [ ] Task: Conductor - User Manual Verification 'Phase 4: Integration & Cleanup' (Protocol in workflow.md)
+- [x] Task: Expose Public API
+    - [x] Subtask: Define `__all__` in `apps/telemetry_storage/__init__.py` (Note: Kept minimal to avoid AppRegistryNotReady errors).
+- [x] Task: Final Polish
+    - [x] Subtask: Run full test suite and ensure >80% coverage.
+    - [x] Subtask: Run mypy and ruff.
+- [x] Task: Conductor - User Manual Verification 'Phase 4: Integration & Cleanup' (Protocol in workflow.md)
