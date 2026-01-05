@@ -346,24 +346,30 @@ This approach provides modularity while avoiding the overhead of inter-service c
 =================================================
 
 TelemetryReading (Hypertable)
-  - id: UUIDv7 (primary key)
+  - id: UUIDv7 (primary key, composite with timestamp)
   - channel: ForeignKey -> TelemetryChannel
-  - timestamp: DateTimeField (indexed)
+  - timestamp: DateTimeField (partitioning key, indexed)
   - value: DecimalField
-  - calibrated_data: DecimalField - ? 
-  - status_class: CharField - ?
-  - status_indicator: CharField - ?
-  - status_color: CharField - ?
-  - ingested_at: DateTimeField
+  - calibrated_data: DecimalField (nullable)
+  - status_class: CharField (nullable)
+  - status_indicator: CharField (nullable)
+  - status_color: CharField (nullable)
+  - created_at: DateTimeField (auto_now_add)
+  - updated_at: DateTimeField (auto_now)
+  - deleted_at: DateTimeField (nullable, soft-delete)
+  - metadata: JSONField
+
+  Constraints:
+    * PRIMARY KEY (id, timestamp)
+    * UNIQUE (id, timestamp)
 
   Indexes:
-    * (channel, timestamp) - Primary query pattern
-    * (event_id) - Deduplication
-    * (ingested_at) - Processing order
+    * (channel_id, timestamp DESC) - Primary query pattern
+    * (created_at, timestamp) - Ingestion order verification
 
   Optimizations:
     * Automatic time partitioning (1-day chunks)
-    * Automatic compression after 7 days
+    * Automatic compression after 7 days (segment_by channel_id)
     * Retention: Drop chunks > 30 days
 
 -------------------------------------------------
