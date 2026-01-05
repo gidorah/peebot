@@ -28,7 +28,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # Read .env file
 env_file = os.environ.get("DOTENV_PATH", BASE_DIR / ".env")
-print(f"env file path: {env_file}")
 environ.Env.read_env(env_file)
 
 
