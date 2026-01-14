@@ -45,7 +45,7 @@ async def test_repository_bulk_create_async() -> None:
     created_readings = await repo.abulk_create_readings(readings_data)
 
     assert len(created_readings) == 10
-    
+
     count = await TelemetryReading.objects.acount()
     assert count == 10
 
@@ -53,7 +53,7 @@ async def test_repository_bulk_create_async() -> None:
 @pytest.mark.django_db
 def test_create_reading() -> None:
     channel = baker.make(TelemetryChannel, public_pui="TEST_CREATE")
-    
+
     # Passing data dict
     reading_data: ReadingData = {
         "channel": channel,

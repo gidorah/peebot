@@ -19,14 +19,14 @@ MIDDLEWARE += [
 ]
 
 # Email backend for development (console output)
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # Development database configuration (will be updated to TimescaleDB later)
 # Currently using the default SQLite from base.py
 
 # Django Debug Toolbar configuration (when installed)
 INTERNAL_IPS = [
-    '127.0.0.1',
+    "127.0.0.1",
 ]
 
 # Celery configuration for development
