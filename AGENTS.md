@@ -86,6 +86,7 @@ All agents must adhere to the following folder hierarchy:
 - **Purpose:** AI-generated high-level plans.
 - **Rule:** Before writing code, the system architecture, stack, and high-level requirements must be defined here.
 - **Key File:** `main-tasks.md` acts as the project roadmap.
+- **Decision Log:** `tech-decisions.md` must track every important technical/architectural decision.
 
 ### `/docs/implementation` (The Hands)
 - **Purpose:** Execution of specific features.
@@ -95,7 +96,7 @@ All agents must adhere to the following folder hierarchy:
   2. Create `requirements.md` (What are we building?).
   3. Create `design.md` (How are we building it?).
   4. Create `tasks.md` (Checklist of coding steps).
-  5. Only THEN generate code in the `/src` directory.
+  5. Only THEN generate code.
 
 ## 2. SDD Workflow Phases
 Agents must follow these phases sequentially:
