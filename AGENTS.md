@@ -49,6 +49,8 @@ peebot/
     - **`uv`**: ALWAYS use `uv run`, `uv sync`.
     - **`ruff`**: No linting workarounds. Fix the root cause.
     - **`mypy`**: Strict mode enabled.
+6.  **Code Style**:
+    - MUST follow guidelines in `docs/code_styleguides/python.md`.
 
 ## DEV COMMANDS
 ```bash
@@ -69,3 +71,50 @@ uv run python manage.py run_lightstreamer # Ingestion
 - **Secrets**: `userlist.txt` passwords must match `.env`.
 - **PgBouncer**: Internal port `6432`. Hybrid Auth.
 - **Git**: Use `/commit` command. Never commit `.env`.
+
+---
+# Spec-Driven Development (SDD) Protocol
+
+## 1. Documentation Structure
+All agents must adhere to the following folder hierarchy:
+
+### `/docs/incoming` (Source of Truth)
+- **Purpose:** Contains raw materials (customer chats, PRDs, design mocks).
+- **Rule:** Agents read from here but NEVER modify files here.
+
+### `/docs/system-solution` (The Brain)
+- **Purpose:** AI-generated high-level plans.
+- **Rule:** Before writing code, the system architecture, stack, and high-level requirements must be defined here.
+- **Key File:** `main-tasks.md` acts as the project roadmap.
+
+### `/docs/implementation` (The Hands)
+- **Purpose:** Execution of specific features.
+- **Structure:** One folder per task ID (e.g., `T001 - User Auth`).
+- **Workflow:**
+  1. Create folder `T### - Name`.
+  2. Create `requirements.md` (What are we building?).
+  3. Create `design.md` (How are we building it?).
+  4. Create `tasks.md` (Checklist of coding steps).
+  5. Only THEN generate code in the `/src` directory.
+
+## 2. SDD Workflow Phases
+Agents must follow these phases sequentially:
+
+### Phase 1: System Solution
+- Define high-level requirements and architecture in `/docs/system-solution`.
+- Decompose the project into sequential epics in `main-tasks.md`.
+
+### Phase 2: Spec Generation
+- For each task in `main-tasks.md`, create a dedicated implementation folder.
+- Generate `requirements.md`, `design.md`, and `tasks.md` BEFORE writing code.
+
+### Phase 3: Controlled Execution
+- Implement code ONE task at a time from `tasks.md`.
+- Generate tests to validate the implementation.
+
+### Phase 4: Documentation Review
+- Update project documentation (README, architecture, etc.) after task completion to ensure it reflects the true state of the code.
+
+## 3. The Golden Rule
+**"Doc-First, Code-Later."**
+No code is written until the implementation documentation for that specific task is complete and verified against the `/docs/system-solution` directives.
