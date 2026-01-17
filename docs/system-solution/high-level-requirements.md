@@ -28,31 +28,39 @@ The **PeeBot ISS Telemetry Data Analytics System** is a unified, modular monolit
 
 ### **4. Functional Requirements (FR)**
 
+*   **Feature: Core Infrastructure (Module: `core`)**
+    *   **FR-CORE-001:** The system shall provide abstract base models for consistent UUIDv7 and timestamp tracking across all entities.
+    *   **FR-CORE-002:** The system shall define centralized DRF serializers for mapping Lightstreamer field names to internal database formats.
+    *   **FR-CORE-003:** The system shall handle timestamp normalization and timezone conversions for all incoming telemetry.
+
 *   **Feature: Telemetry Ingestion (Module: `telemetry_ingestion`)**
     *   **FR-ING-001:** The system shall maintain a persistent asynchronous connection to the ISS Lightstreamer feed.
     *   **FR-ING-002:** The system shall automatically reconnect to the feed with exponential backoff upon connection loss.
     *   **FR-ING-003:** The system shall validate all incoming data packets against defined schemas (using DRF serializers) before processing.
     *   **FR-ING-004:** The system shall enrich raw data with a unique UUIDv7 event ID and a server-side ingestion timestamp (`ingested_at`).
     *   **FR-ING-005:** The system shall persist valid readings to the database immediately, using batch inserts for performance.
+    *   **FR-ING-006:** The system shall provide a restricted REST API endpoint for manual injection of telemetry data for testing purposes.
 
 *   **Feature: Data Storage (Module: `telemetry_storage`)**
     *   **FR-STO-001:** The system shall store all telemetry readings in a TimescaleDB hypertable partitioned by time (1-day chunks).
     *   **FR-STO-002:** The system shall automatically compress data chunks older than 7 days.
     *   **FR-STO-003:** The system shall automatically delete data chunks older than 30 days (Retention Policy).
     *   **FR-STO-004:** The system shall ensure data uniqueness based on the composite key of `id` and `timestamp`.
+    *   **FR-STO-005:** The system shall maintain metadata for ~400 telemetry channels, including Public PUI, nomenclature (Ops/Eng), and units.
 
 *   **Feature: Event Processing - PeeBot (Module: `event_processors`)**
     *   **FR-PROC-001:** The system shall execute analytics modules independently via a polling mechanism (Celery Beat) rather than event streams.
     *   **FR-PROC-002:** The PeeBot processor shall query the `TelemetryReading` table every 30 seconds for new data on channel `NODE3000004` (UPA Tank Level).
     *   **FR-PROC-003:** The processor shall detect a "Fill Event" by analyzing the sliding window of the last 10 minutes for a consistent increasing trend.
-    *   **FR-PROC-004:** Upon detection, the system shall generate humorous text using an integration with an external LLM API (provider TBD).
-    *   **FR-PROC-005:** The system shall post the generated text to Twitter via the Twitter API, subject to a configured cooldown period (e.g., 30 mins) to prevent spam.
+    *   **FR-PROC-004:** Upon detection, the system shall generate "dry, scientific, slightly absurd" humorous text using an integration with an external LLM API.
+    *   **FR-PROC-005:** The system shall post the generated text to Twitter via the Twitter API, subject to a minimum 30-minute cooldown period between tweets.
 
 *   **Feature: Real-Time Dashboard (Module: `dashboards`)**
     *   **FR-DASH-001:** The system shall provide a web interface displaying live status of key telemetry channels.
-    *   **FR-DASH-002:** The system shall allow for dynamic selection of "high-priority" channels which will receive real-time updates via WebSockets.
-    *   **FR-DASH-003:** The dashboard shall use HTMX polling (2-3s interval) for all non-priority channel updates to minimize WebSocket load.
-    *   **FR-DASH-004:** The system shall provide interactive time-series charts for historical data visualization.
+    *   **FR-DASH-002:** The dashboard shall include a searchable browser for all telemetry channels (~400).
+    *   **FR-DASH-003:** The system shall allow for dynamic selection of "high-priority" channels which will receive real-time updates via WebSockets.
+    *   **FR-DASH-004:** The dashboard shall use HTMX polling (2-3s interval) for all non-priority channel updates to minimize WebSocket load.
+    *   **FR-DASH-005:** The system shall provide interactive time-series charts for historical data visualization (using Chart.js or similar).
 
 ### **5. Non-Functional Requirements (NFR)**
 
