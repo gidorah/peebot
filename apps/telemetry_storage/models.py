@@ -16,7 +16,7 @@ class TelemetryChannel(TimeStampedModel, SoftDeleteModel):
         return f"{self.public_pui} ({self.ops_nom})"
 
 
-class TelemetryReading(UUID7Model, TimeStampedModel, SoftDeleteModel):
+class TelemetryReading(UUID7Model, TimeStampedModel):
     channel = models.ForeignKey(
         TelemetryChannel, on_delete=models.CASCADE, related_name="readings"
     )

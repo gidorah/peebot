@@ -14,3 +14,8 @@
 *   **Decision**: TimescaleDB (PostgreSQL Extension).
 *   **Status**: Accepted.
 *   **Rationale**: Telemetry data is inherently time-series. Hypertables provide O(1) partitioning performance and native compression (90% storage reduction), critical for the "Single Source of Truth" requirement.
+
+## ADR-004: High-Performance Ingestion Validation
+*   **Decision**: Pydantic and Direct Dict Manipulation (Bypassing DRF).
+*   **Status**: Accepted.
+*   **Rationale**: To handle 10k msg/sec bursts, the CPU overhead of instantiating Django REST Framework serializers is too high. We use Pydantic for the "hot path" ingestion pipeline to ensure the Consumer Loop does not become a bottleneck, reserving DRF for standard REST APIs.

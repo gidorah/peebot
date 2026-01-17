@@ -1,6 +1,6 @@
 # PeeBot Architecture Specification
 
-**Last Updated**: 2026-01-17
+**Last Updated**: 2026-01-18
 
 ---
 
@@ -49,6 +49,7 @@ All versions are **MANDATORY**. Do not upgrade without RFC.
 | **AI Client** | openai (Python SDK) | `1.x` | Generic client compatible with OpenRouter. |
 | **AI Provider**| DeepSeek V3 | `Latest` | Via OpenRouter. |
 | **Social** | tweepy | `4.14+` | Twitter API v2 wrapper. |
+| **Validation** | Pydantic | `2.x` | High-performance data validation for ingestion. |
 | **Pkg Manager** | uv | `Latest` | Fast resolution and locking. |
 
 ---
@@ -203,11 +204,12 @@ Used primarily for the `dashboards` module to retrieve historical or current sta
 **Key Components**:
 1.  **Base Models**: 
     - `TimeStampedModel`: Provides `created_at` and `updated_at`.
-    - `UUIDModel`: Provides `id = UUIDField` (defaulting to UUIDv7).
+    - `UUID7Model`: Provides `id = UUIDField` (defaulting to UUIDv7).
     - `SoftDeleteModel`: Provides `deleted_at` and custom manager.
 2.  **Telemetry Serializers**:
-    - Centralized DRF serializers that map raw Lightstreamer keys (e.g., `TimeStamp`) to internal snake_case fields.
-    - Handles type coercion (Strings to Decimals).
+    -   **API**: DRF serializers for REST endpoints (e.g., Dashboards).
+    -   **Ingestion**: Pydantic models for high-performance stream validation (10k/sec).
+    -   Handles type coercion (Strings to Decimals).
 3.  **Utilities**:
     - Timestamp normalization (UTC conversion).
     - Event ID generation (UUIDv7 based on data timestamp).
@@ -245,7 +247,8 @@ The single source of truth for all ISS telemetry data, optimized as a TimescaleD
 | `status_indicator`| String | Metadata describing the indicator state. |
 | `status_color` | String | Visual status color from the feed. |
 | `metadata` | JSON | Extensible field for additional telemetry metadata. |
-| `created_at` | DateTime | System-level insertion timestamp. |
+| `created_at` | DateTime | System-level insertion timestamp (from `TimeStampedModel`). |
+| `updated_at` | DateTime | System-level update timestamp (from `TimeStampedModel`). |
 
 **Indexes & Constraints**:
 - **Unique Constraint**: Composite key of `(id, timestamp)` for hypertable partitioning integrity.
@@ -267,22 +270,16 @@ The single source of truth for all ISS telemetry data, optimized as a TimescaleD
           | (Subscription)
           v
 [LightstreamerClient] (Threaded SDK)
-          | (Callback)
+          | (Callback: loop.call_soon_threadsafe)
           v
-[UpdateListener] (Mapping raw keys to snake_case)
-          | (Enqueue)
+[asyncio.Queue] (Raw Dicts)
+          | (Consume Loop)
           v
-[asyncio.Queue]
-          | (Consume)
-          v
-[Validation Service] (DRF Serializers)
-          | (Valid)
-          v
-[Enrichment Service] (UUIDv7, ingested_at)
-          | (Buffer)
+[Validation Service] (Pydantic / Direct)
+          | (Valid TelemetryReading objects)
           v
 [Ingestion Buffer] (Memory List)
-          | (Flush every 500ms or 2000 items)
+          | (Flush Trigger: >2000 items OR >500ms)
           v
 [Repository Layer] (abulk_create)
           |
@@ -290,15 +287,16 @@ The single source of truth for all ISS telemetry data, optimized as a TimescaleD
 [TimescaleDB] (TelemetryReading Table)
 ```
 
-**Pattern**: Sync-to-Async Bridge.
-The Lightstreamer SDK is blocking/threaded. We must run it in a management command and bridge to Django's async ORM.
+**Pattern**: Sync-to-Async Bridge with Smart Buffering ("Bucket Brigade").
+The Lightstreamer SDK is blocking/threaded. We must run it in a management command and bridge to Django's async ORM via a thread-safe Queue.
 
 **Implementation**:
 1.  **Command**: `python manage.py run_lightstreamer`
     *   *Resilience*: Exponential backoff (1s to 60s) for connection drops.
-2.  **Client**: `LightstreamerClient` (Official SDK).
-3.  **Adapter**: `UpdateListener` callback enqueues items to `asyncio.Queue`.
-4.  **Write Strategy**: Buffer readings in memory (list) and flush to DB every 500ms or 2,000 items using `TelemetryReading.objects.abulk_create()`.
+    *   *Shutdown*: Must catch SIGINT/SIGTERM to flush remaining buffer items before exit.
+2.  **Producer**: `LightstreamerClient` pushes raw dicts to `asyncio.Queue` (non-blocking).
+3.  **Consumer**: Async worker loop pulls from Queue, validates using Pydantic (bypassing DRF for speed), and appends to `IngestionBuffer`.
+4.  **Write Strategy**: `IngestionBuffer` flushes to DB using `TelemetryReading.objects.abulk_create()`.
     *   *Latency Goal*: P99 persistence < 5s.
 
 ### 8.4 Event Processors (`apps/event_processors`)
@@ -455,8 +453,9 @@ All long-running components are managed as independent systemd services with `Re
 
 ### 10.1 Handling High Throughput (10k msg/sec)
 1.  **Batch Inserts**: The `telemetry_ingestion` module must use `abulk_create` to flush readings in batches (e.g., every 500ms or 2,000 items). This minimizes database round-trips and transaction overhead.
-2.  **Async I/O**: Leveraging Django's ASGI and `asyncio` for the ingestion pipeline ensures that blocking network I/O from the Lightstreamer feed does not starve the application of resources.
-3.  **Connection Pooling**: Using PgBouncer in session mode is mandatory to handle the high volume of short-lived queries from multiple workers without exhausting PostgreSQL's connection limit.
+2.  **Fast Validation**: Use Pydantic or direct dict manipulation instead of DRF serializers in the hot path to minimize CPU overhead per message.
+3.  **Async I/O**: Leveraging Django's ASGI and `asyncio` for the ingestion pipeline ensures that blocking network I/O from the Lightstreamer feed does not starve the application of resources.
+4.  **Connection Pooling**: Using PgBouncer in session mode is mandatory to handle the high volume of short-lived queries from multiple workers without exhausting PostgreSQL's connection limit.
 
 ### 10.2 Caching Strategy
 - **Dashboard Cache**: Recent readings for the dashboard overview should be cached in Redis with a short TTL (e.g., 2-5s) to prevent redundant heavy queries on the `TelemetryReading` table.
