@@ -295,6 +295,8 @@ The Lightstreamer SDK is blocking/threaded. We must run it in a management comma
     *   *Resilience*: Exponential backoff (1s to 60s) for connection drops.
     *   *Shutdown*: Must catch SIGINT/SIGTERM to flush remaining buffer items before exit.
 2.  **Producer**: `LightstreamerClient` pushes raw dicts to `asyncio.Queue` (non-blocking).
+    *   **Backpressure**: Queue MUST be bounded (e.g., `maxsize=50000`, approx 5s burst capacity).
+    *   **Overflow Strategy**: Drop **oldest** items when full to preserve latest telemetry and prevent OOM.
 3.  **Consumer**: Async worker loop pulls from Queue, validates using Pydantic (bypassing DRF for speed), and appends to `IngestionBuffer`.
 4.  **Write Strategy**: `IngestionBuffer` flushes to DB using `TelemetryReading.objects.abulk_create()`.
     *   *Latency Goal*: P99 persistence < 5s.
@@ -341,18 +343,21 @@ Maintains the state for each analytics processor to support resumption and histo
 | `state_data` | JSON | Processor-specific state (e.g., sliding window buffers). |
 | `updated_at` | DateTime | Last time the state was updated (from `TimeStampedModel`). |
 
-**Architecture**: Polling Pattern.
+**Architecture**: Polling Pattern with Jitter.
 
 ```
-[Celery Beat] --(30s)--> [PeeBot Task] --(Query)--> [TimescaleDB]
-                               |
-                          (Detection)
-                               |
-                               v
-                          [DetectedEvent]
-                               +
-                        [Twitter Client] <--(Check Cooldown)-- [ProcessorState]
+[Celery Beat] --(30s)--> [PeeBot Task] --(Random Jitter 0-5s)--> [Query TimescaleDB]
+                                |
+                           (Detection)
+                                |
+                                v
+                           [DetectedEvent]
+                                +
+                         [Twitter Client] <--(Check Cooldown)-- [ProcessorState]
 ```
+
+**Implementation Note**:
+-   **Jitter**: All processor tasks MUST implement a random sleep (0-5s) at startup. This prevents "Thundering Herd" CPU spikes on the database when multiple processors share the same schedule alignment.
 
 **PeeBot Specifics**:
 -   **Schedule**: Every 30 seconds.
