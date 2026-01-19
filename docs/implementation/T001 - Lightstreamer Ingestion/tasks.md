@@ -17,9 +17,9 @@
 - [x] **Batch Write**: Implement `flush_buffer` using `TelemetryReading.objects.abulk_create`.
 
 ## Phase 4: Resilience & Lifecycle
-- [ ] **Connection Loop**: Wrap client connection in a `while` loop with exponential backoff.
-- [ ] **Signal Handling**: Add `SIGINT/SIGTERM` handlers to trigger graceful shutdown.
-- [ ] **Shutdown Drain**: Ensure queue is drained and final buffer is flushed on exit.
+- [x] **Connection Loop**: Wrap client connection in a `while` loop with exponential backoff.
+- [x] **Signal Handling**: Add `SIGINT/SIGTERM` handlers to trigger graceful shutdown.
+- [x] **Shutdown Drain**: Ensure queue is drained and final buffer is flushed on exit.
 
 ## Phase 5: Verification
 - [ ] **Manual Test**: Run command and verify data appears in `TelemetryReading` table via Django Admin or `psql`.

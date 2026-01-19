@@ -1,13 +1,17 @@
 import asyncio
+import logging
 from collections.abc import Callable, Coroutine
 from typing import Any, cast
 
 from lightstreamer.client import (
+    ClientListener,
     ItemUpdate,
     LightstreamerClient,
     Subscription,
     SubscriptionListener,
 )
+
+logger = logging.getLogger(__name__)
 
 # Type alias for the telemetry callback
 TelemetryCallback = Callable[[dict[str, dict[str, Any]]], Coroutine[Any, Any, None]]
@@ -33,10 +37,25 @@ class SubListener(SubscriptionListener):  # type: ignore[misc]
         asyncio.run_coroutine_threadsafe(self.callback(received_data), self.loop)
 
 
+class StatusListener(ClientListener):  # type: ignore[misc]
+    def onListenStart(self) -> None:
+        logger.info("Lightstreamer: Listen start")
+
+    def onListenEnd(self) -> None:
+        logger.info("Lightstreamer: Listen end")
+
+    def onServerError(self, code: int, message: str) -> None:
+        logger.error(f"Lightstreamer Server Error: {code} - {message}")
+
+    def onStatusChange(self, status: str) -> None:
+        logger.info(f"Lightstreamer Status Change: {status}")
+
+
 class LightstreamerClientService:
     def __init__(self, item_names: list[str], callback: TelemetryCallback) -> None:
         self.item_names = item_names
         self.callback = callback
+        self.client: LightstreamerClient | None = None
 
     async def connect(self) -> None:
         loop = asyncio.get_running_loop()
@@ -55,9 +74,16 @@ class LightstreamerClientService:
         sub.setRequestedSnapshot("yes")
         sub.addListener(SubListener(callback=self.callback, loop=loop))
 
-        client = LightstreamerClient("http://push.lightstreamer.com", "ISSLIVE")
-        client.connectionOptions.setSlowingEnabled(False)
-        client.subscribe(sub)
-        client.connect()
+        self.client = LightstreamerClient("http://push.lightstreamer.com", "ISSLIVE")
+        self.client.connectionOptions.setSlowingEnabled(False)
+        self.client.addListener(StatusListener())
+        self.client.subscribe(sub)
+        self.client.connect()
 
-        print("Lightstreamer connected.")
+        logger.info("Lightstreamer connection initiated.")
+
+    async def disconnect(self) -> None:
+        if self.client:
+            logger.info("Disconnecting Lightstreamer client...")
+            self.client.disconnect()
+            self.client = None

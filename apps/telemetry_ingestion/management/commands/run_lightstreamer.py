@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import signal
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
@@ -21,10 +22,15 @@ class Command(BaseCommand):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.channel_map: dict[str, Any] = {}
-        self.queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue(maxsize=50000)
+        # Queue initialized in run_async to ensure loop attachment
+        self.queue: asyncio.Queue[dict[str, Any]]
 
     def handle(self, *args: Any, **options: Any) -> None:
-        asyncio.run(self.run_async())
+        try:
+            asyncio.run(self.run_async())
+        except KeyboardInterrupt:
+            # Handle SIGINT if it bubbles up before async handlers catch it
+            pass
 
     def load_channel_map(self) -> None:
         """Pre-load all TelemetryChannels into an in-memory map for fast resolution."""
@@ -34,6 +40,9 @@ class Command(BaseCommand):
         logger.info(f"Loaded {len(self.channel_map)} channels into memory map.")
 
     async def run_async(self) -> None:
+        # Step 0: Initialize Queue in the running loop
+        self.queue = asyncio.Queue(maxsize=50000)
+
         # Step 1: Load channel map (ADR-005)
         self.load_channel_map()
 
@@ -61,22 +70,81 @@ class Command(BaseCommand):
             item_names=item_names, callback=on_data_received
         )
 
-        # Step 3: Start Tasks
-        worker_task = asyncio.create_task(self.ingestion_worker())
+        # Step 3: Setup Shutdown Signal Handling
+        shutdown_event = asyncio.Event()
+        loop = asyncio.get_running_loop()
 
-        try:
-            await client.connect()
-            # Keep running until cancelled
-            await asyncio.Event().wait()
-        except asyncio.CancelledError:
-            logger.info("Command cancelled, shutting down...")
-        finally:
-            worker_task.cancel()
+        def _signal_handler() -> None:
+            logger.info("Signal received, initiating shutdown...")
+            shutdown_event.set()
+
+        for sig in (signal.SIGINT, signal.SIGTERM):
             try:
-                await worker_task
-            except asyncio.CancelledError:
-                pass
-            logger.info("Ingestion process stopped.")
+                loop.add_signal_handler(sig, _signal_handler)
+            except NotImplementedError:
+                # Fallback for loops that don't support signal handlers (e.g. some tests)
+                logger.warning(f"Signal handlers not implemented for loop {type(loop)}")
+
+        # Step 4: Start Worker and Connection Loop
+        worker_task = asyncio.create_task(self.ingestion_worker())
+        attempt = 0
+
+        logger.info("Starting ingestion loop...")
+
+        while not shutdown_event.is_set():
+            try:
+                logger.info(f"Connecting to Lightstreamer (Attempt {attempt + 1})...")
+                await client.connect()
+
+                # Reset attempt counter on successful initiation
+                attempt = 0
+
+                # Wait until shutdown is signaled
+                # Note: If the client library loses connection, it usually retries internally.
+                # If it raises an exception during connect, we catch it below.
+                await shutdown_event.wait()
+
+            except Exception as e:
+                if isinstance(e, asyncio.CancelledError):
+                    break
+
+                logger.error(f"Connection failed or lost: {e}")
+                attempt += 1
+                # Exponential backoff: 1s, 2s, 4s... max 60s
+                delay = min(60, 2 ** (attempt - 1)) if attempt > 0 else 1
+                logger.info(f"Retrying in {delay} seconds...")
+
+                try:
+                    await asyncio.wait_for(shutdown_event.wait(), timeout=delay)
+                except TimeoutError:
+                    continue  # Retry connection
+                except asyncio.CancelledError:
+                    break  # Exit loop
+
+        # Step 5: Graceful Shutdown
+        logger.info("Shutting down resources...")
+        await client.disconnect()
+
+        # Drain Queue: Wait for worker to process remaining items
+        logger.info("Draining ingestion queue...")
+        try:
+            # We assume the producer (client) is stopped, so no new items.
+            # wait_for join() ensures we process what's left.
+            if not self.queue.empty():
+                await asyncio.wait_for(self.queue.join(), timeout=10.0)
+        except TimeoutError:
+            logger.warning("Queue drain timed out! Some items may be lost.")
+        except Exception as e:
+            logger.error(f"Error draining queue: {e}")
+
+        # Cancel worker
+        worker_task.cancel()
+        try:
+            await worker_task
+        except asyncio.CancelledError:
+            pass
+
+        logger.info("Ingestion process stopped.")
 
     async def ingestion_worker(self) -> None:
         """

@@ -45,6 +45,10 @@ ignore_errors = false
 module = "django.contrib.postgres.*"
 ignore_errors = false
 
+[[tool.mypy.overrides]]
+module = "apps.telemetry_ingestion.management.commands.run_lightstreamer"
+disable_error_code = ["attr-defined"]
+
 [tool.django-stubs]
 django_settings_module = "config.settings"
 
