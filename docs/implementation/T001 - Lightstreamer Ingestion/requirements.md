@@ -25,8 +25,11 @@ Implement a robust, high-performance telemetry ingestion pipeline that connects 
 3.  **Efficiency**: Minimize database round-trips via batching. Avoid redundant read queries via in-memory channel mapping (ADR-005).
 4.  **Type Safety**: Ensure `timestamp` is converted to UTC `datetime` and `value` is converted to `Decimal`.
 
-## 4. Constraints
-1.  Must use `lightstreamer-client-lib` version 2.2.2.
-2.  Must not use DRF serializers for ingestion validation (per ADR-004).
-3.  Must follow the "Sync-to-Async Bridge" architecture using `asyncio.Queue`.
-4.  Must respect module boundaries (Ingestion module imports models from Storage module).
+## 5. Field Probe Findings (Verified 2026-01-19)
+1.  **Wire Names**: The following fields are verified to be present on the `ISSLIVE` adapter:
+    *   `TimeStamp`: Internal relative timestamp (float string).
+    *   `Value`: Raw telemetry value.
+    *   `Status.Class`: Quality class (confirmed dot notation).
+    *   `Status.Indicator`: Quality indicator (confirmed dot notation).
+    *   `Status.Color`: Hex color string (confirmed dot notation).
+    *   `CalibratedData`: Human-readable formatted value (e.g., "18/00:10:09" for time PUIs).
