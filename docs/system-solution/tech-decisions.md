@@ -19,3 +19,11 @@
 *   **Decision**: Pydantic and Direct Dict Manipulation (Bypassing DRF).
 *   **Status**: Accepted.
 *   **Rationale**: To handle 10k msg/sec bursts, the CPU overhead of instantiating Django REST Framework serializers is too high. We use Pydantic for the "hot path" ingestion pipeline to ensure the Consumer Loop does not become a bottleneck, reserving DRF for standard REST APIs.
+
+## ADR-005: Channel Resolution Strategy
+*   **Decision**: In-Process Memory Map (Dictionary).
+*   **Status**: Accepted.
+*   **Rationale**: To meet the ingestion throughput target, we require nanosecond-level resolution of PUI strings (e.g., "NODE3000004") to Database UUIDs. 
+    *   **Implementation**: A Python dictionary is pre-loaded from the DB at startup. 
+    *   **Trade-off**: Adding new channels requires a process restart (or a periodic refresh implementation). This "stale data" risk is acceptable because Channel definitions are static configuration data that change extremely rarely.
+    *   **Alternative Rejected**: Redis cache was rejected for the hot path due to network I/O latency (~0.5ms per message) which would degrade performance during high-frequency bursts.

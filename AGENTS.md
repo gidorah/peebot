@@ -42,7 +42,6 @@ peebot/
     - Ingestion MUST use Async ORM / Bulk creates.
 3.  **Ingestion Pattern**:
     - **Bridge**: `LightstreamerClient` (Sync) → `asyncio.Queue` → Consumer Task → `abulk_create`.
-    - **Deduplication**: MUST enforce unique constraint on `(channel_id, timestamp)`.
 4.  **Analytics Pattern**:
     - **Polling**: Celery Beat triggers tasks. No signals.
     - **Sliding Window**: Query `TelemetryReading` for last N minutes.
