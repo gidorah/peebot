@@ -1,52 +1,59 @@
 import asyncio
-from typing import Any
+from collections.abc import Callable, Coroutine
+from typing import Any, cast
 
-from lightstreamer.client import LightstreamerClient, Subscription, SubscriptionListener
-from lightstreamer.client.ls_python_client_haxe import (
-    com_lightstreamer_client_internal_update_ItemUpdateBase as ItemUpdate,
+from lightstreamer.client import (
+    ItemUpdate,
+    LightstreamerClient,
+    Subscription,
+    SubscriptionListener,
 )
 
-from apps.telemetry_ingestion.services.identifiers import IDENTIFIERS
+# Type alias for the telemetry callback
+TelemetryCallback = Callable[[dict[str, dict[str, Any]]], Coroutine[Any, Any, None]]
 
 
 class SubListener(SubscriptionListener):  # type: ignore[misc]
     def __init__(
         self,
-        callback: Any,
+        callback: TelemetryCallback,
         loop: asyncio.AbstractEventLoop,
-        subscribed_items: list[str],
     ) -> None:
         self.callback = callback
         self.loop = loop
-        self.subscribed_items = subscribed_items
 
     def onItemUpdate(self, update: ItemUpdate) -> None:
-        item_name = update.getItemName()
-        if item_name not in self.subscribed_items:
+        item_name = cast(str, update.getItemName())
+        value = cast(dict[str, str], update.getChangedFields())
+
+        if item_name is None or value is None:
             return
 
-        value = update.getChangedFields()
-        received_data = {item_name: value}
+        received_data: dict[str, dict[str, Any]] = {item_name: value}
         asyncio.run_coroutine_threadsafe(self.callback(received_data), self.loop)
 
 
-SUBS = IDENTIFIERS
-
-
 class LightstreamerClientService:
-    def __init__(self, callback: Any) -> None:
+    def __init__(self, item_names: list[str], callback: TelemetryCallback) -> None:
+        self.item_names = item_names
         self.callback = callback
 
     async def connect(self) -> None:
         loop = asyncio.get_running_loop()
         sub = Subscription(
-            mode="MERGE", items=IDENTIFIERS, fields=["TimeStamp", "Value"]
+            mode="MERGE",
+            items=self.item_names,
+            fields=[
+                "TimeStamp",
+                "Value",
+                "Status.Class",
+                "Status.Indicator",
+                "Status.Color",
+            ],
         )
         # sub.setDataAdapter("QUOTE_ADAPTER")
         sub.setRequestedSnapshot("yes")
-        sub.addListener(
-            SubListener(callback=self.callback, loop=loop, subscribed_items=SUBS)
-        )
+        sub.addListener(SubListener(callback=self.callback, loop=loop))
 
         client = LightstreamerClient("http://push.lightstreamer.com", "ISSLIVE")
         client.connectionOptions.setSlowingEnabled(False)

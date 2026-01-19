@@ -2,9 +2,9 @@
 
 ## Phase 1: Service Implementation (`lightstreamer_client.py`)
 - [x] **Field Probe**: (Priority) Create a temporary script/test to connect and print *all* available fields from an update to confirm wire names (e.g., `Status.Class` vs `StatusClass`).
-- [ ] **Refactor Client Service**: Rewrite `LightstreamerClientService` to accept `item_names` and `callback` in `__init__`.
-- [ ] **Implement SubListener**: Update `SubListener` to extract `TimeStamp`, `Value`, and `Status.*` fields and bridge them to the asyncio loop properly.
-- [ ] **Clean Imports**: Remove internal/haxe imports and use public API or safe reflection if necessary.
+- [x] **Refactor Client Service**: Rewrite `LightstreamerClientService` to accept `item_names` and `callback` in `__init__`.
+- [x] **Implement SubListener**: Update `SubListener` to extract `TimeStamp`, `Value`, and `Status.*` fields and bridge them to the asyncio loop properly.
+- [x] **Clean Imports**: Remove internal/haxe imports and use public API or safe reflection if necessary.
 
 ## Phase 2: Management Command Core (`run_lightstreamer.py`)
 - [ ] **Channel Map Loading**: Implement `load_channel_map` to fetch `TelemetryChannel`s into a `dict[pui, uuid]`.
