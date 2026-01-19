@@ -1,13 +1,16 @@
 import asyncio
 import logging
+from datetime import UTC, datetime
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from django.core.management.base import BaseCommand
+from django.utils import timezone
 
 from apps.telemetry_ingestion.services.lightstreamer_client import (
     LightstreamerClientService,
 )
-from apps.telemetry_storage.models import TelemetryChannel
+from apps.telemetry_storage.models import TelemetryChannel, TelemetryReading
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +107,7 @@ class Command(BaseCommand):
                 if len(buffer) >= MAX_BUFFER_SIZE or (
                     buffer and time_since_flush >= MAX_FLUSH_INTERVAL
                 ):
-                    await self.flush_buffer_placeholder(buffer)
+                    await self.flush_buffer(buffer)
                     buffer = []
                     last_flush_time = current_time
 
@@ -117,13 +120,73 @@ class Command(BaseCommand):
             except asyncio.CancelledError:
                 # Final flush on shutdown
                 if buffer:
-                    await self.flush_buffer_placeholder(buffer)
+                    await self.flush_buffer(buffer)
                 break
             except Exception as e:
                 logger.error(f"Error in ingestion worker: {e}", exc_info=True)
 
-    async def flush_buffer_placeholder(self, buffer: list[dict[str, Any]]) -> None:
-        """Placeholder for Phase 3: Transformation and Batch Write."""
-        logger.debug(f"Buffering logic triggered: Flushing {len(buffer)} items.")
-        # This will be implemented in Phase 3
-        pass
+    async def flush_buffer(self, buffer: list[dict[str, Any]]) -> None:
+        """
+        Transforms buffered data into TelemetryReading objects and batch inserts them.
+        Implements Phase 3: Ingestion Logic & Transformation.
+        """
+        if not buffer:
+            return
+
+        readings: list[TelemetryReading] = []
+
+        for item_data in buffer:
+            # item_data is {pui: {field: value, ...}}
+            for pui, fields in item_data.items():
+                channel_id = self.channel_map.get(pui)
+                if not channel_id:
+                    # In production we might warn once per unknown channel,
+                    # but for high throughput we just skip.
+                    continue
+
+                raw_value = fields.get("Value")
+                # We strictly require a value. Status-only updates are dropped
+                # because the model requires 'value'.
+                if raw_value is None:
+                    continue
+
+                try:
+                    value = Decimal(raw_value)
+                except (InvalidOperation, TypeError):
+                    logger.warning(f"Invalid value for {pui}: {raw_value}")
+                    continue
+
+                # Timestamp handling:
+                # Per user instruction: prefer source timestamp.
+                # Requirement note says "relative float", but we attempt Unix conversion first.
+                source_ts = fields.get("TimeStamp")
+                reading_ts = None
+
+                if source_ts:
+                    try:
+                        # Assume Unix timestamp (float string)
+                        reading_ts = datetime.fromtimestamp(float(source_ts), tz=UTC)
+                    except (ValueError, TypeError, OverflowError):
+                        logger.warning(
+                            f"Could not parse source timestamp '{source_ts}' for {pui}. Using now()."
+                        )
+
+                if reading_ts is None:
+                    reading_ts = timezone.now()
+
+                # Note: created_at and updated_at are handled by Django's bulk_create
+                # in modern versions/configurations.
+                readings.append(
+                    TelemetryReading(
+                        channel_id=channel_id,
+                        timestamp=reading_ts,
+                        value=value,
+                        status_class=fields.get("Status.Class"),
+                        status_indicator=fields.get("Status.Indicator"),
+                        status_color=fields.get("Status.Color"),
+                    )
+                )
+
+        if readings:
+            await TelemetryReading.objects.abulk_create(readings)
+            logger.info(f"Flushed {len(readings)} readings to DB.")

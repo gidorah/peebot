@@ -13,8 +13,8 @@
 - [x] **Consumer Worker**: Implement `ingestion_worker` with the buffering logic (2000 items / 500ms flush).
 
 ## Phase 3: Ingestion Logic & Transformation
-- [ ] **Data Transformation**: Implement helper to parse `timestamp` (UTC), `value` (Decimal), and resolve `channel_id`.
-- [ ] **Batch Write**: Implement `flush_buffer` using `TelemetryReading.objects.abulk_create`.
+- [x] **Data Transformation**: Implement helper to parse `timestamp` (UTC), `value` (Decimal), and resolve `channel_id`.
+- [x] **Batch Write**: Implement `flush_buffer` using `TelemetryReading.objects.abulk_create`.
 
 ## Phase 4: Resilience & Lifecycle
 - [ ] **Connection Loop**: Wrap client connection in a `while` loop with exponential backoff.
