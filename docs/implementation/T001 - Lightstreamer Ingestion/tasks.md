@@ -7,10 +7,10 @@
 - [x] **Clean Imports**: Remove internal/haxe imports and use public API or safe reflection if necessary.
 
 ## Phase 2: Management Command Core (`run_lightstreamer.py`)
-- [ ] **Channel Map Loading**: Implement `load_channel_map` to fetch `TelemetryChannel`s into a `dict[pui, uuid]`.
-- [ ] **Queue Setup**: Initialize `asyncio.Queue` (size 50k) in the command.
-- [ ] **Producer Callback**: Create the `on_item_update` callback to push to the queue with backpressure handling (drop oldest/warn).
-- [ ] **Consumer Worker**: Implement `ingestion_worker` with the buffering logic (2000 items / 500ms flush).
+- [x] **Channel Map Loading**: Implement `load_channel_map` to fetch `TelemetryChannel`s into a `dict[pui, uuid]`.
+- [x] **Queue Setup**: Initialize `asyncio.Queue` (size 50k) in the command.
+- [x] **Producer Callback**: Create the `on_item_update` callback to push to the queue with backpressure handling (drop oldest/warn).
+- [x] **Consumer Worker**: Implement `ingestion_worker` with the buffering logic (2000 items / 500ms flush).
 
 ## Phase 3: Ingestion Logic & Transformation
 - [ ] **Data Transformation**: Implement helper to parse `timestamp` (UTC), `value` (Decimal), and resolve `channel_id`.
