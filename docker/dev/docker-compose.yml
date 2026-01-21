@@ -1,10 +1,3 @@
-# ==============================================================================
-# PeeBot - Development Environment
-# Django Modular Monolith with TimescaleDB
-# ==============================================================================
-# Usage: docker compose -f docker/dev/docker-compose.yml up -d
-# ==============================================================================
-
 services:
   # ----------------------------------------------------------------------------
   # PgBouncer - Connection Pooler (Session Mode)
@@ -99,6 +92,23 @@ services:
       - peebot_network
 
   # ----------------------------------------------------------------------------
+  # Seq - Centralized Logging
+  # ----------------------------------------------------------------------------
+  seq:
+    image: datalust/seq:latest
+    container_name: peebot_seq_dev
+    restart: unless-stopped
+    environment:
+      - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_ADMINPASSWORD=password
+    ports:
+      - "5341:80"
+    volumes:
+      - seq_data:/data
+    networks:
+      - peebot_network
+
+  # ----------------------------------------------------------------------------
   # Django Web - Development Server (uv-managed environment)
   # ----------------------------------------------------------------------------
   web:
@@ -121,6 +131,8 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       REDIS_URL: redis://redis:6379/0
+      SEQ_SERVER_URL: http://seq:80
+      SERVICE_NAME: peebot-web
 
     volumes:
       - ../..:/workspace
@@ -133,6 +145,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      seq:
+        condition: service_started
 
     networks:
       - peebot_network
@@ -160,6 +174,8 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       REDIS_URL: redis://redis:6379/0
+      SEQ_SERVER_URL: http://seq:80
+      SERVICE_NAME: peebot-worker
 
     volumes:
       - ../..:/workspace
@@ -171,6 +187,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      seq:
+        condition: service_started
 
     networks:
       - peebot_network
@@ -198,6 +216,8 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       REDIS_URL: redis://redis:6379/0
+      SEQ_SERVER_URL: http://seq:80
+      SERVICE_NAME: peebot-beat
 
     volumes:
       - ../..:/workspace
@@ -209,6 +229,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      seq:
+        condition: service_started
 
     networks:
       - peebot_network
@@ -238,6 +260,8 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       REDIS_URL: redis://redis:6379/0
+      SEQ_SERVER_URL: http://seq:80
+      SERVICE_NAME: peebot-flower
 
     volumes:
       - ../..:/workspace
@@ -250,6 +274,8 @@ services:
         condition: service_healthy
       worker:
         condition: service_started
+      seq:
+        condition: service_started
 
     networks:
       - peebot_network
@@ -260,6 +286,9 @@ services:
 volumes:
   postgres_data:
     name: peebot_postgres_data_dev
+    driver: local
+  seq_data:
+    name: peebot_seq_data_dev
     driver: local
 
 # ==============================================================================

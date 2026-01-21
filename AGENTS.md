@@ -7,7 +7,7 @@
 ## OVERVIEW
 PeeBot is a modular monolith for ISS telemetry analytics. It ingests real-time data from Lightstreamer, stores it in TimescaleDB (`TelemetryReading`), and uses polling-based analytics to detect events (e.g., UPA activity) and trigger actions (tweets).
 
-**Key Tech**: Python 3.14+, Django 5.2, TimescaleDB, Celery/Redis, `uv` (pkg manager), `just` (runner).
+**Key Tech**: Python 3.14+, Django 5.2, TimescaleDB, Celery/Redis, Seq (Logging), `uv` (pkg manager), `just` (runner).
 
 ## STRUCTURE
 ```
@@ -54,11 +54,12 @@ peebot/
 
 ## DEV COMMANDS
 ```bash
-just dev-up        # Start full stack (Docker)
+just dev-up        # Start full stack (Docker + Seq)
 just dev-down      # Stop stack
 just test          # Run tests (pytest)
-uv run python manage.py runserver # Dev server
+uv run python manage.py runserver # Dev server (Logs to Console + Seq)
 uv run python manage.py run_lightstreamer # Ingestion
+# Seq Dashboard: http://localhost:5341 (admin/password)
 ```
 
 ## SECURITY & CONFIG
