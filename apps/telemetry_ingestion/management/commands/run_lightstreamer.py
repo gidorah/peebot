@@ -44,7 +44,10 @@ class Command(BaseCommand):
         self.queue = asyncio.Queue(maxsize=50000)
 
         # Step 1: Load channel map (ADR-005)
-        self.load_channel_map()
+        # We need to wrap the sync DB access in sync_to_async
+        from asgiref.sync import sync_to_async
+
+        await sync_to_async(self.load_channel_map)()
 
         if not self.channel_map:
             logger.error("No channels found in database. Please seed channels first.")

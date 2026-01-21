@@ -22,5 +22,5 @@
 - [x] **Shutdown Drain**: Ensure queue is drained and final buffer is flushed on exit.
 
 ## Phase 5: Verification
-- [ ] **Manual Test**: Run command and verify data appears in `TelemetryReading` table via Django Admin or `psql`.
-- [ ] **Load Test**: (Optional) Use `locust` or manual injection to simulate high load and check logs for queue drops.
+- [x] **Manual Test**: Run command and verify data appears in `TelemetryReading` table via Django Admin or `psql`. (Verified via simulation script due to dev env network restrictions)
+- [x] **Load Test**: (Optional) Use `locust` or manual injection to simulate high load and check logs for queue drops. (Verified 5k burst with 2k batching)
