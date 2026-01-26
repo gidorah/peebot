@@ -27,8 +27,15 @@ env = environ.Env(
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # Read .env file
-env_file = os.environ.get("DOTENV_PATH", BASE_DIR / ".env")
-environ.Env.read_env(env_file)
+dotenv_path = os.environ.get("DOTENV_PATH")
+if dotenv_path:
+    # If custom env file is specified, it should override any pre-loaded
+    # environment variables (e.g. from IDE or runner defaults)
+    env_file = BASE_DIR / dotenv_path
+    environ.Env.read_env(env_file, overwrite=True)
+else:
+    env_file = BASE_DIR / ".env"
+    environ.Env.read_env(env_file)
 
 
 # Quick-start development settings - unsuitable for production

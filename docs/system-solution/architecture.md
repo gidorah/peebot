@@ -50,6 +50,7 @@ All versions are **MANDATORY**. Do not upgrade without RFC.
 | **AI Provider**| DeepSeek V3 | `Latest` | Via OpenRouter. |
 | **Social** | tweepy | `4.14+` | Twitter API v2 wrapper. |
 | **Validation** | Pydantic | `2.x` | High-performance data validation for ingestion. |
+| **Logging** | Structlog + Seq | `24.x` | Structured logging with centralized ingestion. |
 | **Pkg Manager** | uv | `Latest` | Fast resolution and locking. |
 
 ---
@@ -438,7 +439,8 @@ All long-running components are managed as independent systemd services with `Re
 - **`peebot-beat`**: Celery Beat for task scheduling.
 
 **Observability**:
-- **Logging**: All processes log to `syslog` for centralized aggregation.
+- **Logging**: Structured JSON logs (Structlog) aggregated in **Seq** (Dev/Staging) or centralized log store.
+- **Tracing**: Logs tagged with `request_id`, `Application`, and `Environment` for distributed tracing.
 - **Metrics**: Prometheus + Grafana for monitoring DB performance and ingestion throughput.
 - **Errors**: Sentry integration for real-time application error tracking.
 

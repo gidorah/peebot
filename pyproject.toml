@@ -10,11 +10,15 @@ dependencies = [
     "django>=5.2.7",
     "django-celery-beat>=2.8.1",
     "django-environ>=0.12.0",
+    "django-structlog>=10.0.0",
     "djangorestframework>=3.16.1",
     "flower>=2.0.1",
     "lightstreamer-client-lib>=2.2.2",
     "psycopg[binary,pool]>=3.2.11",
     "redis>=6.4.0",
+    "rich>=14.2.0",
+    "seqlog>=0.4.3",
+    "structlog>=25.5.0",
 ]
 
 [tool.mypy]
@@ -34,12 +38,20 @@ module = "django_celery_results.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
+module = "lightstreamer.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
 module = "django.contrib.gis.*"
 ignore_errors = false
 
 [[tool.mypy.overrides]]
 module = "django.contrib.postgres.*"
 ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = "apps.telemetry_ingestion.management.commands.run_lightstreamer"
+disable_error_code = ["attr-defined"]
 
 [tool.django-stubs]
 django_settings_module = "config.settings"

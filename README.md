@@ -155,7 +155,10 @@ To run the full stack in containers with PgBouncer session pooling:
    ```bash
    docker compose -f docker/dev/docker-compose.yml run --rm web uv run python manage.py migrate
    ```
-4. The Django dev server listens on `http://localhost:8000`, PgBouncer exposes `localhost:6432`, and TimescaleDB remains reachable directly via `localhost:5432` for tools like `psql` or Postgres GUIs.
+4. The Django dev server listens on `http://localhost:8000`, PgBouncer exposes `localhost:6432`, and TimescaleDB remains reachable directly via `localhost:5432`.
+5. **Logging (Seq)**: Access the centralized log dashboard at `http://localhost:5341`.
+   - **Username**: `admin`
+   - **Password**: `password`
    > If you change the database name or credentials, update both `.env` and `docker/dev/pgbouncer/pgbouncer.ini` so PgBouncer can route connections correctly.
 
 ### PgBouncer Configuration
@@ -370,6 +373,8 @@ DJANGO_SETTINGS_MODULE=config.settings.testing uv run pytest
 - **ruff** - Fast Python linter
 - **mypy** - Static type checker
 - **django-stubs** - Type stubs for Django
+- **Seq** - Centralized structured logging
+- **Structlog** - Structured logging instrumentation
 
 ## Development Commands
 

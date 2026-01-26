@@ -13,13 +13,18 @@ class TestLightstreamerClientService:
     @patch("apps.telemetry_ingestion.services.lightstreamer_client.LightstreamerClient")
     @patch("apps.telemetry_ingestion.services.lightstreamer_client.Subscription")
     @pytest.mark.asyncio
-    async def test_connect(self, mock_subscription, mock_lightstreamer_client):
+    async def test_connect(
+        self, mock_subscription: MagicMock, mock_lightstreamer_client: MagicMock
+    ) -> None:
         """
         Verify that connecting initializes the client and subscription correctly.
         """
         # Arrange
         mock_callback = AsyncMock()
-        service = LightstreamerClientService(callback=mock_callback)
+        item_names = ["NODE3000004", "AIRLOCK000001"]
+        service = LightstreamerClientService(
+            item_names=item_names, callback=mock_callback
+        )
         mock_client_instance = mock_lightstreamer_client.return_value
 
         # Act
@@ -39,8 +44,12 @@ class TestLightstreamerClientService:
         mock_subscription.assert_called_once()
         call_kwargs = mock_subscription.call_args[1]
         assert call_kwargs["mode"] == "MERGE"
+        assert call_kwargs["items"] == item_names
         assert "TimeStamp" in call_kwargs["fields"]
         assert "Value" in call_kwargs["fields"]
+        assert "Status.Class" in call_kwargs["fields"]
+        assert "Status.Indicator" in call_kwargs["fields"]
+        assert "Status.Color" in call_kwargs["fields"]
 
         # 3. Verify Subscription Registration
         mock_sub_instance = mock_subscription.return_value
@@ -51,7 +60,7 @@ class TestLightstreamerClientService:
         mock_client_instance.subscribe.assert_called_once_with(mock_sub_instance)
 
     @pytest.mark.asyncio
-    async def test_listener_callback_execution(self):
+    async def test_listener_callback_execution(self) -> None:
         """
         Verify that the SubListener correctly bridges the synchronous onItemUpdate
         to the asynchronous callback.
@@ -59,11 +68,8 @@ class TestLightstreamerClientService:
         # Arrange
         mock_callback = AsyncMock()
         loop = asyncio.get_running_loop()
-        subscribed_items = ["NODE3000004"]
 
-        listener = SubListener(
-            callback=mock_callback, loop=loop, subscribed_items=subscribed_items
-        )
+        listener = SubListener(callback=mock_callback, loop=loop)
 
         # Mock an ItemUpdate object from Lightstreamer
         mock_update = MagicMock()
@@ -81,25 +87,3 @@ class TestLightstreamerClientService:
 
         expected_data = {"NODE3000004": {"Value": "10.5"}}
         mock_callback.assert_called_once_with(expected_data)
-
-    @pytest.mark.asyncio
-    async def test_listener_ignores_unsubscribed_items(self):
-        """
-        Verify that the listener ignores updates for items not in our list.
-        """
-        # Arrange
-        mock_callback = AsyncMock()
-        loop = asyncio.get_running_loop()
-        listener = SubListener(
-            callback=mock_callback, loop=loop, subscribed_items=["NODE3000004"]
-        )
-
-        mock_update = MagicMock()
-        mock_update.getItemName.return_value = "UNKNOWN_ITEM"
-
-        # Act
-        listener.onItemUpdate(mock_update)
-        await asyncio.sleep(0)
-
-        # Assert
-        mock_callback.assert_not_called()

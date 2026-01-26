@@ -32,3 +32,4 @@ def chunk_list():
     """
     Splits lists for batch processing
     """
+    pass
