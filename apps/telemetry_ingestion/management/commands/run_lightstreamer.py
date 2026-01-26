@@ -239,11 +239,6 @@ class Command(BaseCommand):
                         # Base date: Start of current year (UTC)
                         now = datetime.now(tz=UTC)
                         # ADR-010: ISS 'TimeStamp' is Hours from Dec 31 (Year-1).
-                        # e.g., Day 1 (Jan 1) starts at 0.0h? No, usually Jan 1 = Day 1.
-                        # Analysis:
-                        # 631.9h / 24 = 26.32 days.
-                        # Demo Logic: floor(26.32) = 26 -> Day 026 -> Jan 26.
-                        # Python Logic: Jan 1 + 26 days = Jan 27.
                         # Fix: Base must be Jan 1 - 1 day (Dec 31).
                         base_epoch = datetime(now.year, 1, 1, tzinfo=UTC) - timedelta(
                             days=1
@@ -251,6 +246,17 @@ class Command(BaseCommand):
 
                         # Add hours delta
                         reading_ts = base_epoch + timedelta(hours=hours_from_soy)
+
+                        # Heuristic check for Year Rollover (New Year's Eve)
+                        # If calculated time is > 24h in the future, it likely belongs to previous year
+                        # (e.g. processing late Dec 31st data when it is already Jan 1st)
+                        if reading_ts > now + timedelta(hours=24):
+                            base_epoch_prev = datetime(
+                                now.year - 1, 1, 1, tzinfo=UTC
+                            ) - timedelta(days=1)
+                            reading_ts = base_epoch_prev + timedelta(
+                                hours=hours_from_soy
+                            )
                     except (ValueError, TypeError, OverflowError) as e:
                         logger.warning(
                             f"Could not parse source timestamp '{source_ts}' for {pui}: {e}. Using now()."
