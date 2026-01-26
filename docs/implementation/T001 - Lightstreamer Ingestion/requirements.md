@@ -5,7 +5,7 @@ Implement a robust, high-performance telemetry ingestion pipeline that connects 
 
 ## 2. Functional Requirements
 1.  **Lightstreamer Connection**: Establish and maintain a stable connection to `http://push.lightstreamer.com` with the `ISSLIVE` adapter set.
-2.  **Channel Subscription**: Subscribe to the telemetry channels defined in `apps.telemetry_ingestion.services.identifiers.IDENTIFIERS`.
+2.  **Channel Subscription**: Load active `TelemetryChannel` PUIs from the database and subscribe dynamically using the in‑memory channel map.
 3.  **Data Extraction**: Extract `TimeStamp`, `Value`, `Status.Class`, `Status.Indicator`, and `Status.Color` fields from incoming updates.
 4.  **Channel Resolution**: Map incoming Item Names (e.g., "NODE3000004") to `TelemetryChannel` UUIDs using an in-memory lookup table (dictionary).
 5.  **Buffered Ingestion**: 
