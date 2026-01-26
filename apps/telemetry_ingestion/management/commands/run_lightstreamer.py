@@ -34,9 +34,8 @@ class Command(BaseCommand):
 
     def load_channel_map(self) -> None:
         """Pre-load all TelemetryChannels into an in-memory map for fast resolution."""
-        channels = TelemetryChannel.objects.all()
-        # Use .pk to avoid LSP ambiguity with id attribute
-        self.channel_map = {c.public_pui: c.pk for c in channels}
+        channels = TelemetryChannel.objects.values_list("public_pui", "pk")
+        self.channel_map = {pui: pk for pui, pk in channels}
         logger.info(f"Loaded {len(self.channel_map)} channels into memory map.")
 
     async def run_async(self) -> None:
