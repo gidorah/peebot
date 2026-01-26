@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import signal
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
@@ -228,18 +228,32 @@ class Command(BaseCommand):
                     continue
 
                 # Timestamp handling:
-                # Per user instruction: prefer source timestamp.
-                # Requirement note says "relative float", but we attempt Unix conversion first.
+                # Source 'TimeStamp' is HOURS since the start of the current year (DOY).
+                # Example: 631.9155 hours -> Jan 26, 07:54
                 source_ts = fields.get("TimeStamp")
                 reading_ts = None
 
                 if source_ts:
                     try:
-                        # Assume Unix timestamp (float string)
-                        reading_ts = datetime.fromtimestamp(float(source_ts), tz=UTC)
-                    except (ValueError, TypeError, OverflowError):
+                        hours_from_soy = float(source_ts)
+                        # Base date: Start of current year (UTC)
+                        now = datetime.now(tz=UTC)
+                        # ADR-010: ISS 'TimeStamp' is Hours from Dec 31 (Year-1).
+                        # e.g., Day 1 (Jan 1) starts at 0.0h? No, usually Jan 1 = Day 1.
+                        # Analysis:
+                        # 631.9h / 24 = 26.32 days.
+                        # Demo Logic: floor(26.32) = 26 -> Day 026 -> Jan 26.
+                        # Python Logic: Jan 1 + 26 days = Jan 27.
+                        # Fix: Base must be Jan 1 - 1 day (Dec 31).
+                        base_epoch = datetime(now.year, 1, 1, tzinfo=UTC) - timedelta(
+                            days=1
+                        )
+
+                        # Add hours delta
+                        reading_ts = base_epoch + timedelta(hours=hours_from_soy)
+                    except (ValueError, TypeError, OverflowError) as e:
                         logger.warning(
-                            f"Could not parse source timestamp '{source_ts}' for {pui}. Using now()."
+                            f"Could not parse source timestamp '{source_ts}' for {pui}: {e}. Using now()."
                         )
 
                 if reading_ts is None:
