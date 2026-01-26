@@ -182,10 +182,8 @@ class Command(BaseCommand):
                     last_flush_time = current_time
 
                 # If data was retrieved, mark as done
-                try:
-                    self.queue.task_done()
-                except ValueError:  # If get() didn't happen
-                    pass
+                # Fix: We moved task_done() to flush_buffer to ensure data is persisted
+                # before we tell the queue we are done.
 
             except asyncio.CancelledError:
                 # Final flush on shutdown
@@ -200,83 +198,98 @@ class Command(BaseCommand):
         Transforms buffered data into TelemetryReading objects and batch inserts them.
         Implements Phase 3: Ingestion Logic & Transformation.
         """
-        if not buffer:
-            return
+        # CRITICAL: We MUST acknowledge every item in the buffer regardless of outcome,
+        # otherwise queue.join() will hang forever.
+        try:
+            if not buffer:
+                return
 
-        readings: list[TelemetryReading] = []
+            readings: list[TelemetryReading] = []
 
-        for item_data in buffer:
-            # item_data is {pui: {field: value, ...}}
-            for pui, fields in item_data.items():
-                channel_id = self.channel_map.get(pui)
-                if not channel_id:
-                    # In production we might warn once per unknown channel,
-                    # but for high throughput we just skip.
-                    continue
+            for item_data in buffer:
+                # item_data is {pui: {field: value, ...}}
+                for pui, fields in item_data.items():
+                    channel_id = self.channel_map.get(pui)
+                    if not channel_id:
+                        # In production we might warn once per unknown channel,
+                        # but for high throughput we just skip.
+                        continue
 
-                raw_value = fields.get("Value")
-                # We strictly require a value. Status-only updates are dropped
-                # because the model requires 'value'.
-                if raw_value is None:
-                    continue
+                    raw_value = fields.get("Value")
+                    # We strictly require a value. Status-only updates are dropped
+                    # because the model requires 'value'.
+                    if raw_value is None:
+                        continue
 
-                try:
-                    value = Decimal(raw_value)
-                except (InvalidOperation, TypeError):
-                    logger.warning(f"Invalid value for {pui}: {raw_value}")
-                    continue
-
-                # Timestamp handling:
-                # Source 'TimeStamp' is HOURS since the start of the current year (DOY).
-                # Example: 631.9155 hours -> Jan 26, 07:54
-                source_ts = fields.get("TimeStamp")
-                reading_ts = None
-
-                if source_ts:
                     try:
-                        hours_from_soy = float(source_ts)
-                        # Base date: Start of current year (UTC)
-                        now = datetime.now(tz=UTC)
-                        # ADR-010: ISS 'TimeStamp' is Hours from Dec 31 (Year-1).
-                        # Fix: Base must be Jan 1 - 1 day (Dec 31).
-                        base_epoch = datetime(now.year, 1, 1, tzinfo=UTC) - timedelta(
-                            days=1
-                        )
+                        value = Decimal(raw_value)
+                    except (InvalidOperation, TypeError):
+                        logger.warning(f"Invalid value for {pui}: {raw_value}")
+                        continue
 
-                        # Add hours delta
-                        reading_ts = base_epoch + timedelta(hours=hours_from_soy)
+                    # Timestamp handling:
+                    # Source 'TimeStamp' is HOURS since the start of the current year (DOY).
+                    # Example: 631.9155 hours -> Jan 26, 07:54
+                    source_ts = fields.get("TimeStamp")
+                    reading_ts = None
 
-                        # Heuristic check for Year Rollover (New Year's Eve)
-                        # If calculated time is > 24h in the future, it likely belongs to previous year
-                        # (e.g. processing late Dec 31st data when it is already Jan 1st)
-                        if reading_ts > now + timedelta(hours=24):
-                            base_epoch_prev = datetime(
-                                now.year - 1, 1, 1, tzinfo=UTC
+                    if source_ts:
+                        try:
+                            hours_from_soy = float(source_ts)
+                            # Base date: Start of current year (UTC)
+                            now = datetime.now(tz=UTC)
+                            # ADR-010: ISS 'TimeStamp' is Hours from Dec 31 (Year-1).
+                            # Fix: Base must be Jan 1 - 1 day (Dec 31).
+                            base_epoch = datetime(
+                                now.year, 1, 1, tzinfo=UTC
                             ) - timedelta(days=1)
-                            reading_ts = base_epoch_prev + timedelta(
-                                hours=hours_from_soy
+
+                            # Add hours delta
+                            reading_ts = base_epoch + timedelta(hours=hours_from_soy)
+
+                            # Heuristic check for Year Rollover (New Year's Eve)
+                            # If calculated time is > 24h in the future, it likely belongs to previous year
+                            # (e.g. processing late Dec 31st data when it is already Jan 1st)
+                            if reading_ts > now + timedelta(hours=24):
+                                base_epoch_prev = datetime(
+                                    now.year - 1, 1, 1, tzinfo=UTC
+                                ) - timedelta(days=1)
+                                reading_ts = base_epoch_prev + timedelta(
+                                    hours=hours_from_soy
+                                )
+                        except (ValueError, TypeError, OverflowError) as e:
+                            logger.warning(
+                                f"Could not parse source timestamp '{source_ts}' for {pui}: {e}. Using now()."
                             )
-                    except (ValueError, TypeError, OverflowError) as e:
-                        logger.warning(
-                            f"Could not parse source timestamp '{source_ts}' for {pui}: {e}. Using now()."
+
+                    if reading_ts is None:
+                        reading_ts = timezone.now()
+
+                    # Note: created_at and updated_at are handled by Django's bulk_create
+                    # in modern versions/configurations.
+                    readings.append(
+                        TelemetryReading(
+                            channel_id=channel_id,
+                            timestamp=reading_ts,
+                            value=value,
+                            status_class=fields.get("Status.Class"),
+                            status_indicator=fields.get("Status.Indicator"),
+                            status_color=fields.get("Status.Color"),
                         )
-
-                if reading_ts is None:
-                    reading_ts = timezone.now()
-
-                # Note: created_at and updated_at are handled by Django's bulk_create
-                # in modern versions/configurations.
-                readings.append(
-                    TelemetryReading(
-                        channel_id=channel_id,
-                        timestamp=reading_ts,
-                        value=value,
-                        status_class=fields.get("Status.Class"),
-                        status_indicator=fields.get("Status.Indicator"),
-                        status_color=fields.get("Status.Color"),
                     )
-                )
 
-        if readings:
-            await TelemetryReading.objects.abulk_create(readings)
-            logger.info(f"Flushed {len(readings)} readings to DB.")
+            if readings:
+                await TelemetryReading.objects.abulk_create(readings)
+                logger.info(f"Flushed {len(readings)} readings to DB.")
+
+        except Exception as e:
+            logger.error(f"Error flushing buffer to DB: {e}", exc_info=True)
+        finally:
+            # Mark all items in this buffer as done, so the queue unblocks.
+            # This happens whether the DB write succeeded or failed.
+            for _ in range(len(buffer)):
+                try:
+                    self.queue.task_done()
+                except ValueError:
+                    # Ignore if called too many times (should not happen with this logic)
+                    pass
