@@ -35,3 +35,10 @@
     *   **Structure**: Moving from text-based logs (`grep`) to structured events allows filtering by `request_id`, `user_id`, or `channel` across distributed services (Web, Worker, Beat).
     *   **Tooling**: Seq provides a zero-config, powerful search UI for development that is far superior to docker-compose logs.
     *   **Implementation**: `Structlog` ensures consistent JSON context injection across the stack. A custom `SeqHandler` manages async dispatch to the Seq container.
+
+## ADR-007: Hybrid Enrichment Strategy
+*   **Decision**: Separation of Domain Normalization and System Metadata.
+*   **Status**: Accepted.
+*   **Rationale**: 
+    *   **Domain Data**: Complex logic like converting "Hours since start of year" to UTC Datetime and handling Year Rollover requires explicit business logic. This is delegated to `apps.telemetry_ingestion.services.enricher.py`.
+    *   **System Metadata**: Standard fields like `id` (UUIDv7) and `created_at` (Ingestion Time) are handled efficiently by Django Model defaults (`UUID7Model`, `TimeStampedModel`) upon instantiation, reducing boilerplate in the ingestion loop.
