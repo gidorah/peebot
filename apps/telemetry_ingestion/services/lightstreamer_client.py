@@ -1,4 +1,5 @@
 import asyncio
+import concurrent.futures
 import logging
 from collections.abc import Callable, Coroutine
 from typing import Any, cast
@@ -33,8 +34,25 @@ class SubListener(SubscriptionListener):  # type: ignore[misc]
         if item_name is None or value is None:
             return
 
+        if self.loop.is_closed():
+            logger.warning("Telemetry loop closed; dropping update for %s", item_name)
+            return
+
         received_data: dict[str, dict[str, Any]] = {item_name: value}
-        asyncio.run_coroutine_threadsafe(self.callback(received_data), self.loop)
+        future = asyncio.run_coroutine_threadsafe(
+            self.callback(received_data),
+            self.loop,
+        )
+
+        def _log_callback_exception(
+            f: concurrent.futures.Future[Any],
+        ) -> None:
+            try:
+                f.result()
+            except Exception:
+                logger.exception("Telemetry callback failed for %s", item_name)
+
+        future.add_done_callback(_log_callback_exception)
 
 
 class StatusListener(ClientListener):  # type: ignore[misc]
