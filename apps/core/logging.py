@@ -70,9 +70,20 @@ class SeqHandler(logging.Handler):
 
     def close(self):
         """Signal worker to stop and wait briefly."""
+        # Drain any remaining logs in the queue
+        while True:
+            try:
+                payload = self.queue.get_nowait()
+                self._send(payload)
+                self.queue.task_done()
+            except queue.Empty:
+                break
+
         self._stop_event.set()
         if self._worker_thread.is_alive():
             self._worker_thread.join(timeout=1.0)
+
+        self.session.close()
         super().close()
 
     def _send(self, payload):
