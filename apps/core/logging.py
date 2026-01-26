@@ -1,8 +1,9 @@
 import json
 import logging
+import queue
 import threading
+
 import requests
-from django.conf import settings
 
 
 class SeqHandler(logging.Handler):
@@ -15,6 +16,14 @@ class SeqHandler(logging.Handler):
         if api_key:
             self.session.headers.update({"X-Seq-ApiKey": api_key})
         self.session.headers.update({"Content-Type": "application/vnd.serilog.clef"})
+
+        # Initialize queue and worker
+        self.queue = queue.Queue(maxsize=5000)
+        self._stop_event = threading.Event()
+        self._worker_thread = threading.Thread(
+            target=self._worker, name="SeqLoggerWorker", daemon=True
+        )
+        self._worker_thread.start()
 
     def emit(self, record):
         try:
@@ -38,11 +47,33 @@ class SeqHandler(logging.Handler):
             # Re-serialize to JSON
             final_payload = json.dumps(event_dict)
 
-            # We run this in a thread to avoid blocking the main execution
-            threading.Thread(target=self._send, args=(final_payload,)).start()
+            # Push to queue instead of spawning a thread
+            try:
+                self.queue.put_nowait(final_payload)
+            except queue.Full:
+                # Drop log if queue is full to prevent blocking main thread or crashing
+                pass
 
         except Exception:
             self.handleError(record)
+
+    def _worker(self):
+        """Background worker to consume logs from the queue and send to Seq."""
+        while not self._stop_event.is_set():
+            try:
+                payload = self.queue.get(timeout=0.2)
+            except queue.Empty:
+                continue
+
+            self._send(payload)
+            self.queue.task_done()
+
+    def close(self):
+        """Signal worker to stop and wait briefly."""
+        self._stop_event.set()
+        if self._worker_thread.is_alive():
+            self._worker_thread.join(timeout=1.0)
+        super().close()
 
     def _send(self, payload):
         try:
