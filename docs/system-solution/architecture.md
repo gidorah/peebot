@@ -114,7 +114,8 @@ peebot/
 │   ├── telemetry_ingestion/         # Module: Data Ingestion (No models)
 │   │   ├── services/
 │   │   │   ├── lightstreamer_client.py
-│   │   │   └── validator.py
+│   │   │   ├── validator.py
+│   │   │   └── enricher.py          # Domain Normalization (Timestamp Logic)
 │   │   └── management/commands/
 │   │       └── run_lightstreamer.py
 │   ├── telemetry_storage/           # Module: Data Persistence (Owner)
@@ -298,8 +299,12 @@ The Lightstreamer SDK is blocking/threaded. We must run it in a management comma
 2.  **Producer**: `LightstreamerClient` pushes raw dicts to `asyncio.Queue` (non-blocking).
     *   **Backpressure**: Queue MUST be bounded (e.g., `maxsize=50000`, approx 5s burst capacity).
     *   **Overflow Strategy**: Drop **oldest** items when full to preserve latest telemetry and prevent OOM.
-3.  **Consumer**: Async worker loop pulls from Queue, validates using Pydantic (bypassing DRF for speed), and appends to `IngestionBuffer`.
-4.  **Write Strategy**: `IngestionBuffer` flushes to DB using `TelemetryReading.objects.abulk_create()`.
+3.  **Consumer**: Async worker loop pulls from Queue, validates using Pydantic, and passes to **Enrichment Service**.
+4.  **Enrichment**: `Enricher.normalize()` handles complex domain logic:
+    *   Converts ISS "Hours since start of year" to standard UTC `datetime`.
+    *   Handles Year Rollover edge cases (e.g., processing Dec 31st data on Jan 1st).
+    *   *Note*: System metadata like `id` (UUIDv7) and `created_at` are handled by Model defaults, not this service.
+5.  **Write Strategy**: Validated & enriched items are appended to `IngestionBuffer` and flushed to DB using `TelemetryReading.objects.abulk_create()`.
     *   *Latency Goal*: P99 persistence < 5s.
 
 ### 8.4 Event Processors (`apps/event_processors`)

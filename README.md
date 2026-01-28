@@ -362,6 +362,9 @@ DJANGO_SETTINGS_MODULE=config.settings.testing uv run pytest
 - **Lightstreamer Client** - ISS telemetry ingestion
 - **Tweepy** - Twitter API integration
 
+### Data Validation
+- **Pydantic V2** - High-performance data validation for ingestion
+
 ### Package Management
 - **uv** - Fast Python package manager and virtual environment tool
 
@@ -499,7 +502,7 @@ ISS Lightstreamer Feed
 [Lightstreamer Client]
          |
          v
-[Validation Service] <- DRF Serializers
+[Validation Service] <- Pydantic
          |
          v
 [Enrichment Service] <- Add event_id, timestamps

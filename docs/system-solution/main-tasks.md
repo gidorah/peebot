@@ -21,3 +21,13 @@ These tasks address architectural changes and bugs in the **currently implemente
 - [ ] **Fix (Storage)**: Resolve `Meta` class inheritance conflicts.
     - *Goal*: Ensure `TelemetryReading.Meta` correctly overrides/inherits from base model Meta classes to satisfy MRO.
     - *Files*: `apps/telemetry_storage/models.py`.
+
+## Phase 2: Ingestion Implementation
+
+- [x] **Implement (Ingestion)**: Create Enrichment Service (`enricher.py`).
+    - *Goal*: Move timestamp normalization and year-rollover logic from management command to a dedicated service.
+    - *Files*: `apps/telemetry_ingestion/services/enricher.py`.
+
+- [x] **Refactor (Ingestion)**: Update Validation Layer (Pydantic).
+    - *Goal*: Replace DRF Serializer with Pydantic model for high-performance ingestion (ADR-004). Integrate into `run_lightstreamer` loop.
+    - *Files*: `apps/telemetry_ingestion/services/validator.py`, `apps/telemetry_ingestion/management/commands/run_lightstreamer.py`.

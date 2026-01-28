@@ -35,3 +35,17 @@
     *   **Structure**: Moving from text-based logs (`grep`) to structured events allows filtering by `request_id`, `user_id`, or `channel` across distributed services (Web, Worker, Beat).
     *   **Tooling**: Seq provides a zero-config, powerful search UI for development that is far superior to docker-compose logs.
     *   **Implementation**: `Structlog` ensures consistent JSON context injection across the stack. A custom `SeqHandler` manages async dispatch to the Seq container.
+
+## ADR-007: Hybrid Enrichment Strategy
+*   **Decision**: Separation of Domain Normalization and System Metadata.
+*   **Status**: Accepted.
+*   **Rationale**: 
+    *   **Domain Data**: Complex logic like converting "Hours since start of year" to UTC Datetime and handling Year Rollover requires explicit business logic. This is delegated to `apps.telemetry_ingestion.services.enricher.py`.
+    *   **System Metadata**: Standard fields like `id` (UUIDv7) and `created_at` (Ingestion Time) are handled efficiently by Django Model defaults (`UUID7Model`, `TimeStampedModel`) upon instantiation, reducing boilerplate in the ingestion loop.
+
+## ADR-008: Ingestion Queue Safety Pattern
+*   **Decision**: Robust Queue Handling with Backpressure & Loop Safety.
+*   **Status**: Accepted.
+*   **Rationale**:
+    *   **Backpressure**: When the `asyncio.Queue` is full (`maxsize=50000`), the producer loop drops the oldest message (`get_nowait()`) to make room for new data. This prevents memory leaks and ensures we always ingest the freshest data during bursts.
+    *   **Loop Safety**: The consumer loop tracks the exact number of items pulled from the queue and guarantees `task_done()` is called for that count in a `finally` block. This prevents the pipeline from hanging (deadlock on `queue.join()`) even if the DB flush operation fails or raises an exception.
