@@ -502,7 +502,7 @@ ISS Lightstreamer Feed
 [Lightstreamer Client]
          |
          v
-[Validation Service] <- DRF Serializers
+[Validation Service] <- Pydantic
          |
          v
 [Enrichment Service] <- Add event_id, timestamps
