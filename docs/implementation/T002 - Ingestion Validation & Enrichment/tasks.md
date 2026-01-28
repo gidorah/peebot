@@ -24,7 +24,7 @@
         - Refactor `flush_buffer` to only handle `abulk_create` (remove logic).
 
 ## Phase 3: Verification
-- [ ] **Step 5**: Run Unit Tests.
+- [x] **Step 5**: Run Unit Tests.
     - *Command*: `pytest apps/telemetry_ingestion/tests/`
-- [ ] **Step 6**: Manual Dry Run.
+- [x] **Step 6**: Manual Dry Run.
     - *Command*: `python manage.py run_lightstreamer` (ensure it starts without error and connects).
