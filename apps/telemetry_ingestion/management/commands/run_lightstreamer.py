@@ -225,7 +225,7 @@ class Command(BaseCommand):
                 # item is validated and enriched dict
                 # We just need to map channel_id and instantiate
                 pui = item["pui"]
-                channel_id = self.channel_map.get(str(pui))
+                channel_id = self.channel_map.get(pui)
 
                 if not channel_id:
                     # Should be rare if channel_map is up to date
