@@ -51,6 +51,9 @@ peebot/
     - **`mypy`**: Strict mode enabled.
 6.  **Code Style**:
     - MUST follow guidelines in `docs/code_styleguides/python.md`.
+7.  **Temporary Artifacts**:
+    - MUST use `_work-tmp/` for temporary scripts, logs, or intermediate docs.
+    - These files are ephemeral and will be deleted at the end of the session.
 
 ## DEV COMMANDS
 ```bash
