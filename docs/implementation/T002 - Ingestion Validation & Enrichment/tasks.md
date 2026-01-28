@@ -1,7 +1,7 @@
 # Implementation Plan: Ingestion Validation & Enrichment
 
 ## Phase 1: Preparation
-- [ ] **Step 1**: Install Pydantic (if not already present/updated) and verify environment.
+- [x] **Step 1**: Install Pydantic (if not already present/updated) and verify environment.
     - *Command*: `uv pip install pydantic` (or check pyproject.toml).
     - *Verification*: `python -c "import pydantic; print(pydantic.VERSION)"`
 
