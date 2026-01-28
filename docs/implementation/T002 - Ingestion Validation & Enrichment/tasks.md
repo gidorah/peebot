@@ -16,7 +16,7 @@
     - *Task*: Create `TelemetryEnricher` class with timestamp normalization logic.
     - *Test*: Add unit test `tests/test_enricher.py` (specifically testing rollover logic).
 
-- [ ] **Step 4**: Integrate into Management Command.
+- [x] **Step 4**: Integrate into Management Command.
     - *File*: `apps/telemetry_ingestion/management/commands/run_lightstreamer.py`
     - *Task*:
         - Import new services.

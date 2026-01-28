@@ -1,16 +1,15 @@
 import asyncio
 import logging
 import signal
-from datetime import UTC, datetime, timedelta
-from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from django.core.management.base import BaseCommand
-from django.utils import timezone
 
+from apps.telemetry_ingestion.services.enricher import TelemetryEnricher
 from apps.telemetry_ingestion.services.lightstreamer_client import (
     LightstreamerClientService,
 )
+from apps.telemetry_ingestion.services.validator import validate_payload
 from apps.telemetry_storage.models import TelemetryChannel, TelemetryReading
 
 logger = logging.getLogger(__name__)
@@ -154,6 +153,7 @@ class Command(BaseCommand):
         """
         logger.info("Ingestion worker started.")
         buffer: list[dict[str, Any]] = []
+        pending_queue_count = 0  # Number of raw queue items to acknowledge
         last_flush_time = asyncio.get_event_loop().time()
 
         # Buffering constraints from requirements
@@ -165,7 +165,22 @@ class Command(BaseCommand):
                 # Wait for an item with a timeout to handle the periodic flush
                 try:
                     data = await asyncio.wait_for(self.queue.get(), timeout=0.1)
-                    buffer.append(data)
+
+                    # Process the raw item immediately (Validation + Enrichment)
+                    # data is {pui: {field: value, ...}}
+                    for pui, fields in data.items():
+                        # 1. Validate
+                        validated_reading = validate_payload(pui, fields)
+                        if not validated_reading:
+                            # dropped invalid data
+                            continue
+
+                        # 2. Enrich
+                        enriched_data = TelemetryEnricher.enrich(validated_reading)
+                        buffer.append(enriched_data)
+
+                    pending_queue_count += 1
+
                 except TimeoutError:
                     pass
 
@@ -174,119 +189,78 @@ class Command(BaseCommand):
 
                 # Check if we should flush
                 if len(buffer) >= MAX_BUFFER_SIZE or (
-                    buffer and time_since_flush >= MAX_FLUSH_INTERVAL
+                    pending_queue_count > 0 and time_since_flush >= MAX_FLUSH_INTERVAL
                 ):
-                    await self.flush_buffer(buffer)
+                    # Flush the enriched buffer AND acknowledge the queue items
+                    await self.flush_buffer(buffer, pending_queue_count)
                     buffer = []
+                    pending_queue_count = 0
                     last_flush_time = current_time
-
-                # If data was retrieved, mark as done
-                # Fix: We moved task_done() to flush_buffer to ensure data is persisted
-                # before we tell the queue we are done.
 
             except asyncio.CancelledError:
                 # Final flush on shutdown
-                if buffer:
-                    await self.flush_buffer(buffer)
+                if buffer or pending_queue_count > 0:
+                    await self.flush_buffer(buffer, pending_queue_count)
                 break
             except Exception as e:
                 logger.error(f"Error in ingestion worker: {e}", exc_info=True)
+                # If we crash, we should try to ack pending items to prevent deadlock on join()
+                # though usually we just loop.
+                # Ideally we don't crash the loop.
 
-    async def flush_buffer(self, buffer: list[dict[str, Any]]) -> None:
+    async def flush_buffer(
+        self, buffer: list[dict[str, Any]], queue_items_to_ack: int
+    ) -> None:
         """
-        Transforms buffered data into TelemetryReading objects and batch inserts them.
-        Implements Phase 3: Ingestion Logic & Transformation.
+        Transforms enriched data into TelemetryReading objects and batch inserts them.
+        Uses abulk_create for performance.
         """
-        # CRITICAL: We MUST acknowledge every item in the buffer regardless of outcome,
-        # otherwise queue.join() will hang forever.
         try:
             if not buffer:
                 return
 
             readings: list[TelemetryReading] = []
 
-            for item_data in buffer:
-                # item_data is {pui: {field: value, ...}}
-                for pui, fields in item_data.items():
-                    channel_id = self.channel_map.get(pui)
-                    if not channel_id:
-                        # In production we might warn once per unknown channel,
-                        # but for high throughput we just skip.
-                        continue
+            for item in buffer:
+                # item is validated and enriched dict
+                # We just need to map channel_id and instantiate
+                pui = item["pui"]
+                channel_id = self.channel_map.get(str(pui))
 
-                    raw_value = fields.get("Value")
-                    # We strictly require a value. Status-only updates are dropped
-                    # because the model requires 'value'.
-                    if raw_value is None:
-                        continue
-
-                    try:
-                        value = Decimal(raw_value)
-                    except (InvalidOperation, TypeError):
-                        logger.warning(f"Invalid value for {pui}: {raw_value}")
-                        continue
-
-                    # Timestamp handling:
-                    # Source 'TimeStamp' is HOURS since the start of the current year (DOY).
-                    # Example: 631.9155 hours -> Jan 26, 07:54
-                    source_ts = fields.get("TimeStamp")
-                    reading_ts = None
-
-                    if source_ts:
-                        try:
-                            hours_from_soy = float(source_ts)
-                            # Base date: Start of current year (UTC)
-                            now = datetime.now(tz=UTC)
-                            # ADR-010: ISS 'TimeStamp' is Hours from Dec 31 (Year-1).
-                            # Fix: Base must be Jan 1 - 1 day (Dec 31).
-                            base_epoch = datetime(
-                                now.year, 1, 1, tzinfo=UTC
-                            ) - timedelta(days=1)
-
-                            # Add hours delta
-                            reading_ts = base_epoch + timedelta(hours=hours_from_soy)
-
-                            # Heuristic check for Year Rollover (New Year's Eve)
-                            # If calculated time is > 24h in the future, it likely belongs to previous year
-                            # (e.g. processing late Dec 31st data when it is already Jan 1st)
-                            if reading_ts > now + timedelta(hours=24):
-                                base_epoch_prev = datetime(
-                                    now.year - 1, 1, 1, tzinfo=UTC
-                                ) - timedelta(days=1)
-                                reading_ts = base_epoch_prev + timedelta(
-                                    hours=hours_from_soy
-                                )
-                        except (ValueError, TypeError, OverflowError) as e:
-                            logger.warning(
-                                f"Could not parse source timestamp '{source_ts}' for {pui}: {e}. Using now()."
-                            )
-
-                    if reading_ts is None:
-                        reading_ts = timezone.now()
-
-                    # Note: created_at and updated_at are handled by Django's bulk_create
-                    # in modern versions/configurations.
-                    readings.append(
-                        TelemetryReading(
-                            channel_id=channel_id,
-                            timestamp=reading_ts,
-                            value=value,
-                            status_class=fields.get("Status.Class"),
-                            status_indicator=fields.get("Status.Indicator"),
-                            status_color=fields.get("Status.Color"),
-                        )
+                if not channel_id:
+                    # Should be rare if channel_map is up to date
+                    logger.info(
+                        f"Incoming PUI {pui} is not in the channel map. Ignoring the reading."
                     )
+                    continue
+
+                readings.append(
+                    TelemetryReading(
+                        channel_id=channel_id,
+                        timestamp=item["timestamp"],
+                        value=item["value"],
+                        status_class=item.get("status_class"),
+                        status_indicator=item.get("status_indicator"),
+                        status_color=item.get("status_color"),
+                    )
+                )
 
             if readings:
                 await TelemetryReading.objects.abulk_create(readings)
-                logger.info(f"Flushed {len(readings)} readings to DB.")
+                logger.info(
+                    f"Flushed {len(readings)} readings to DB (Acked {queue_items_to_ack} queue items)."
+                )
+            else:
+                logger.debug(
+                    f"Buffer processed but no readings created (Acked {queue_items_to_ack} queue items)."
+                )
 
         except Exception as e:
             logger.error(f"Error flushing buffer to DB: {e}", exc_info=True)
         finally:
-            # Mark all items in this buffer as done, so the queue unblocks.
-            # This happens whether the DB write succeeded or failed.
-            for _ in range(len(buffer)):
+            # CRITICAL: We MUST acknowledge every item pulled from the queue
+            # regardless of outcome, otherwise queue.join() will hang forever.
+            for _ in range(queue_items_to_ack):
                 try:
                     self.queue.task_done()
                 except ValueError:
