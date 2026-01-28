@@ -29,13 +29,12 @@ class Command(BaseCommand):
         try:
             asyncio.run(self.run_async())
         except KeyboardInterrupt:
-            # Handle SIGINT if it bubbles up before async handlers catch it
-            pass
+            logger.info("User interrupted process via KeyboardInterrupt.")
 
     def load_channel_map(self) -> None:
         """Pre-load all TelemetryChannels into an in-memory map for fast resolution."""
         channels = TelemetryChannel.objects.values_list("public_pui", "pk")
-        self.channel_map = {pui: pk for pui, pk in channels}
+        self.channel_map = dict(channels)
         logger.info(f"Loaded {len(self.channel_map)} channels into memory map.")
 
     async def run_async(self) -> None:
@@ -144,7 +143,7 @@ class Command(BaseCommand):
         try:
             await worker_task
         except asyncio.CancelledError:
-            pass
+            logger.info("Worker task cancelled.")
 
         logger.info("Ingestion process stopped.")
 
@@ -291,5 +290,4 @@ class Command(BaseCommand):
                 try:
                     self.queue.task_done()
                 except ValueError:
-                    # Ignore if called too many times (should not happen with this logic)
-                    pass
+                    logger.warning("queue.task_done() called too many times.")

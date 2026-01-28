@@ -3,7 +3,9 @@ Development settings for peebot project.
 """
 
 import os
+
 import structlog
+
 from .base import *
 
 # DEBUG is set in .env file and loaded by base.py

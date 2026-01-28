@@ -1,6 +1,7 @@
 import json
 import logging
 import queue
+import sys
 import threading
 
 import requests
@@ -52,7 +53,7 @@ class SeqHandler(logging.Handler):
                 self.queue.put_nowait(final_payload)
             except queue.Full:
                 # Drop log if queue is full to prevent blocking main thread or crashing
-                pass
+                sys.stderr.write("SeqHandler queue full, dropping log.\n")
 
         except Exception:
             self.handleError(record)
