@@ -6,12 +6,12 @@
     - *Verification*: `python -c "import pydantic; print(pydantic.VERSION)"`
 
 ## Phase 2: Implementation
-- [ ] **Step 2**: Implement Validation Service.
+- [x] **Step 2**: Implement Validation Service.
     - *File*: `apps/telemetry_ingestion/services/validator.py`
     - *Task*: Replace existing DRF serializer with `LightstreamerReading` Pydantic model. Implement `validate_payload` helper.
     - *Test*: Add unit test `tests/test_validator.py`.
 
-- [ ] **Step 3**: Implement Enrichment Service.
+- [x] **Step 3**: Implement Enrichment Service.
     - *File*: `apps/telemetry_ingestion/services/enricher.py`
     - *Task*: Create `TelemetryEnricher` class with timestamp normalization logic.
     - *Test*: Add unit test `tests/test_enricher.py` (specifically testing rollover logic).
