@@ -2,7 +2,7 @@
 
 **Generated:** 2026-01-02
 **Architecture:** Django Modular Monolith (TimescaleDB)
-**State:** STORAGE_READY (Storage layer verified, Ingestion pending)
+**State:** INGESTION_READY (Ingestion pipeline verified, Validation & Enrichment active)
 
 ## OVERVIEW
 PeeBot is a modular monolith for ISS telemetry analytics. It ingests real-time data from Lightstreamer, stores it in TimescaleDB (`TelemetryReading`), and uses polling-based analytics to detect events (e.g., UPA activity) and trigger actions (tweets).

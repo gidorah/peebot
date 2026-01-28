@@ -16,19 +16,19 @@ Connects synchronous, multi-threaded Lightstreamer SDK to Django Async loop.
 - `run_lightstreamer`: Management command. Entry point for the async event loop.
 - `LightstreamerClientService`: Orchestrates connection, subscriptions, and listener lifecycle.
 - `SubListener`: The Bridge. Translates SDK callbacks into async tasks.
-- `validator.py`: (Pending) DRF-based validation of incoming telemetry packets.
+- `validator.py`: Pydantic V2 based validation service (`LightstreamerReading`).
+- `enricher.py`: Transforms raw readings into normalized `TelemetryReading` dicts (handles Year Rollover).
 - `identifiers.py`: Single source for subscribed ISS Item IDs.
 
 ## INTEGRATION POINTS
 - **Input**: Lightstreamer `MERGE` mode subscription.
 - **Output**: Bulk inserts into `TelemetryReading` (via `telemetry_storage` repo).
 
-## CURRENT STATUS: SCAFFOLDING
-- **DONE**: Client connection and "Async Bridge" pattern verified.
-- **PENDING**: 
-    - Data enrichment (mapping Item IDs to `TelemetryChannel` IDs).
-    - Validation logic (handling malformed stream data).
-    - High-performance bulk storage implementation.
+## CURRENT STATUS: STABLE
+- **DONE**: Client connection and "Async Bridge" pattern.
+- **DONE**: Pydantic Validation (ADR-004).
+- **DONE**: Enrichment Service (ADR-007).
+- **DONE**: Robust Queue Handling (Backpressure & Loop Safety).
 
 ## DEV COMMANDS
 ```bash
