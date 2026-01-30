@@ -14,22 +14,22 @@
 
 ## Phase 2: Data Models
 
-- [ ] **Step 3**: Implement `ProcessorState` model.
+- [x] **Step 3**: Implement `ProcessorState` model.
     - *File*: `apps/event_processors/models.py`
     - *Task*: Define model with fields per design.md section 3.2. Inherit from `UUID7Model` and `TimeStampedModel`. Add unique constraint on `processor_name`.
     - *Test*: `apps/event_processors/tests/test_models.py` — verify CRUD operations, state persistence, unique constraint enforcement.
 
-- [ ] **Step 4**: Implement `DetectedEvent` model.
+- [x] **Step 4**: Implement `DetectedEvent` model.
     - *File*: `apps/event_processors/models.py`
     - *Task*: Define model with fields per design.md section 3.1. Inherit from `UUID7Model` and `TimeStampedModel`. Add index on `(event_type, -detected_at)`.
     - *Test*: Extend `test_models.py` — verify field types, index exists.
 
-- [ ] **Step 4b**: Implement `SocialPost` model.
+- [x] **Step 4b**: Implement `SocialPost` model.
     - *File*: `apps/event_processors/models.py`
     - *Task*: Define model with fields per design.md section 3.3. Inherit from `UUID7Model` and `TimeStampedModel`. Add FK to `DetectedEvent`. Add index on `(platform, -posted_at)`.
     - *Test*: Extend `test_models.py` — verify FK relationship, cooldown query works.
 
-- [ ] **Step 5**: Create and apply migrations.
+- [x] **Step 5**: Create and apply migrations.
     - *Command*: `uv run python manage.py makemigrations event_processors`
     - *Command*: `uv run python manage.py migrate`
     - *Verification*: Tables exist in database.

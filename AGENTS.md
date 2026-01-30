@@ -60,6 +60,7 @@ peebot/
 just dev-up        # Start full stack (Docker + Seq)
 just dev-down      # Stop stack
 just test          # Run tests (pytest)
+just test-pooled   # Run tests with pgbouncer (pytest)
 uv run python manage.py runserver # Dev server (Logs to Console + Seq)
 uv run python manage.py run_lightstreamer # Ingestion
 # Seq Dashboard: http://localhost:5341 (admin/password)
