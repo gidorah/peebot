@@ -36,12 +36,12 @@
 
 ## Phase 3: Base Processor Infrastructure
 
-- [ ] **Step 6**: Implement `BaseProcessor` abstract class.
+- [x] **Step 6**: Implement `BaseProcessor` abstract class.
     - *File*: `apps/event_processors/processors/base.py`
     - *Task*: Define abstract class with attributes (`processor_name`, `channel_pui`, `poll_interval_seconds`, `window_minutes`) and abstract methods (`analyze`, `get_confidence`). Include state load/save helpers.
     - *Test*: `apps/event_processors/tests/test_base_processor.py` — verify abstract enforcement, state helper methods.
 
-- [ ] **Step 7**: Implement jitter utility.
+- [x] **Step 7**: Implement jitter utility.
     - *File*: `apps/event_processors/processors/base.py`
     - *Task*: Add async method for random 0–5 second delay before execution.
     - *Test*: Verify delay is within expected range (mock `asyncio.sleep`).
