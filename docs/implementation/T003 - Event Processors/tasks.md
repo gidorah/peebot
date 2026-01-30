@@ -48,7 +48,7 @@
 
 ## Phase 4: PeeBot Processor
 
-- [ ] **Step 8**: Implement `PeeBotProcessor` class.
+- [x] **Step 8**: Implement `PeeBotProcessor` class.
     - *File*: `apps/event_processors/processors/pee_bot.py`
     - *Task*: Inherit from `BaseProcessor`. Set channel to `NODE3000004`. Implement `analyze()` with burst detection and glitch filtering logic per design.md section 4.4.
     - *Test*: `apps/event_processors/tests/test_pee_bot.py` — test with mock readings:
@@ -58,7 +58,7 @@
         - Burst too short (< 30s) → no event
         - Insufficient data → no event
 
-- [ ] **Step 9**: Implement confidence calculation.
+- [x] **Step 9**: Implement confidence calculation.
     - *File*: `apps/event_processors/processors/pee_bot.py`
     - *Task*: Implement `get_confidence()` based on trend strength/consistency.
     - *Test*: Verify confidence values are within 0.0–1.0 range.

@@ -63,18 +63,18 @@ class BaseProcessor(ABC):
         await asyncio.sleep(delay)
 
     @abstractmethod
-    async def analyze(self, readings: list[TelemetryReading]) -> dict[str, Any] | None:
+    async def analyze(self, readings: list[TelemetryReading]) -> DetectionResult | None:
         """Analyze readings to detect events.
 
         Implementations should analyze the provided telemetry readings
-        and return detection metadata if an event is detected, or None
+        and return DetectionResult if an event is detected, or None
         if no event is found.
 
         Args:
             readings: List of TelemetryReading objects to analyze
 
         Returns:
-            Detection result dict with event metadata, or None
+            DetectionResult with event metadata, or None
         """
         pass
 
