@@ -2,12 +2,12 @@
 
 ## Phase 1: Module Setup
 
-- [ ] **Step 1**: Create Django app structure.
+- [x] **Step 1**: Create Django app structure.
     - *Command*: `uv run python manage.py startapp event_processors apps/event_processors`
     - *Task*: Create subdirectories `processors/`, `services/`, `tests/`.
     - *Verification*: Directory structure matches design.md section 2.
 
-- [ ] **Step 2**: Register app in Django settings.
+- [x] **Step 2**: Register app in Django settings.
     - *File*: `config/settings/base.py`
     - *Task*: Add `apps.event_processors` to `INSTALLED_APPS`.
     - *Verification*: `uv run python manage.py check` passes.
