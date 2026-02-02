@@ -348,7 +348,7 @@ TelemetryReading (Hypertable)
   - channel: ForeignKey -> TelemetryChannel
   - timestamp: DateTimeField (indexed)
   - value: DecimalField
-  - calibrated_data: DecimalField - ? 
+  - calibrated_data: DecimalField - ?
   - status_class: CharField - ?
   - status_indicator: CharField - ?
   - status_color: CharField - ?

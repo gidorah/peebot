@@ -3,6 +3,7 @@ Development settings for peebot project.
 """
 
 import os
+from typing import Any, cast
 
 import structlog
 
@@ -61,7 +62,7 @@ structlog.configure(
 
 
 # Custom processor to map standard keys to Seq CLEF keys
-def render_to_clef(logger, name, event_dict):
+def render_to_clef(logger: Any, name: str, event_dict: dict[str, Any]) -> str:
     # Seq expects @t for timestamp, @m for message, @l for level
     event_dict["@m"] = event_dict.pop("event", "")
     event_dict["@l"] = event_dict.pop("level", "info")
@@ -70,7 +71,7 @@ def render_to_clef(logger, name, event_dict):
     )["timestamp"]
 
     # Return JSON STRING. This ensures ProcessorFormatter passes a valid JSON string to the handler.
-    return structlog.processors.JSONRenderer()(logger, name, event_dict)
+    return cast(str, structlog.processors.JSONRenderer()(logger, name, event_dict))
 
 
 LOGGING = {

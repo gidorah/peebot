@@ -43,9 +43,15 @@ class DjangoTelemetryRepository(TelemetryRepositoryInterface):
         self, readings_data: list[ReadingData]
     ) -> list[TelemetryReading]:
         readings = [TelemetryReading(**data) for data in readings_data]
-        return await TelemetryReading.objects.abulk_create(
-            readings, ignore_conflicts=True
+        return cast(
+            list[TelemetryReading],
+            await TelemetryReading.objects.abulk_create(  # type: ignore[attr-defined]
+                readings, ignore_conflicts=True
+            ),
         )
 
     def create_reading(self, reading_data: ReadingData) -> TelemetryReading:
-        return cast(TelemetryReading, TelemetryReading.objects.create(**reading_data))
+        return cast(
+            TelemetryReading,
+            TelemetryReading.objects.create(**reading_data),  # type: ignore[attr-defined]
+        )

@@ -204,7 +204,7 @@ Used primarily for the `dashboards` module to retrieve historical or current sta
 **Purpose**: Shared foundations, base models, and project-wide utilities.
 
 **Key Components**:
-1.  **Base Models**: 
+1.  **Base Models**:
     - `TimeStampedModel`: Provides `created_at` and `updated_at`.
     - `UUID7Model`: Provides `id = UUIDField` (defaulting to UUIDv7).
     - `SoftDeleteModel`: Provides `deleted_at` and custom manager.
@@ -257,7 +257,7 @@ The single source of truth for all ISS telemetry data, optimized as a TimescaleD
 - **Query Index**: Optimized for `(channel, -timestamp)` for trend analysis.
 - **Audit Index**: `(created_at, timestamp)` for ingestion performance monitoring.
 
-**Retention Policy**: 
+**Retention Policy**:
 -   **Compression**: 7 days.
 -   **Retention**: 30 days.
 

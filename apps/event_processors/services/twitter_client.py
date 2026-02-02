@@ -111,7 +111,7 @@ class TwitterClient:
 
         try:
             # Get most recent Twitter post
-            recent_post = await SocialPost.objects.filter(
+            recent_post = await SocialPost.objects.filter(  # type: ignore[attr-defined]
                 platform=self.PLATFORM,
                 posted_at__gte=cooldown_threshold,
             ).afirst()
@@ -191,7 +191,7 @@ class TwitterClient:
             tweet_id = str(response.data["id"])
 
             # Create SocialPost record
-            social_post = await SocialPost.objects.acreate(
+            social_post = await SocialPost.objects.acreate(  # type: ignore[attr-defined]
                 event=event,
                 platform=self.PLATFORM,
                 external_id=tweet_id,

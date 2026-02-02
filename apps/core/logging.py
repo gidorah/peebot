@@ -3,12 +3,19 @@ import logging
 import queue
 import sys
 import threading
+from typing import Any
 
 import requests
 
 
 class SeqHandler(logging.Handler):
-    def __init__(self, server_url, api_key=None, batch_size=1, static_fields=None):
+    def __init__(
+        self,
+        server_url: str,
+        api_key: str | None = None,
+        batch_size: int = 1,
+        static_fields: dict[str, Any] | None = None,
+    ) -> None:
         super().__init__()
         self.server_url = server_url.rstrip("/")
         self.api_key = api_key
@@ -19,14 +26,14 @@ class SeqHandler(logging.Handler):
         self.session.headers.update({"Content-Type": "application/vnd.serilog.clef"})
 
         # Initialize queue and worker
-        self.queue = queue.Queue(maxsize=5000)
+        self.queue: queue.Queue[str] = queue.Queue(maxsize=5000)
         self._stop_event = threading.Event()
         self._worker_thread = threading.Thread(
             target=self._worker, name="SeqLoggerWorker", daemon=True
         )
         self._worker_thread.start()
 
-    def emit(self, record):
+    def emit(self, record: logging.LogRecord) -> None:
         try:
             # Format the log record using the configured formatter (returns a dict if using JSONRenderer)
             payload_data = self.format(record)
@@ -58,7 +65,7 @@ class SeqHandler(logging.Handler):
         except Exception:
             self.handleError(record)
 
-    def _worker(self):
+    def _worker(self) -> None:
         """Background worker to consume logs from the queue and send to Seq."""
         while not self._stop_event.is_set():
             try:
@@ -69,7 +76,7 @@ class SeqHandler(logging.Handler):
             self._send(payload)
             self.queue.task_done()
 
-    def close(self):
+    def close(self) -> None:
         """Signal worker to stop and wait briefly."""
         # Drain any remaining logs in the queue
         while True:
@@ -87,7 +94,7 @@ class SeqHandler(logging.Handler):
         self.session.close()
         super().close()
 
-    def _send(self, payload):
+    def _send(self, payload: str) -> None:
         try:
             # Seq raw events endpoint
             url = f"{self.server_url}/api/events/raw?clef"

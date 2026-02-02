@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from datetime import timedelta
 from decimal import Decimal
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -31,11 +30,17 @@ class ConcreteProcessor(BaseProcessor):
     poll_interval_seconds = 30
     window_minutes = 5
 
-    async def analyze(self, readings: list[TelemetryReading]) -> dict[str, Any] | None:
+    async def analyze(self, readings: list[TelemetryReading]) -> DetectionResult | None:
         """Return dummy detection result."""
         if not readings:
             return None
-        return {"detected": True, "readings_count": len(readings)}
+        # Return a proper DetectionResult object instead of a dict
+        return DetectionResult(
+            event_type="test_event",
+            detected_at=timezone.now(),
+            confidence=Decimal("0.85"),
+            metadata={"readings_count": len(readings)},
+        )
 
     def get_confidence(self, readings: list[TelemetryReading]) -> Decimal:
         """Return dummy confidence score."""
@@ -49,7 +54,7 @@ class MissingNameProcessor(BaseProcessor):
 
     channel_pui = "NODE3000004"
 
-    async def analyze(self, readings: list[TelemetryReading]) -> dict[str, Any] | None:
+    async def analyze(self, readings: list[TelemetryReading]) -> DetectionResult | None:
         return None
 
     def get_confidence(self, readings: list[TelemetryReading]) -> Decimal:
@@ -61,7 +66,7 @@ class MissingChannelProcessor(BaseProcessor):
 
     processor_name = "test_processor"
 
-    async def analyze(self, readings: list[TelemetryReading]) -> dict[str, Any] | None:
+    async def analyze(self, readings: list[TelemetryReading]) -> DetectionResult | None:
         return None
 
     def get_confidence(self, readings: list[TelemetryReading]) -> Decimal:
@@ -324,8 +329,9 @@ class TestBaseProcessorAbstractMethods:
         result = await processor.analyze([mock_reading])
 
         assert result is not None
-        assert result["detected"] is True
-        assert result["readings_count"] == 1
+        assert isinstance(result, DetectionResult)
+        assert result.event_type == "test_event"
+        assert result.metadata["readings_count"] == 1
 
     async def test_analyze_returns_none_when_no_event(self) -> None:
         """analyze returns None when no event detected."""

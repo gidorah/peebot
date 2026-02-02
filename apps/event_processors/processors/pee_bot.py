@@ -448,4 +448,4 @@ class PeeBotProcessor(BaseProcessor):
         # Normalize: assume SNR > 10 is excellent (1.0)
         normalized_snr = min(snr / 10.0, 1.0)
 
-        return max(0.0, normalized_snr)
+        return float(max(0.0, normalized_snr))

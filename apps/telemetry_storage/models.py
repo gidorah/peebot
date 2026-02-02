@@ -12,7 +12,7 @@ class TelemetryChannel(TimeStampedModel, SoftDeleteModel):
     eng_nom = models.CharField(max_length=100, help_text="Engineering Nomenclature")
     unit = models.CharField(max_length=50)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.public_pui} ({self.ops_nom})"
 
 

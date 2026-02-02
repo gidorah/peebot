@@ -34,7 +34,7 @@ app.conf.beat_schedule = {
 }
 
 
-@shared_task(bind=True)
+@shared_task(bind=True)  # type: ignore[misc]
 def debug_task(self: Task) -> None:
     """Debug task to test Celery is working correctly."""
 

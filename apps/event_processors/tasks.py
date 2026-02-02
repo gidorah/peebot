@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 import structlog
 from asgiref.sync import async_to_sync
-from celery import shared_task  # type: ignore[import-untyped]
+from celery import shared_task
 from django.db import OperationalError
 from django.utils import timezone
 
@@ -31,7 +31,7 @@ logger = structlog.get_logger(__name__)
     retry_backoff_max=60,
     retry_kwargs={"max_retries": 3},
     acks_late=True,
-)
+)  # type: ignore[misc]
 def run_peebot_processor(self: Any) -> dict[str, Any]:
     """Run the PeeBot processor to detect UPA tank fill events.
 

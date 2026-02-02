@@ -31,7 +31,7 @@ These tasks address architectural changes and bugs in the **currently implemente
 - [x] **Refactor (Ingestion)**: Update Validation Layer (Pydantic).
     - *Goal*: Replace DRF Serializer with Pydantic model for high-performance ingestion (ADR-004). Integrate into `run_lightstreamer` loop.
     - *Files*: `apps/telemetry_ingestion/services/validator.py`, `apps/telemetry_ingestion/management/commands/run_lightstreamer.py`.
-    
+
 ## Phase 3: Event Processing Implementation (T003)
 
 - [x] **T003-1 (Setup)**: Create `event_processors` Django app and register in settings.
@@ -41,4 +41,3 @@ These tasks address architectural changes and bugs in the **currently implemente
 - [x] **T003-5 (Services)**: Implement `JokeGenerator` and `TwitterClient` services.
 - [x] **T003-6 (Celery)**: Implement Celery task and Beat schedule (30s interval).
 - [x] **T003-7 (Testing)**: Unit tests for processor logic, integration test for full flow.
-

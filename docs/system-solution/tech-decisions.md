@@ -23,8 +23,8 @@
 ## ADR-005: Channel Resolution Strategy
 *   **Decision**: In-Process Memory Map (Dictionary).
 *   **Status**: Accepted.
-*   **Rationale**: To meet the ingestion throughput target, we require nanosecond-level resolution of PUI strings (e.g., "NODE3000004") to Database UUIDs. 
-    *   **Implementation**: A Python dictionary is pre-loaded from the DB at startup. 
+*   **Rationale**: To meet the ingestion throughput target, we require nanosecond-level resolution of PUI strings (e.g., "NODE3000004") to Database UUIDs.
+    *   **Implementation**: A Python dictionary is pre-loaded from the DB at startup.
     *   **Trade-off**: Adding new channels requires a process restart (or a periodic refresh implementation). This "stale data" risk is acceptable because Channel definitions are static configuration data that change extremely rarely.
     *   **Alternative Rejected**: Redis cache was rejected for the hot path due to network I/O latency (~0.5ms per message) which would degrade performance during high-frequency bursts.
 
@@ -39,7 +39,7 @@
 ## ADR-007: Hybrid Enrichment Strategy
 *   **Decision**: Separation of Domain Normalization and System Metadata.
 *   **Status**: Accepted.
-*   **Rationale**: 
+*   **Rationale**:
     *   **Domain Data**: Complex logic like converting "Hours since start of year" to UTC Datetime and handling Year Rollover requires explicit business logic. This is delegated to `apps.telemetry_ingestion.services.enricher.py`.
     *   **System Metadata**: Standard fields like `id` (UUIDv7) and `created_at` (Ingestion Time) are handled efficiently by Django Model defaults (`UUID7Model`, `TimeStampedModel`) upon instantiation, reducing boilerplate in the ingestion loop.
 

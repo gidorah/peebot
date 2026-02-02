@@ -31,6 +31,7 @@ warn_unused_ignores = true
 warn_redundant_casts = true
 warn_unused_configs = true
 plugins = ["mypy_django_plugin.main"]
+exclude = ["migrations/", "tests/"]
 
 [[tool.mypy.overrides]]
 module = "django_celery_beat.*"
@@ -42,6 +43,22 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "lightstreamer.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "celery.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tweepy.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "environ.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "rest_framework.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
@@ -111,11 +128,16 @@ dev = [
     "django-stubs>=5.2.7",
     "model-bakery>=1.20.5",
     "mypy>=1.18.2",
+    "pre-commit>=4.5.1",
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",
     "pytest-django>=4.11.1",
     "ruff>=0.14.1",
     "types-defusedxml>=0.7.0.20250822",
+    "types-python-dateutil>=2.9.0.20260124",
+    "types-redis>=4.6.0.20241004",
+    "types-requests>=2.32.4.20260107",
+    "types-setuptools>=80.10.0.20260124",
 ]
 
 [tool.pytest.ini_options]
