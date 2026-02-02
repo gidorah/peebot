@@ -180,3 +180,22 @@ CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 minutes soft limit
 
 # Celery Beat scheduler configuration (for periodic tasks)
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+
+# ==============================================================================
+# External API Configuration
+# ==============================================================================
+
+# OpenRouter / LLM Configuration
+OPENROUTER_API_KEY = env("OPENROUTER_API_KEY", default=None)
+OPENROUTER_BASE_URL = env("OPENROUTER_BASE_URL", default="https://openrouter.ai/api/v1")
+OPENROUTER_MODEL = env("OPENROUTER_MODEL", default="deepseek/deepseek-chat")
+JOKE_GENERATOR_MAX_RETRIES = env.int("JOKE_GENERATOR_MAX_RETRIES", default=3)
+JOKE_GENERATOR_BASE_DELAY = env.float("JOKE_GENERATOR_BASE_DELAY", default=1.0)
+
+# Twitter API Configuration
+TWITTER_BEARER_TOKEN = env("TWITTER_BEARER_TOKEN", default=None)
+TWITTER_API_KEY = env("TWITTER_API_KEY", default=None)
+TWITTER_API_SECRET = env("TWITTER_API_SECRET", default=None)
+TWITTER_ACCESS_TOKEN = env("TWITTER_ACCESS_TOKEN", default=None)
+TWITTER_ACCESS_SECRET = env("TWITTER_ACCESS_SECRET", default=None)
+TWITTER_COOLDOWN_MINUTES = env.int("TWITTER_COOLDOWN_MINUTES", default=30)

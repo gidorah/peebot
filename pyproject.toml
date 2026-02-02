@@ -14,12 +14,14 @@ dependencies = [
     "djangorestframework>=3.16.1",
     "flower>=2.0.1",
     "lightstreamer-client-lib>=2.2.2",
+    "openai>=1.60.0",
     "psycopg[binary,pool]>=3.2.11",
     "pydantic>=2.12.5",
     "redis>=6.4.0",
     "rich>=14.2.0",
     "seqlog>=0.4.3",
     "structlog>=25.5.0",
+    "tweepy>=4.15.0",
 ]
 
 [tool.mypy]

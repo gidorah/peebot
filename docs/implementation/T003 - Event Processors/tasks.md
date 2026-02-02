@@ -65,17 +65,17 @@
 
 ## Phase 5: External Services
 
-- [ ] **Step 10**: Implement `JokeGenerator` service.
+- [x] **Step 10**: Implement `JokeGenerator` service.
     - *File*: `apps/event_processors/services/joke_generator.py`
     - *Task*: Create class using `openai` SDK. Configure for OpenRouter endpoint and DeepSeek model. Implement `generate(event)` method with prompt for "dry, scientific, slightly absurd" tone.
     - *Test*: `apps/event_processors/tests/test_joke_generator.py` — mock OpenAI client, verify prompt includes event context, verify retry logic on failure.
 
-- [ ] **Step 11**: Implement `TwitterClient` service.
+- [x] **Step 11**: Implement `TwitterClient` service.
     - *File*: `apps/event_processors/services/twitter_client.py`
     - *Task*: Create class using `tweepy`. Implement `post(text, event)` method that posts to Twitter and creates `SocialPost` record. Implement `check_cooldown()` querying `SocialPost` for posts within last 30 minutes.
     - *Test*: `apps/event_processors/tests/test_twitter_client.py` — mock tweepy, verify cooldown logic blocks/allows correctly, verify `SocialPost` created on success.
 
-- [ ] **Step 12**: Add environment configuration for API keys.
+- [x] **Step 12**: Add environment configuration for API keys.
     - *File*: `config/settings/base.py`, `.env.example`
     - *Task*: Add settings for `OPENROUTER_API_KEY`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_SECRET`.
     - *Verification*: Settings load without error when env vars present.
