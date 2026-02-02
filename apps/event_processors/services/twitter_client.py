@@ -162,11 +162,14 @@ class TwitterClient:
         """
         # Check cooldown first
         can_post, remaining = await self.check_cooldown()
-        if not can_post:
+        if not can_post and remaining:
             raise TwitterCooldownError(
                 f"Cannot post: cooldown active. "
                 f"Wait {remaining.total_seconds() / 60:.1f} more minutes."
             )
+        elif not can_post:
+            # Should not happen based on check_cooldown logic but for type safety
+            raise TwitterCooldownError("Cannot post: cooldown active.")
 
         try:
             # Post to Twitter using synchronous tweepy in executor

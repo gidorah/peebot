@@ -13,14 +13,18 @@ from __future__ import annotations
 import asyncio
 import random
 from abc import ABC, abstractmethod
+from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
+import structlog
 from django.utils import timezone
 
 if TYPE_CHECKING:
     from apps.event_processors.models import ProcessorState
     from apps.telemetry_storage.models import TelemetryReading
+
+logger = structlog.get_logger(__name__)
 
 
 class BaseProcessor(ABC):
@@ -106,7 +110,8 @@ class BaseProcessor(ABC):
         # Import here to avoid circular dependency during module load
         from apps.event_processors.models import ProcessorState
 
-        state, _ = await ProcessorState.objects.aget_or_create(
+        state: ProcessorState
+        state, created = await ProcessorState.objects.aget_or_create(  # type: ignore[attr-defined]
             processor_name=self.processor_name,
             defaults={
                 "last_processed_at": None,
@@ -114,10 +119,12 @@ class BaseProcessor(ABC):
                 "state_data": None,
             },
         )
+        if created:
+            logger.info("processor_state_created", processor_name=self.processor_name)
         return state
 
     async def update_state_cursor(
-        self, state: ProcessorState, processed_at: timezone.datetime | None = None
+        self, state: ProcessorState, processed_at: datetime | None = None
     ) -> None:
         """Update the processor state cursor after execution.
 
@@ -128,10 +135,18 @@ class BaseProcessor(ABC):
             state: The ProcessorState instance to update
             processed_at: Timestamp of processed data (defaults to now)
         """
-        state.last_run_at = timezone.now()
+        now = timezone.now()
+        state.last_run_at = now
         if processed_at:
             state.last_processed_at = processed_at
+
         await state.asave()
+        logger.debug(
+            "processor_state_updated",
+            processor_name=self.processor_name,
+            last_run_at=now.isoformat(),
+            last_processed_at=processed_at.isoformat() if processed_at else None,
+        )
 
     async def get_state_data(self, state: ProcessorState) -> dict[str, Any] | None:
         """Get processor-specific state data.
@@ -167,7 +182,7 @@ class DetectionResult:
     def __init__(
         self,
         event_type: str,
-        detected_at: timezone.datetime,
+        detected_at: datetime,
         confidence: Decimal,
         metadata: dict[str, Any] | None = None,
     ):

@@ -32,25 +32,13 @@ These tasks address architectural changes and bugs in the **currently implemente
     - *Goal*: Replace DRF Serializer with Pydantic model for high-performance ingestion (ADR-004). Integrate into `run_lightstreamer` loop.
     - *Files*: `apps/telemetry_ingestion/services/validator.py`, `apps/telemetry_ingestion/management/commands/run_lightstreamer.py`.
     
-## Phase 3: Event Processing Implementation
+## Phase 3: Event Processing Implementation (T003)
 
-- [ ] **T003-1 (Setup)**: Create `event_processors` Django app and register in settings.
+- [x] **T003-1 (Setup)**: Create `event_processors` Django app and register in settings.
+- [x] **T003-2 (Models)**: Implement `ProcessorState`, `DetectedEvent`, and `SocialPost` models.
+- [x] **T003-3 (Base Processor)**: Implement `BaseProcessor` abstract class with jitter utility.
+- [x] **T003-4 (PeeBot)**: Implement `PeeBotProcessor` with burst detection algorithm.
+- [x] **T003-5 (Services)**: Implement `JokeGenerator` and `TwitterClient` services.
+- [x] **T003-6 (Celery)**: Implement Celery task and Beat schedule (30s interval).
+- [x] **T003-7 (Testing)**: Unit tests for processor logic, integration test for full flow.
 
-- [ ] **T003-2 (Models)**: Implement `ProcessorState`, `DetectedEvent`, and `SocialPost` models.
-    - `ProcessorState`: Tracks processor cursor and state for resumption.
-    - `DetectedEvent`: Generic event storage with confidence and metadata.
-    - `SocialPost`: Tracks posts to social platforms (FK to DetectedEvent).
-
-- [ ] **T003-3 (Base Processor)**: Implement `BaseProcessor` abstract class with jitter utility.
-    - Defines contract: `analyze()`, `get_confidence()`, state helpers.
-
-- [ ] **T003-4 (PeeBot)**: Implement `PeeBotProcessor` with burst detection algorithm.
-    - Detects 30s–2min sustained tank level increase, rejects glitches.
-
-- [ ] **T003-5 (Services)**: Implement `JokeGenerator` and `TwitterClient` services.
-    - `JokeGenerator`: DeepSeek V3 via OpenRouter for humor generation.
-    - `TwitterClient`: tweepy posting with 30-min cooldown via `SocialPost`.
-
-- [ ] **T003-6 (Celery)**: Implement Celery task and Beat schedule (30s interval).
-
-- [ ] **T003-7 (Testing)**: Unit tests for processor logic, integration test for full flow.

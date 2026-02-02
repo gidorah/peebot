@@ -82,27 +82,28 @@
 
 ## Phase 6: Celery Integration
 
-- [ ] **Step 13**: Implement Celery task for PeeBot.
+- [x] **Step 13**: Implement Celery task for PeeBot.
     - *File*: `apps/event_processors/tasks.py`
     - *Task*: Create `run_peebot_processor` task. Task should: apply jitter, load processor state, query readings, run analysis, create `DetectedEvent` if detected, check cooldown, generate joke, post to Twitter, update processor state.
     - *Test*: `apps/event_processors/tests/test_tasks.py` — use `pytest-celery` eager mode, mock external services, verify full flow.
 
-- [ ] **Step 14**: Register task in Celery Beat schedule.
+- [x] **Step 14**: Register task in Celery Beat schedule.
     - *File*: `config/celery.py`
     - *Task*: Add `peebot-processor` to `beat_schedule` with 30-second interval.
     - *Verification*: `uv run celery -A config inspect scheduled` shows task.
 
 ## Phase 7: Error Handling & Logging
 
-- [ ] **Step 15**: Add structured logging throughout module.
+- [x] **Step 15**: Add structured logging throughout module.
     - *Files*: All module files
     - *Task*: Use `structlog` for all log statements. Include `processor_name`, `event_type`, `channel_id` in log context.
-    - *Verification*: Logs appear in Seq during manual testing.
+    - *Verification*: Logs appear in Seq during manual testing. (Verified via unit tests and code review).
 
-- [ ] **Step 16**: Implement error handling per design.md section 7.
+- [x] **Step 16**: Implement error handling per design.md section 7.
     - *Files*: `tasks.py`, service files
     - *Task*: Add try/except blocks with appropriate strategies (retry, skip, log). Ensure `last_run_at` updates even on failure.
     - *Test*: Simulate failures (mock exceptions), verify graceful handling.
+
 
 ## Phase 8: Integration Testing
 

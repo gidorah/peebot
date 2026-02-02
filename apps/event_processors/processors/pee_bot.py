@@ -16,15 +16,18 @@ Detection Logic:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from django.utils import timezone
+import structlog
 
 from apps.event_processors.processors.base import BaseProcessor, DetectionResult
 
 if TYPE_CHECKING:
     from apps.telemetry_storage.models import TelemetryReading
+
+logger = structlog.get_logger(__name__)
 
 
 @dataclass
@@ -34,8 +37,8 @@ class BurstInfo:
     Tracks the characteristics of a potential fill event burst for validation.
     """
 
-    start_time: timezone.datetime
-    end_time: timezone.datetime
+    start_time: datetime
+    end_time: datetime
     start_value: Decimal
     end_value: Decimal
     readings_count: int = 0
@@ -104,21 +107,37 @@ class PeeBotProcessor(BaseProcessor):
         # Detect bursts in the readings
         bursts = self._detect_bursts(sorted_readings)
 
+        if not bursts:
+            logger.debug("no_bursts_detected", readings_count=len(readings))
+            return None
+
         for burst in bursts:
+            log = logger.bind(
+                burst_start=burst.start_time.isoformat(),
+                burst_end=burst.end_time.isoformat(),
+                delta=str(burst.delta),
+                duration=burst.duration_seconds,
+            )
+
             # Validate burst duration
             if not self._is_valid_burst_duration(burst):
+                log.debug("invalid_burst_duration")
                 continue
 
             # Check if it's a glitch (quick reversion)
             if self._is_glitch(burst, sorted_readings):
+                log.info("rejected_as_glitch")
                 continue
 
             # Check post-burst stability
             if not self._check_post_burst_stability(burst, sorted_readings):
+                log.info("rejected_as_unstable_post_burst")
                 continue
 
             # Calculate confidence based on trend strength
             confidence = self.get_confidence(sorted_readings)
+
+            log.info("fill_event_detected", confidence=str(confidence))
 
             # Create detection result
             return DetectionResult(
