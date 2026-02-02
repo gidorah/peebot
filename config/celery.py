@@ -25,6 +25,14 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 # This will look for tasks.py files in each app
 app.autodiscover_tasks()
 
+# Celery Beat schedule for periodic tasks
+app.conf.beat_schedule = {
+    "peebot-processor": {
+        "task": "apps.event_processors.tasks.run_peebot_processor",
+        "schedule": 30.0,  # Run every 30 seconds
+    },
+}
+
 
 @shared_task(bind=True)
 def debug_task(self: Task) -> None:
