@@ -1,1 +1,1 @@
-# Register your models here.
+"""Admin configuration for event processor models."""

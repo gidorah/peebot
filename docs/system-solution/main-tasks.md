@@ -41,3 +41,4 @@ These tasks address architectural changes and bugs in the **currently implemente
 - [x] **T003-5 (Services)**: Implement `JokeGenerator` and `BlueskyClient` services.
 - [x] **T003-6 (Celery)**: Implement Celery task and Beat schedule (30s interval).
 - [x] **T003-7 (Testing)**: Unit tests for processor logic, integration test for full flow.
+- **T003 Completion Date**: 2026-02-06

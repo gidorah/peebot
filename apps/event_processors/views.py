@@ -1,1 +1,1 @@
-# Create your views here.
+"""Views for the event_processors module."""

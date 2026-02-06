@@ -319,6 +319,16 @@ DATABASE_URL=postgresql://user:password@localhost:5432/peebot
 # Celery Configuration
 CELERY_BROKER_URL=redis://localhost:6379/0
 CELERY_RESULT_BACKEND=redis://localhost:6379/0
+
+# Event processor integrations
+OPENROUTER_API_KEY=your-openrouter-key
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+OPENROUTER_MODEL=deepseek/deepseek-chat
+JOKE_GENERATOR_MAX_RETRIES=3
+JOKE_GENERATOR_BASE_DELAY=1.0
+BLUESKY_HANDLE=your-handle.bsky.social
+BLUESKY_APP_PASSWORD=your-app-password
+BLUESKY_COOLDOWN_MINUTES=30
 ```
 
 ## Settings Management
@@ -435,6 +445,9 @@ uv run celery -A config beat --loglevel=info
 uv run celery -A config flower
 # Dashboard available at http://localhost:5555
 
+# Inspect scheduled tasks
+uv run celery -A config inspect scheduled
+
 ```
 
 ### Testing
@@ -534,6 +547,17 @@ Analytics modules use a **polling pattern**:
 4. Analyze sliding window (e.g., last 10 minutes)
 5. Detect events and store results in `DetectedEvent`
 6. Update `ProcessorState` with current timestamp
+
+## Event Processors
+
+The `event_processors` module runs polling-based analytics over recent telemetry
+windows. The initial processor, `PeeBotProcessor`, detects UPA tank fill events
+and can publish a short Bluesky post with a generated joke when a valid event is
+found. Processor state is stored in `ProcessorState` to ensure safe resumption
+after restarts.
+
+To run processors locally, start a Celery worker and beat scheduler, then
+monitor scheduled tasks (see the Celery section above).
 
 ## Database Schema
 

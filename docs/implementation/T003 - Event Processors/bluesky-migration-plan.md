@@ -38,11 +38,11 @@ post = client.send_post('Hello from PeeBot! 🚽🛰️')
 
 ### Phase 1: Add Bluesky Client Service
 
-- [ ] **Task 1.1**: Add `atproto` dependency
+- [x] **Task 1.1**: Add `atproto` dependency
   - File: `pyproject.toml`
   - Command: `uv add atproto`
 
-- [ ] **Task 1.2**: Create `BlueskyClient` service
+- [x] **Task 1.2**: Create `BlueskyClient` service
   - File: `apps/event_processors/services/bluesky_client.py`
   - Mirror `TwitterClient` interface:
     - `__init__()` - Initialize with credentials
@@ -50,7 +50,7 @@ post = client.send_post('Hello from PeeBot! 🚽🛰️')
     - `post(text, event)` - Post to Bluesky, create SocialPost record
     - `_create_failed_post()` - Record failures
 
-- [ ] **Task 1.3**: Add environment configuration
+- [x] **Task 1.3**: Add environment configuration
   - File: `config/settings/base.py`, `.env.example`
   - Settings:
     - `BLUESKY_HANDLE` (e.g., `peebot.bsky.social`)
@@ -58,38 +58,38 @@ post = client.send_post('Hello from PeeBot! 🚽🛰️')
 
 ### Phase 2: Update Task Orchestration
 
-- [ ] **Task 2.1**: Update Celery task to use BlueskyClient
+- [x] **Task 2.1**: Update Celery task to use BlueskyClient
   - File: `apps/event_processors/tasks.py`
   - Replace TwitterClient instantiation with BlueskyClient
   - Keep fallback logic for graceful degradation
 
-- [ ] **Task 2.2**: Update SocialPost platform field
+- [x] **Task 2.2**: Update SocialPost platform field
   - Add `"bluesky"` as platform value
   - BlueskyClient should use `platform="bluesky"`
 
 ### Phase 3: Testing
 
-- [ ] **Task 3.1**: Create unit tests for BlueskyClient
+- [x] **Task 3.1**: Create unit tests for BlueskyClient
   - File: `apps/event_processors/tests/test_bluesky_client.py`
   - Mock `atproto.Client`
   - Test: successful post, cooldown, error handling
 
-- [ ] **Task 3.2**: Update integration tests
+- [x] **Task 3.2**: Update integration tests
   - File: `tests/test_event_processors_integration.py`
   - Mock BlueskyClient instead of TwitterClient
 
-- [ ] **Task 3.3**: Manual E2E verification
+- [x] **Task 3.3**: Manual E2E verification
   - Create Bluesky account for PeeBot
   - Generate App Password
   - Test posting with real credentials
 
 ### Phase 4: Cleanup (Optional)
 
-- [ ] **Task 4.1**: Remove Twitter dependencies (optional)
+- [x] **Task 4.1**: Remove Twitter dependencies (optional)
   - Keep if you want multi-platform support
   - Remove `tweepy` if Twitter-only
 
-- [ ] **Task 4.2**: Update documentation
+- [x] **Task 4.2**: Update documentation
   - README.md
   - Module docstrings
 
