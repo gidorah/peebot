@@ -40,23 +40,25 @@ class TestRunPeeBotProcessor:
         self.joke_gen_patch = patch(
             "apps.event_processors.services.joke_generator.JokeGenerator"
         )
-        self.twitter_patch = patch(
-            "apps.event_processors.services.twitter_client.TwitterClient"
+        self.bluesky_patch = patch(
+            "apps.event_processors.services.bluesky_client.BlueskyClient"
         )
         self.mock_joke_gen_class = self.joke_gen_patch.start()
-        self.mock_twitter_class = self.twitter_patch.start()
+        self.mock_bluesky_class = self.bluesky_patch.start()
 
         self.mock_joke_gen = MagicMock()
         self.mock_joke_gen.generate = AsyncMock(return_value="Test joke")
         self.mock_joke_gen_class.return_value = self.mock_joke_gen
 
-        self.mock_twitter = MagicMock()
-        self.mock_twitter.check_cooldown = AsyncMock(return_value=(True, None))
-        self.mock_twitter.post = AsyncMock(return_value="tweet_123")
-        self.mock_twitter_class.return_value = self.mock_twitter
+        self.mock_bluesky = MagicMock()
+        self.mock_bluesky.check_cooldown = AsyncMock(return_value=(True, None))
+        self.mock_bluesky.post = AsyncMock(
+            return_value="at://did:plc:xxx/app.bsky.feed.post/123"
+        )
+        self.mock_bluesky_class.return_value = self.mock_bluesky
 
     def test_run_peebot_processor_happy_path(self) -> None:
-        """Task successfully detects event and posts to Twitter."""
+        """Task successfully detects event and posts to Bluesky."""
         # 1. Setup data: processor state and telemetry readings (increasing trend)
         state = baker.make(
             ProcessorState, processor_name="pee_bot", last_processed_at=None
@@ -103,7 +105,7 @@ class TestRunPeeBotProcessor:
 
         # Verify external calls
         self.mock_joke_gen.generate.assert_called_once()
-        self.mock_twitter.post.assert_called_once()
+        self.mock_bluesky.post.assert_called_once()
 
     def test_run_peebot_processor_no_event(self) -> None:
         """Task runs but detects no event with flat readings."""
@@ -128,8 +130,8 @@ class TestRunPeeBotProcessor:
         assert result["tweet_posted"] is False
         assert DetectedEvent.objects.count() == 0
 
-    def test_run_peebot_processor_cooldown_blocks_twitter(self) -> None:
-        """Task detects event but respects Twitter cooldown."""
+    def test_run_peebot_processor_cooldown_blocks_post(self) -> None:
+        """Task detects event but respects Bluesky cooldown."""
         baker.make(ProcessorState, processor_name="pee_bot")
         channel: Any = baker.make(
             "telemetry_storage.TelemetryChannel", public_pui="NODE3000004"
@@ -149,14 +151,14 @@ class TestRunPeeBotProcessor:
             )
 
         # Simulate cooldown active
-        self.mock_twitter.check_cooldown.return_value = (False, timedelta(minutes=15))
+        self.mock_bluesky.check_cooldown.return_value = (False, timedelta(minutes=15))
 
         result = run_peebot_processor()
 
         assert result["event_detected"] is True
         assert result["tweet_posted"] is False
         assert DetectedEvent.objects.count() == 1
-        self.mock_twitter.post.assert_not_called()
+        self.mock_bluesky.post.assert_not_called()
 
     def test_run_peebot_processor_db_error_triggers_retry(self) -> None:
         """OperationalError causes the task to retry (verified via exception propagation)."""
@@ -228,4 +230,4 @@ class TestRunPeeBotProcessor:
 
         assert result["event_detected"] is True
         assert result["tweet_posted"] is False
-        self.mock_twitter.post.assert_not_called()
+        self.mock_bluesky.post.assert_not_called()

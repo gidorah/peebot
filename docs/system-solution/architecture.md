@@ -48,7 +48,7 @@ All versions are **MANDATORY**. Do not upgrade without RFC.
 | **Queue** | Celery + Redis | `5.3+` / `7.2` | Polling and background tasks. |
 | **AI Client** | openai (Python SDK) | `1.x` | Generic client compatible with OpenRouter. |
 | **AI Provider**| DeepSeek V3 | `Latest` | Via OpenRouter. |
-| **Social** | tweepy | `4.14+` | Twitter API v2 wrapper. |
+| **Social** | atproto | `0.0.65+` | Bluesky AT Protocol SDK. |
 | **Validation** | Pydantic | `2.x` | High-performance data validation for ingestion. |
 | **Logging** | Structlog + Seq | `24.x` | Structured logging with centralized ingestion. |
 | **Pkg Manager** | uv | `Latest` | Fast resolution and locking. |
@@ -127,7 +127,7 @@ peebot/
 │   │   ├── processors/
 │   │   │   └── pee_bot.py           # Urination detector logic
 │   │   ├── services/
-│   │   │   ├── twitter_client.py
+│   │   │   ├── bluesky_client.py
 │   │   │   └── joke_generator.py
 │   │   └── tasks.py                 # Celery periodic tasks
 │   └── dashboards/                  # Module: Web Interface
@@ -359,7 +359,7 @@ Maintains the state for each analytics processor to support resumption and histo
                                 v
                            [DetectedEvent]
                                 +
-                         [Twitter Client] <--(Check Cooldown)-- [ProcessorState]
+                         [Bluesky Client] <--(Check Cooldown)-- [ProcessorState]
 ```
 
 **Implementation Note**:

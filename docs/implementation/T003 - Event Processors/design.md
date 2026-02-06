@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-This module implements a polling-based analytics framework using Celery Beat. Processors independently query TimescaleDB for pattern detection and trigger actions (e.g., Twitter posts) upon event detection.
+This module implements a polling-based analytics framework using Celery Beat. Processors independently query TimescaleDB for pattern detection and trigger actions (e.g., Bluesky posts) upon event detection.
 
 ### 1.1 Design Rationale: Why Polling?
 
@@ -24,7 +24,7 @@ apps/event_processors/
 │   └── pee_bot.py           # PeeBot implementation
 ├── services/
 │   ├── __init__.py
-│   ├── twitter_client.py    # Twitter API wrapper
+│   ├── bluesky_client.py    # Bluesky API wrapper
 │   └── joke_generator.py    # LLM integration
 ├── tasks.py                 # Celery periodic tasks
 └── tests/
@@ -56,7 +56,7 @@ Tracks social media posts linked to detected events. Supports multiple platforms
 |-------|------|-------------|
 | `id` | UUIDv7 | PK, time-sortable (inherits `UUID7Model`) |
 | `event` | ForeignKey | Reference to `DetectedEvent` |
-| `platform` | CharField | Social platform (e.g., `twitter`, `mastodon`) |
+| `platform` | CharField | Social platform (e.g., `bluesky`) |
 | `external_id` | CharField | Platform-specific post ID (e.g., tweet ID) |
 | `content` | TextField | The posted text content |
 | `posted_at` | DateTimeField | When the post was published |
@@ -133,7 +133,7 @@ Maintains processor state for resumption and replay.
                     │              │                       │
                     │              │                       ▼
                     │              │              ┌──────────────────┐
-                    │              │              │ TwitterClient    │
+                    │              │              │ BlueskyClient    │
                     │              │              └────────┬─────────┘
                     │              │                       │
                     └──────────────┴───────────────────────┘
@@ -195,11 +195,11 @@ An abstract base class that all processors must inherit. Defines the contract fo
 | Context | Include event timestamp and confidence in prompt |
 | Error Handling | Retry with exponential backoff (max 3 attempts). On failure, skip posting and log error. |
 
-### 5.2 TwitterClient Service
+### 5.2 BlueskyClient Service
 
 | Aspect | Detail |
 |--------|--------|
-| Library | tweepy (Twitter API v2) |
+| Library | atproto (AT Protocol SDK) |
 | Method | `post(text)` → returns tweet ID string |
 | Cooldown Check | Query `SocialPost` for posts within last 30 minutes before allowing new post |
 | Error Handling | Log failures to Seq. Do not retry immediately (respect rate limits). |
@@ -220,7 +220,7 @@ Register the PeeBot task in `config/celery.py` beat schedule with a 30-second in
 |----------|----------|
 | DB connection failure | Celery auto-retry with backoff |
 | LLM API timeout | Retry 3x, then skip posting for this cycle |
-| Twitter API rate limit | Log warning, skip posting |
+| Bluesky API error | Log warning, skip posting |
 | Invalid readings data | Log and continue processing remaining data |
 | Processor exception | Catch, log to Seq, update `last_run_at` anyway to prevent stuck state |
 
@@ -230,6 +230,6 @@ Register the PeeBot task in `config/celery.py` beat schedule with a 30-second in
 |-----------|-------|----------|
 | Unit | `BaseProcessor`, detection logic | Mock readings, verify trend detection accuracy |
 | Unit | `JokeGenerator` | Mock OpenAI client, verify prompt construction |
-| Unit | `TwitterClient` | Mock tweepy, verify cooldown enforcement |
+| Unit | `BlueskyClient` | Mock atproto, verify cooldown enforcement |
 | Integration | Full processor flow | Use `model_bakery` for realistic test data |
 | Integration | Celery task execution | Use `pytest-celery` with eager mode |

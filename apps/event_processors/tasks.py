@@ -41,7 +41,7 @@ def run_peebot_processor(self: Any) -> dict[str, Any]:
     3. Queries TelemetryReading for NODE3000004 channel
     4. Runs burst detection analysis
     5. Creates DetectedEvent if event found
-    6. Generates joke and posts to Twitter (with cooldown check)
+    6. Generates joke and posts to Bluesky (with cooldown check)
     7. Updates processor state cursor
 
     Returns:
@@ -117,9 +117,9 @@ async def _run_peebot_processor_async() -> dict[str, Any]:
         log = log.bind(event_id=str(event.id), event_type=event.event_type)
         log.info("detected_event_created")
 
-        # Step 6: Try to post to Twitter (with cooldown and joke generation)
-        tweet_posted = await _try_post_to_twitter(event, log)
-        result["tweet_posted"] = tweet_posted
+        # Step 6: Try to post to Bluesky (with cooldown and joke generation)
+        post_success = await _try_post_to_bluesky(event, log)
+        result["tweet_posted"] = post_success  # Keep key for backward compatibility
 
         # Step 7: Update processor state cursor
         await processor.update_state_cursor(state, processed_at=detection.detected_at)
@@ -219,8 +219,8 @@ async def _create_detected_event(
     return event
 
 
-async def _try_post_to_twitter(event: DetectedEvent, log: Any) -> bool:
-    """Attempt to generate a joke and post to Twitter.
+async def _try_post_to_bluesky(event: DetectedEvent, log: Any) -> bool:
+    """Attempt to generate a joke and post to Bluesky.
 
     Handles all errors gracefully - failures here should not affect
     the main processing flow.
@@ -230,39 +230,36 @@ async def _try_post_to_twitter(event: DetectedEvent, log: Any) -> bool:
         log: Bound structlog logger
 
     Returns:
-        True if tweet was posted successfully, False otherwise
+        True if post was successful, False otherwise
     """
+    from apps.event_processors.services.bluesky_client import (
+        BlueskyClient,
+        BlueskyClientError,
+        BlueskyCooldownError,
+    )
     from apps.event_processors.services.joke_generator import (
         JokeGenerator,
         JokeGeneratorError,
     )
-    from apps.event_processors.services.twitter_client import (
-        TwitterClient,
-        TwitterClientError,
-        TwitterCooldownError,
-        TwitterRateLimitError,
-    )
 
-    # Check cooldown first
     try:
-        twitter = TwitterClient()
-    except TwitterClientError as e:
-        log.warning("twitter_client_init_failed", error=str(e))
+        bluesky = BlueskyClient()
+    except BlueskyClientError as e:
+        log.warning("bluesky_client_init_failed", error=str(e))
         return False
 
     try:
-        can_post, remaining = await twitter.check_cooldown()
+        can_post, remaining = await bluesky.check_cooldown()
         if not can_post:
             log.info(
-                "twitter_cooldown_active",
+                "bluesky_cooldown_active",
                 remaining_seconds=remaining.total_seconds() if remaining else 0,
             )
             return False
     except Exception as e:
-        log.warning("twitter_cooldown_check_failed", error=str(e))
+        log.warning("bluesky_cooldown_check_failed", error=str(e))
         return False
 
-    # Generate joke
     try:
         joke_generator = JokeGenerator()
     except JokeGeneratorError as e:
@@ -279,26 +276,22 @@ async def _try_post_to_twitter(event: DetectedEvent, log: Any) -> bool:
         log.warning("joke_generation_failed", error=str(e))
         return False
 
-    # Post to Twitter
     try:
-        tweet_id = await twitter.post(joke_text, event)
-        if tweet_id:
-            log.info("tweet_posted", tweet_id=tweet_id)
+        post_uri = await bluesky.post(joke_text, event)
+        if post_uri:
+            log.info("bluesky_posted", post_uri=post_uri)
             return True
         else:
-            log.warning("tweet_post_returned_none")
+            log.warning("bluesky_post_returned_none")
             return False
-    except TwitterCooldownError as e:
-        log.info("twitter_cooldown_blocked_post", error=str(e))
+    except BlueskyCooldownError as e:
+        log.info("bluesky_cooldown_blocked_post", error=str(e))
         return False
-    except TwitterRateLimitError as e:
-        log.warning("twitter_rate_limit_hit", error=str(e))
-        return False
-    except TwitterClientError as e:
-        log.warning("twitter_post_failed", error=str(e))
+    except BlueskyClientError as e:
+        log.warning("bluesky_post_failed", error=str(e))
         return False
     except Exception as e:
-        log.error("twitter_post_unexpected_error", error=str(e), exc_info=True)
+        log.error("bluesky_post_unexpected_error", error=str(e), exc_info=True)
         return False
 
 

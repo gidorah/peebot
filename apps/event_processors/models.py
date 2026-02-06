@@ -88,6 +88,11 @@ class SocialPost(UUID7Model, TimeStampedModel):
     by querying recent posts per platform.
     """
 
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        SUCCESS = "success", "Success"
+        FAILED = "failed", "Failed"
+
     event = models.ForeignKey(
         DetectedEvent,
         on_delete=models.CASCADE,
@@ -96,23 +101,39 @@ class SocialPost(UUID7Model, TimeStampedModel):
     )
     platform = models.CharField(
         max_length=50,
-        help_text="Social platform (e.g., 'twitter', 'mastodon')",
+        help_text="Social platform (e.g., 'bluesky')",
     )
     external_id = models.CharField(
         max_length=100,
-        help_text="Platform-specific post ID (e.g., tweet ID)",
+        blank=True,
+        default="",
+        help_text="Platform-specific post ID (e.g., tweet ID). Empty if failed.",
     )
     content = models.TextField(
         help_text="The posted text content",
     )
     posted_at = models.DateTimeField(
-        help_text="When the post was published",
+        null=True,
+        blank=True,
+        help_text="When the post was published. Null if failed.",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        help_text="Post status: pending, success, or failed",
+    )
+    error_message = models.TextField(
+        blank=True,
+        default="",
+        help_text="Error message if post failed",
     )
 
     class Meta:
         indexes = [
             models.Index(fields=["platform", "-posted_at"]),
+            models.Index(fields=["platform", "status"]),
         ]
 
     def __str__(self) -> str:
-        return f"{self.platform}: {self.external_id} @ {self.posted_at}"
+        return f"{self.platform}: {self.external_id or 'N/A'} ({self.status}) @ {self.posted_at}"

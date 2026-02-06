@@ -70,21 +70,21 @@
     - *Task*: Create class using `openai` SDK. Configure for OpenRouter endpoint and DeepSeek model. Implement `generate(event)` method with prompt for "dry, scientific, slightly absurd" tone.
     - *Test*: `apps/event_processors/tests/test_joke_generator.py` — mock OpenAI client, verify prompt includes event context, verify retry logic on failure.
 
-- [x] **Step 11**: Implement `TwitterClient` service.
-    - *File*: `apps/event_processors/services/twitter_client.py`
-    - *Task*: Create class using `tweepy`. Implement `post(text, event)` method that posts to Twitter and creates `SocialPost` record. Implement `check_cooldown()` querying `SocialPost` for posts within last 30 minutes.
-    - *Test*: `apps/event_processors/tests/test_twitter_client.py` — mock tweepy, verify cooldown logic blocks/allows correctly, verify `SocialPost` created on success.
+- [x] **Step 11**: Implement `BlueskyClient` service.
+    - *File*: `apps/event_processors/services/bluesky_client.py`
+    - *Task*: Create class using `atproto`. Implement `post(text, event)` method that posts to Bluesky and creates `SocialPost` record. Implement `check_cooldown()` querying `SocialPost` for posts within last 30 minutes.
+    - *Test*: `apps/event_processors/tests/test_bluesky_client.py` — mock atproto, verify cooldown logic blocks/allows correctly, verify `SocialPost` created on success.
 
 - [x] **Step 12**: Add environment configuration for API keys.
     - *File*: `config/settings/base.py`, `.env.example`
-    - *Task*: Add settings for `OPENROUTER_API_KEY`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_SECRET`.
+    - *Task*: Add settings for `OPENROUTER_API_KEY`, `BLUESKY_HANDLE`, `BLUESKY_APP_PASSWORD`.
     - *Verification*: Settings load without error when env vars present.
 
 ## Phase 6: Celery Integration
 
 - [x] **Step 13**: Implement Celery task for PeeBot.
     - *File*: `apps/event_processors/tasks.py`
-    - *Task*: Create `run_peebot_processor` task. Task should: apply jitter, load processor state, query readings, run analysis, create `DetectedEvent` if detected, check cooldown, generate joke, post to Twitter, update processor state.
+    - *Task*: Create `run_peebot_processor` task. Task should: apply jitter, load processor state, query readings, run analysis, create `DetectedEvent` if detected, check cooldown, generate joke, post to Bluesky, update processor state.
     - *Test*: `apps/event_processors/tests/test_tasks.py` — use `pytest-celery` eager mode, mock external services, verify full flow.
 
 - [x] **Step 14**: Register task in Celery Beat schedule.
@@ -107,17 +107,18 @@
 
 ## Phase 8: Integration Testing
 
-- [ ] **Step 17**: Create integration test for full processor flow.
+- [x] **Step 17**: Create integration test for full processor flow.
     - *File*: `tests/test_event_processors_integration.py`
     - *Task*: Use `model_bakery` to create realistic `TelemetryReading` data. Run processor task. Verify `DetectedEvent` created with correct fields.
-    - *Verification*: `uv run pytest tests/test_event_processors_integration.py`
+    - *Verification*: `uv run pytest tests/test_event_processors_integration.py` (8 tests pass)
 
-- [ ] **Step 18**: Manual end-to-end verification.
-    - *Task*: Start Celery worker and beat. Inject test telemetry data with increasing trend. Observe event detection and (with mocked Twitter) posting flow.
+- [x] **Step 18**: Manual end-to-end verification.
+    - *Task*: Start Celery worker and beat. Inject test telemetry data with increasing trend. Observe event detection and (with mocked Bluesky) posting flow.
     - *Commands*:
         - `uv run celery -A config worker -l info`
         - `uv run celery -A config beat -l info`
     - *Verification*: `DetectedEvent` record created in database.
+    - *Result*: Verified 2026-02-02. Event detected (45s burst, delta=2.25%, confidence=0.75). Joke generated via DeepSeek. Bluesky post succeeded. State updated correctly.
 
 ## Phase 9: Documentation
 

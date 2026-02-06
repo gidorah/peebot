@@ -48,7 +48,7 @@ peebot/
 |   |-- event_processors/          # Analytics and event detection
 |   |   |-- models.py              # DetectedEvent, ProcessorState
 |   |   |-- processors/            # PeeBot and other detectors
-|   |   |-- services/              # Twitter client, joke generator
+|   |   |-- services/              # Bluesky client, joke generator
 |   |   +-- tasks.py               # Celery periodic tasks
 |   |
 |   +-- dashboards/                # Web interface
@@ -360,7 +360,7 @@ DJANGO_SETTINGS_MODULE=config.settings.testing uv run pytest
 
 ### External APIs
 - **Lightstreamer Client** - ISS telemetry ingestion
-- **Tweepy** - Twitter API integration
+- **atproto** - Bluesky AT Protocol SDK for social media posting
 
 ### Data Validation
 - **Pydantic V2** - High-performance data validation for ingestion
@@ -521,7 +521,7 @@ ISS Lightstreamer Feed
 [DetectedEvent Table]
          |
          v
-[External Actions] <- Twitter, Email, etc.
+[External Actions] <- Bluesky, Email, etc.
 ```
 
 ### Polling Architecture

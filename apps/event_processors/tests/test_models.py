@@ -116,22 +116,22 @@ class TestSocialPost:
         """SocialPost can be created with FK to DetectedEvent."""
         post = SocialPost.objects.create(
             event=detected_event,
-            platform="twitter",
+            platform="bluesky",
             external_id="1234567890",
             content="ISS crew member just used the facilities!",
             posted_at=timezone.now(),
         )
         assert post.id is not None
         assert post.event == detected_event
-        assert post.platform == "twitter"
+        assert post.platform == "bluesky"
 
     def test_fk_relationship(self, detected_event: DetectedEvent) -> None:
         """DetectedEvent can access related social posts."""
         SocialPost.objects.create(
             event=detected_event,
-            platform="twitter",
+            platform="bluesky",
             external_id="111",
-            content="Tweet 1",
+            content="Post 1",
             posted_at=timezone.now(),
         )
         SocialPost.objects.create(
@@ -148,27 +148,27 @@ class TestSocialPost:
         now = timezone.now()
         old_post = SocialPost.objects.create(
             event=detected_event,
-            platform="twitter",
+            platform="bluesky",
             external_id="old",
-            content="Old tweet",
+            content="Old post",
             posted_at=now - timedelta(minutes=45),
         )
         recent_post = SocialPost.objects.create(
             event=detected_event,
-            platform="twitter",
+            platform="bluesky",
             external_id="recent",
-            content="Recent tweet",
+            content="Recent post",
             posted_at=now - timedelta(minutes=15),
         )
 
         cooldown_threshold = now - timedelta(minutes=30)
-        recent_twitter_posts = SocialPost.objects.filter(
-            platform="twitter",
+        recent_bluesky_posts = SocialPost.objects.filter(
+            platform="bluesky",
             posted_at__gte=cooldown_threshold,
         )
 
-        assert recent_post in recent_twitter_posts
-        assert old_post not in recent_twitter_posts
+        assert recent_post in recent_bluesky_posts
+        assert old_post not in recent_bluesky_posts
 
     def test_platform_posted_at_index_exists(self) -> None:
         """Index on (platform, -posted_at) should exist."""
@@ -186,7 +186,7 @@ class TestSocialPost:
         """SocialPosts are deleted when parent DetectedEvent is deleted."""
         SocialPost.objects.create(
             event=detected_event,
-            platform="twitter",
+            platform="bluesky",
             external_id="cascade_test",
             content="Will be deleted",
             posted_at=timezone.now(),

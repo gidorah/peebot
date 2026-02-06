@@ -38,6 +38,6 @@ These tasks address architectural changes and bugs in the **currently implemente
 - [x] **T003-2 (Models)**: Implement `ProcessorState`, `DetectedEvent`, and `SocialPost` models.
 - [x] **T003-3 (Base Processor)**: Implement `BaseProcessor` abstract class with jitter utility.
 - [x] **T003-4 (PeeBot)**: Implement `PeeBotProcessor` with burst detection algorithm.
-- [x] **T003-5 (Services)**: Implement `JokeGenerator` and `TwitterClient` services.
+- [x] **T003-5 (Services)**: Implement `JokeGenerator` and `BlueskyClient` services.
 - [x] **T003-6 (Celery)**: Implement Celery task and Beat schedule (30s interval).
 - [x] **T003-7 (Testing)**: Unit tests for processor logic, integration test for full flow.

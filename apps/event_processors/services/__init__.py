@@ -1,1 +1,1 @@
-"""External services package - integrations with Twitter, LLM APIs, etc."""
+"""External services package - integrations with Bluesky, LLM APIs, etc."""

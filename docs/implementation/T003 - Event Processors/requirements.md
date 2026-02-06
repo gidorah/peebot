@@ -21,10 +21,10 @@ Implement an analytics framework that detects ISS operational events and trigger
 2. The system shall use an external LLM API for text generation.
 
 ### 2.4 Social Media Posting (FR-PROC-005)
-1. The system shall post generated text to Twitter automatically.
+1. The system shall post generated text to Bluesky automatically.
 2. The system shall track all social media posts separately from detected events.
 3. The system shall enforce a minimum 30-minute cooldown between posts.
-4. The system shall comply with Twitter API rate limits.
+4. The system shall comply with Bluesky AT Protocol rate limits.
 
 ## 3. Non-Functional Requirements
 
@@ -42,7 +42,7 @@ Implement an analytics framework that detects ISS operational events and trigger
 
 ## 4. Constraints
 1. No Kafka or complex event streaming infrastructure (C-003).
-2. Twitter API usage must respect Free/Basic tier rate limits (C-004).
+2. Bluesky API usage must respect AT Protocol rate limits (C-004).
 
 ## 5. Assumptions
 1. The LLM provider will be selected during implementation; architecture must support provider swaps (A-002).

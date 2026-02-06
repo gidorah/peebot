@@ -97,7 +97,7 @@ class JokeGenerator:
                                 "You are a dry, scientific commentator with a "
                                 "slightly absurd sense of humor. You write about "
                                 "ISS operations with deadpan wit. Keep responses "
-                                "under 280 characters (Twitter limit). Be factual "
+                                "under 300 characters (social media limit). Be factual "
                                 "but amusing."
                             ),
                         },
@@ -187,10 +187,10 @@ class JokeGenerator:
             f"by {delta}% over {duration_str}. "
             f"Initial level: {tank_start}%, final level: {tank_end}%. "
             f"Detection confidence: {confidence:.0%}. "
-            f"Write a dry, scientifically accurate but slightly absurd tweet "
+            f"Write a dry, scientifically accurate but slightly absurd post "
             f"about this astronaut bodily function event. "
             f"Make it sound like a mission control announcement with understated "
-            f"wit. Keep it under 280 characters."
+            f"wit. Keep it under 300 characters."
         )
 
         return prompt
