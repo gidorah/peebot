@@ -267,7 +267,7 @@ class PeeBotProcessor(BaseProcessor):
 
         # Check if level reverts to near baseline
         baseline = burst.start_value
-        threshold = burst.delta * Decimal("0.8")  # 80% reversion threshold
+        threshold = burst.delta * Decimal("0.1")  # 10% reversion threshold
 
         for reading in post_burst_readings:
             val = reading.calibrated_data or reading.value

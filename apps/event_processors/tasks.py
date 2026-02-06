@@ -182,15 +182,14 @@ async def _query_readings(
         query_start = window_start
 
     # Query readings for the channel
-    readings: list[TelemetryReading] = (
-        await TelemetryReading.objects.filter(  # type: ignore[attr-defined]
+    readings: list[TelemetryReading] = [
+        reading
+        async for reading in TelemetryReading.objects.filter(  # type: ignore[attr-defined]
             channel__public_pui=processor.channel_pui,
             timestamp__gte=query_start,
             timestamp__lte=now,
-        )
-        .order_by("timestamp")
-        .aiterator_to_list()
-    )
+        ).order_by("timestamp")
+    ]
 
     return readings
 
@@ -293,23 +292,3 @@ async def _try_post_to_bluesky(event: DetectedEvent, log: Any) -> bool:
     except Exception as e:
         log.error("bluesky_post_unexpected_error", error=str(e), exc_info=True)
         return False
-
-
-# Monkey-patch QuerySet to add aiterator_to_list if not present
-def _patch_queryset() -> None:
-    """Add aiterator_to_list method to QuerySet for async iteration."""
-    from django.db.models import QuerySet
-
-    if not hasattr(QuerySet, "aiterator_to_list"):
-
-        async def aiterator_to_list(self: Any) -> list[Any]:
-            """Convert async iterator to list."""
-            result: list[Any] = []
-            async for item in self:
-                result.append(item)
-            return result
-
-        QuerySet.aiterator_to_list = aiterator_to_list  # type: ignore[attr-defined]
-
-
-_patch_queryset()

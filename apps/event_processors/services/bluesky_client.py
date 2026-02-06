@@ -91,7 +91,7 @@ class BlueskyClient:
         if self._authenticated:
             return
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             await loop.run_in_executor(
                 None,
                 lambda: self.client.login(self._handle, self._app_password),
@@ -172,7 +172,7 @@ class BlueskyClient:
             raise BlueskyCooldownError("Cannot post: cooldown active.")
 
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             response = await loop.run_in_executor(
                 None,
                 lambda: self.client.send_post(text=text),
