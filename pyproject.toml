@@ -25,13 +25,13 @@ dependencies = [
 ]
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.14"
 strict = true
 warn_unused_ignores = true
 warn_redundant_casts = true
 warn_unused_configs = true
 plugins = ["mypy_django_plugin.main"]
-exclude = ["migrations/", "tests/"]
+exclude = ["migrations/", "tests/", "_work-tmp"]
 
 [[tool.mypy.overrides]]
 module = "django_celery_beat.*"
