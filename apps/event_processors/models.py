@@ -32,7 +32,7 @@ class DetectedEvent(UUID7Model, TimeStampedModel):
     confidence = models.DecimalField(
         max_digits=3,
         decimal_places=2,
-        help_text="Detection confidence (0.00–1.00)",
+        help_text="Detection confidence (0.00-1.00)",
     )
     metadata = models.JSONField(
         default=dict,
@@ -107,7 +107,7 @@ class SocialPost(UUID7Model, TimeStampedModel):
         max_length=100,
         blank=True,
         default="",
-        help_text="Platform-specific post ID (e.g., tweet ID). Empty if failed.",
+        help_text="Platform-specific post ID (e.g., Bluesky post URI). Empty if failed.",
     )
     content = models.TextField(
         help_text="The posted text content",

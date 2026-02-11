@@ -48,22 +48,6 @@ Stores analytics results (e.g., detected urination events). Generic model for al
 
 **Indexes**: `(event_type, -detected_at)` for dashboard queries.
 
-### 3.3 SocialPost
-
-Tracks social media posts linked to detected events. Supports multiple platforms.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | UUIDv7 | PK, time-sortable (inherits `UUID7Model`) |
-| `event` | ForeignKey | Reference to `DetectedEvent` |
-| `platform` | CharField | Social platform (e.g., `bluesky`) |
-| `external_id` | CharField | Platform-specific post ID (e.g., tweet ID) |
-| `content` | TextField | The posted text content |
-| `posted_at` | DateTimeField | When the post was published |
-| `created_at` | DateTimeField | Record creation (inherits `TimeStampedModel`) |
-
-**Indexes**: `(platform, -posted_at)` for cooldown queries.
-
 ### 3.2 ProcessorState
 
 Maintains processor state for resumption and replay.
@@ -76,6 +60,22 @@ Maintains processor state for resumption and replay.
 | `last_run_at` | DateTimeField | Last execution start time |
 | `state_data` | JSONField | Processor-specific state (nullable) |
 | `updated_at` | DateTimeField | Last update (inherits `TimeStampedModel`) |
+
+### 3.3 SocialPost
+
+Tracks social media posts linked to detected events. Supports multiple platforms.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | UUIDv7 | PK, time-sortable (inherits `UUID7Model`) |
+| `event` | ForeignKey | Reference to `DetectedEvent` |
+| `platform` | CharField | Social platform (e.g., `bluesky`) |
+| `external_id` | CharField | Platform-specific post ID (e.g., Bluesky post URI) |
+| `content` | TextField | The posted text content |
+| `posted_at` | DateTimeField | When the post was published |
+| `created_at` | DateTimeField | Record creation (inherits `TimeStampedModel`) |
+
+**Indexes**: `(platform, -posted_at)` for cooldown queries.
 
 ## 4. Component Design
 
@@ -200,7 +200,7 @@ An abstract base class that all processors must inherit. Defines the contract fo
 | Aspect | Detail |
 |--------|--------|
 | Library | atproto (AT Protocol SDK) |
-| Method | `post(text)` → returns tweet ID string |
+| Method | `post(text)` → returns Bluesky post URI |
 | Cooldown Check | Query `SocialPost` for posts within last 30 minutes before allowing new post |
 | Error Handling | Log failures to Seq. Do not retry immediately (respect rate limits). |
 

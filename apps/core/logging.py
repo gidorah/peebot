@@ -13,7 +13,6 @@ class SeqHandler(logging.Handler):
         self,
         server_url: str,
         api_key: str | None = None,
-        batch_size: int = 1,
         static_fields: dict[str, Any] | None = None,
     ) -> None:
         super().__init__()

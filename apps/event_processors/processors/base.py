@@ -93,7 +93,7 @@ class BaseProcessor(ABC):
             readings: List of TelemetryReading objects used for detection
 
         Returns:
-            Decimal confidence value (0.0–1.0)
+            Decimal confidence value (0.0-1.0)
         """
         pass
 
@@ -191,7 +191,7 @@ class DetectionResult:
         Args:
             event_type: Type/category of the detected event
             detected_at: Timestamp when the event occurred
-            confidence: Detection confidence (0.0–1.0)
+            confidence: Detection confidence (0.0-1.0)
             metadata: Optional processor-specific detection details
 
         Raises:

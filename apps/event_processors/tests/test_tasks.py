@@ -90,7 +90,7 @@ class TestRunPeeBotProcessor:
 
         # 3. Assertions
         assert result["event_detected"] is True
-        assert result["tweet_posted"] is True
+        assert result["post_published"] is True
         assert result["error"] is None
 
         # Verify DetectedEvent created
@@ -127,7 +127,7 @@ class TestRunPeeBotProcessor:
         result = run_peebot_processor()
 
         assert result["event_detected"] is False
-        assert result["tweet_posted"] is False
+        assert result["post_published"] is False
         assert DetectedEvent.objects.count() == 0
 
     def test_run_peebot_processor_cooldown_blocks_post(self) -> None:
@@ -150,15 +150,19 @@ class TestRunPeeBotProcessor:
                 calibrated_data=val,
             )
 
-        # Simulate cooldown active
-        self.mock_bluesky.check_cooldown.return_value = (False, timedelta(minutes=15))
+        # Simulate cooldown active by making post() raise BlueskyCooldownError
+        from apps.event_processors.services.bluesky_client import BlueskyCooldownError
+
+        self.mock_bluesky.post.side_effect = BlueskyCooldownError(
+            "Cannot post: cooldown active. Wait 15.0 more minutes."
+        )
 
         result = run_peebot_processor()
 
         assert result["event_detected"] is True
-        assert result["tweet_posted"] is False
+        assert result["post_published"] is False
         assert DetectedEvent.objects.count() == 1
-        self.mock_bluesky.post.assert_not_called()
+        self.mock_bluesky.post.assert_called_once()
 
     def test_run_peebot_processor_db_error_triggers_retry(self) -> None:
         """OperationalError causes the task to retry (verified via exception propagation)."""
@@ -229,5 +233,5 @@ class TestRunPeeBotProcessor:
         result = run_peebot_processor()
 
         assert result["event_detected"] is True
-        assert result["tweet_posted"] is False
+        assert result["post_published"] is False
         self.mock_bluesky.post.assert_not_called()

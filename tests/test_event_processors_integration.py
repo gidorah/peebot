@@ -128,7 +128,7 @@ def create_burst_readings(
 
     # Phase 1: Pre-burst baseline (30 seconds)
     pre_burst_readings = 30 // interval_seconds
-    for i in range(pre_burst_readings):
+    for _ in range(pre_burst_readings):
         readings.append(
             baker.make(
                 TelemetryReading,
@@ -144,7 +144,7 @@ def create_burst_readings(
     # Phase 2: Sustained burst (increasing trend)
     burst_readings_count = burst_duration_seconds // interval_seconds
     current_value = baseline
-    for i in range(burst_readings_count):
+    for _ in range(burst_readings_count):
         current_value += delta_per_reading
         readings.append(
             baker.make(
@@ -161,7 +161,7 @@ def create_burst_readings(
     # Phase 3: Post-burst stabilization (15 seconds at new level)
     post_burst_readings = 15 // interval_seconds
     stable_value = current_value
-    for i in range(post_burst_readings):
+    for _ in range(post_burst_readings):
         readings.append(
             baker.make(
                 TelemetryReading,
@@ -200,7 +200,7 @@ def create_glitch_readings(
 
     # Phase 1: Pre-spike baseline
     pre_spike_readings = 15 // interval_seconds
-    for i in range(pre_spike_readings):
+    for _ in range(pre_spike_readings):
         readings.append(
             baker.make(
                 TelemetryReading,
@@ -228,7 +228,7 @@ def create_glitch_readings(
 
     # Phase 3: Immediate revert to baseline
     post_spike_readings = 15 // interval_seconds
-    for i in range(post_spike_readings):
+    for _ in range(post_spike_readings):
         readings.append(
             baker.make(
                 TelemetryReading,
@@ -260,7 +260,7 @@ def create_flat_readings(
     readings = []
     current_time = now - timedelta(seconds=start_offset_seconds)
 
-    for i in range(count):
+    for _ in range(count):
         readings.append(
             baker.make(
                 TelemetryReading,
@@ -294,7 +294,7 @@ def create_decreasing_readings(
     current_time = now - timedelta(seconds=start_offset_seconds)
     current_value = start_value
 
-    for i in range(count):
+    for _ in range(count):
         readings.append(
             baker.make(
                 TelemetryReading,

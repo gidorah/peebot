@@ -32,7 +32,7 @@ Implement an analytics framework that detects ISS operational events and trigger
 1. Detection latency (event occurrence to detection) shall be < 2 minutes.
 
 ### 3.2 Architecture (NFR-ARCH-001, NFR-ARCH-002)
-1. The module shall own `DetectedEvent` and `ProcessorState` models.
+1. The module shall own `DetectedEvent`, `ProcessorState`, and `SocialPost` models.
 2. The module shall query `TelemetryReading` from `telemetry_storage`; it shall not define its own telemetry models.
 3. TimescaleDB shall be the only persistent store for analytics state and results.
 

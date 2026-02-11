@@ -63,7 +63,7 @@ async def _run_peebot_processor_async() -> dict[str, Any]:
     result = {
         "processor": processor.processor_name,
         "event_detected": False,
-        "tweet_posted": False,
+        "post_published": False,
         "error": None,
     }
 
@@ -119,7 +119,7 @@ async def _run_peebot_processor_async() -> dict[str, Any]:
 
         # Step 6: Try to post to Bluesky (with cooldown and joke generation)
         post_success = await _try_post_to_bluesky(event, log)
-        result["tweet_posted"] = post_success  # Keep key for backward compatibility
+        result["post_published"] = post_success
 
         # Step 7: Update processor state cursor
         await processor.update_state_cursor(state, processed_at=detection.detected_at)
@@ -245,18 +245,6 @@ async def _try_post_to_bluesky(event: DetectedEvent, log: Any) -> bool:
         bluesky = BlueskyClient()
     except BlueskyClientError as e:
         log.warning("bluesky_client_init_failed", error=str(e))
-        return False
-
-    try:
-        can_post, remaining = await bluesky.check_cooldown()
-        if not can_post:
-            log.info(
-                "bluesky_cooldown_active",
-                remaining_seconds=remaining.total_seconds() if remaining else 0,
-            )
-            return False
-    except Exception as e:
-        log.warning("bluesky_cooldown_check_failed", error=str(e))
         return False
 
     try:
