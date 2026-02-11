@@ -174,7 +174,11 @@ class JokeGenerator:
         delta = metadata.get("delta", "unknown")
         tank_start = metadata.get("tank_level_start", "unknown")
         tank_end = metadata.get("tank_level_end", "unknown")
-        confidence = float(event.confidence)
+        confidence_sentence = ""
+        if event.confidence is not None:
+            confidence_sentence = (
+                f"Detection confidence: {float(event.confidence):.0%}. "
+            )
 
         # Format duration nicely
         if duration < 60:
@@ -186,7 +190,7 @@ class JokeGenerator:
             f"The ISS UPA (Urine Processing Assembly) tank level just increased "
             f"by {delta}% over {duration_str}. "
             f"Initial level: {tank_start}%, final level: {tank_end}%. "
-            f"Detection confidence: {confidence:.0%}. "
+            f"{confidence_sentence}"
             f"Write a dry, scientifically accurate but slightly absurd post "
             f"about this astronaut bodily function event. "
             f"Make it sound like a mission control announcement with understated "

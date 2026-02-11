@@ -254,6 +254,18 @@ async def _try_post_to_bluesky(event: DetectedEvent, log: Any) -> bool:
         return False
 
     try:
+        can_post, remaining = await bluesky.check_cooldown()
+        if not can_post:
+            log.info(
+                "bluesky_cooldown_active",
+                remaining_seconds=remaining.total_seconds() if remaining else None,
+            )
+            return False
+    except Exception as e:
+        log.warning("bluesky_cooldown_check_failed", error=str(e))
+        return False
+
+    try:
         joke_text = await joke_generator.generate(event)
         if not joke_text:
             log.warning("joke_generation_returned_empty")
