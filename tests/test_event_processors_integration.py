@@ -545,7 +545,7 @@ class TestSocialPostCooldownIntegration:
 
         result1 = run_peebot_processor()
         assert result1["event_detected"] is True
-        assert result1["tweet_posted"] is True
+        assert result1["post_published"] is True
 
         # Simulate cooldown active for second run
         mock_external_services["bluesky_client"].check_cooldown.return_value = (
@@ -570,7 +570,7 @@ class TestSocialPostCooldownIntegration:
 
         # Assert: Event detected but no tweet (cooldown)
         assert result2["event_detected"] is True
-        assert result2["tweet_posted"] is False
+        assert result2["post_published"] is False
 
         # Assert: Two events exist, but Bluesky only called once
         assert DetectedEvent.objects.count() == 2
