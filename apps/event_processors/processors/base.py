@@ -15,14 +15,13 @@ import random
 from abc import ABC, abstractmethod
 from datetime import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import structlog
 from django.utils import timezone
 
-if TYPE_CHECKING:
-    from apps.event_processors.models import ProcessorState
-    from apps.telemetry_storage.models import TelemetryReading
+from apps.event_processors.models import ProcessorState
+from apps.telemetry_storage.models import TelemetryReading
 
 logger = structlog.get_logger(__name__)
 
@@ -107,9 +106,6 @@ class BaseProcessor(ABC):
         Returns:
             ProcessorState instance for this processor
         """
-        # Import here to avoid circular dependency during module load
-        from apps.event_processors.models import ProcessorState
-
         state: ProcessorState
         state, created = await ProcessorState.objects.aget_or_create(  # type: ignore[attr-defined]
             processor_name=self.processor_name,

@@ -26,12 +26,23 @@ dependencies = [
 
 [tool.mypy]
 python_version = "3.14"
-strict = true
+# strict = true  # DISABLED: Django's metaclasses make strict mode self-sabotage
+plugins = ["mypy_django_plugin.main"]
+exclude = ["migrations/", "tests/", "_work-tmp"]
+
+# High-value strict checks (enabled selectively for non-Django code)
+disallow_untyped_defs = false  # Too strict for Django views/models
+check_untyped_defs = true      # Check typed functions thoroughly
+warn_return_any = false        # Django QuerySets return Any frequently
 warn_unused_ignores = true
 warn_redundant_casts = true
 warn_unused_configs = true
-plugins = ["mypy_django_plugin.main"]
-exclude = ["migrations/", "tests/", "_work-tmp"]
+no_implicit_optional = true    # Catch None bugs
+strict_equality = true          # Prevent type mismatches in comparisons
+
+# Django-specific relaxations
+allow_redefinition = true       # Supports Django's descriptor magic
+implicit_reexport = true        # Django models re-export fields
 
 [[tool.mypy.overrides]]
 module = "django_celery_beat.*"
@@ -49,13 +60,16 @@ ignore_missing_imports = true
 module = "celery.*"
 ignore_missing_imports = true
 
-
 [[tool.mypy.overrides]]
 module = "environ.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "rest_framework.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "atproto.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
@@ -69,6 +83,30 @@ ignore_errors = false
 [[tool.mypy.overrides]]
 module = "apps.telemetry_ingestion.management.commands.run_lightstreamer"
 disable_error_code = ["attr-defined"]
+
+# Relax checks on Django infrastructure (models, admin, migrations)
+# These files are heavily metaclass-driven and django-stubs coverage is incomplete
+[[tool.mypy.overrides]]
+module = [
+    "apps.*.models",
+    "apps.*.admin",
+    "config.settings.*",
+]
+disable_error_code = ["attr-defined", "misc", "override", "index"]
+warn_return_any = false
+
+# Enforce stricter typing on business logic (services, processors, utils)
+# This is where bugs actually hide
+[[tool.mypy.overrides]]
+module = [
+    "apps.*.services.*",
+    "apps.*.processors.*",
+    "apps.*.utils.*",
+    "apps.*.repositories.*",
+]
+disallow_untyped_defs = true
+warn_return_any = true
+strict_equality = true
 
 [tool.django-stubs]
 django_settings_module = "config.settings"
@@ -122,7 +160,7 @@ unresolved-import = "warn"
 [dependency-groups]
 dev = [
     "debugpy>=1.8.18",
-    "django-stubs>=5.2.7",
+    "django-stubs>=5.2.9",
     "model-bakery>=1.20.5",
     "mypy>=1.18.2",
     "pre-commit>=4.5.1",

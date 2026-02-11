@@ -8,7 +8,7 @@ data, runs analysis, and triggers actions on event detection.
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import structlog
 from asgiref.sync import async_to_sync
@@ -16,10 +16,19 @@ from celery import shared_task
 from django.db import OperationalError
 from django.utils import timezone
 
-if TYPE_CHECKING:
-    from apps.event_processors.models import DetectedEvent, ProcessorState
-    from apps.event_processors.processors.base import BaseProcessor, DetectionResult
-    from apps.telemetry_storage.models import TelemetryReading
+from apps.event_processors.models import DetectedEvent, ProcessorState
+from apps.event_processors.processors.base import BaseProcessor, DetectionResult
+from apps.event_processors.processors.pee_bot import PeeBotProcessor
+from apps.event_processors.services.bluesky_client import (
+    BlueskyClient,
+    BlueskyClientError,
+    BlueskyCooldownError,
+)
+from apps.event_processors.services.joke_generator import (
+    JokeGenerator,
+    JokeGeneratorError,
+)
+from apps.telemetry_storage.models import TelemetryReading
 
 logger = structlog.get_logger(__name__)
 
@@ -31,7 +40,7 @@ logger = structlog.get_logger(__name__)
     retry_backoff_max=60,
     retry_kwargs={"max_retries": 3},
     acks_late=True,
-)  # type: ignore[misc]
+)
 def run_peebot_processor(self: Any) -> dict[str, Any]:
     """Run the PeeBot processor to detect UPA tank fill events.
 
@@ -52,8 +61,6 @@ def run_peebot_processor(self: Any) -> dict[str, Any]:
 
 async def _run_peebot_processor_async() -> dict[str, Any]:
     """Async implementation of the PeeBot processor task."""
-    from apps.event_processors.processors.pee_bot import PeeBotProcessor
-
     processor = PeeBotProcessor()
     log = logger.bind(
         processor_name=processor.processor_name,
@@ -168,8 +175,6 @@ async def _query_readings(
     Returns:
         List of TelemetryReading objects ordered by timestamp
     """
-    from apps.telemetry_storage.models import TelemetryReading
-
     # Calculate time window
     now = timezone.now()
     window_start = now - timedelta(minutes=processor.window_minutes)
@@ -206,8 +211,6 @@ async def _create_detected_event(
     Returns:
         Created DetectedEvent instance
     """
-    from apps.event_processors.models import DetectedEvent
-
     event: DetectedEvent = await DetectedEvent.objects.acreate(  # type: ignore[attr-defined]
         event_type=detection.event_type,
         channel_id=processor.channel_pui,
@@ -231,15 +234,6 @@ async def _try_post_to_bluesky(event: DetectedEvent, log: Any) -> bool:
     Returns:
         True if post was successful, False otherwise
     """
-    from apps.event_processors.services.bluesky_client import (
-        BlueskyClient,
-        BlueskyClientError,
-        BlueskyCooldownError,
-    )
-    from apps.event_processors.services.joke_generator import (
-        JokeGenerator,
-        JokeGeneratorError,
-    )
 
     try:
         bluesky = BlueskyClient()

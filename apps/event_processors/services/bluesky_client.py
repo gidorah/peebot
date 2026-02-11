@@ -9,18 +9,14 @@ from __future__ import annotations
 
 import asyncio
 from datetime import timedelta
-from typing import TYPE_CHECKING
 
 import structlog
-from atproto import Client  # type: ignore[import-untyped]
-from atproto.exceptions import AtProtocolError  # type: ignore[import-untyped]
+from atproto import Client
+from atproto.exceptions import AtProtocolError
 from django.conf import settings
 from django.utils import timezone
 
-from apps.event_processors.models import SocialPost
-
-if TYPE_CHECKING:
-    from apps.event_processors.models import DetectedEvent
+from apps.event_processors.models import DetectedEvent, SocialPost
 
 logger = structlog.get_logger(__name__)
 

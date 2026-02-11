@@ -36,13 +36,9 @@ class TestRunPeeBotProcessor:
         )
         self.jitter_mock = self.jitter_patch.start()
 
-        # Mock external services
-        self.joke_gen_patch = patch(
-            "apps.event_processors.services.joke_generator.JokeGenerator"
-        )
-        self.bluesky_patch = patch(
-            "apps.event_processors.services.bluesky_client.BlueskyClient"
-        )
+        # Mock external services (patch at import site since tasks.py imports at module level)
+        self.joke_gen_patch = patch("apps.event_processors.tasks.JokeGenerator")
+        self.bluesky_patch = patch("apps.event_processors.tasks.BlueskyClient")
         self.mock_joke_gen_class = self.joke_gen_patch.start()
         self.mock_bluesky_class = self.bluesky_patch.start()
 

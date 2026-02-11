@@ -13,7 +13,7 @@ if TEST_DATABASE_URL:
     DATABASES = {"default": env.db_url("TEST_DATABASE_URL")}
 
 # Disable Seq logging during tests to reduce noise
-LOGGING["handlers"]["seq"]["level"] = "CRITICAL"  # type: ignore[index]
+LOGGING["handlers"]["seq"]["level"] = "CRITICAL"
 
 # Speed up password hashing for tests
 PASSWORD_HASHERS = [

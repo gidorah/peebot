@@ -12,14 +12,12 @@ of astronaut bodily functions.
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING
 
 import structlog
 from django.conf import settings
 from openai import AsyncOpenAI
 
-if TYPE_CHECKING:
-    from apps.event_processors.models import DetectedEvent
+from apps.event_processors.models import DetectedEvent
 
 logger = structlog.get_logger(__name__)
 

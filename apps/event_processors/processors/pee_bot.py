@@ -18,14 +18,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING
 
 import structlog
 
 from apps.event_processors.processors.base import BaseProcessor, DetectionResult
-
-if TYPE_CHECKING:
-    from apps.telemetry_storage.models import TelemetryReading
+from apps.telemetry_storage.models import TelemetryReading
 
 logger = structlog.get_logger(__name__)
 

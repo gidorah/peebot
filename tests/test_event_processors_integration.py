@@ -63,12 +63,8 @@ def mock_external_services() -> Generator[dict[str, MagicMock]]:
             "apps.event_processors.processors.base.BaseProcessor.apply_jitter",
             new_callable=AsyncMock,
         ) as jitter_mock,
-        patch(
-            "apps.event_processors.services.joke_generator.JokeGenerator"
-        ) as joke_gen_class,
-        patch(
-            "apps.event_processors.services.bluesky_client.BlueskyClient"
-        ) as bluesky_class,
+        patch("apps.event_processors.tasks.JokeGenerator") as joke_gen_class,
+        patch("apps.event_processors.tasks.BlueskyClient") as bluesky_class,
     ):
         mock_joke_gen = MagicMock()
         mock_joke_gen.generate = AsyncMock(
