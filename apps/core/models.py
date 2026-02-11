@@ -21,7 +21,7 @@ class UUID7Model(models.Model):
 
     id = models.UUIDField(
         primary_key=True,
-        default=uuid.uuid7,  # type: ignore[attr-defined]
+        default=uuid.uuid7,
         editable=False,
         serialize=False,
     )

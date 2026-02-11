@@ -32,6 +32,8 @@ class DetectedEvent(UUID7Model, TimeStampedModel):
     confidence = models.DecimalField(
         max_digits=3,
         decimal_places=2,
+        null=True,
+        blank=True,
         help_text="Detection confidence (0.00-1.00)",
     )
     metadata = models.JSONField(
