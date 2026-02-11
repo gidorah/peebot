@@ -57,7 +57,7 @@ class TestPeeBotProcessorAnalyze:
 
     @pytest.mark.asyncio
     async def test_sustained_burst_detected(self) -> None:
-        """Sustained burst (30s-2min) with stable post-burst triggers event detection."""
+        """Sustained burst (30s-2min) with stable post-burst triggers event."""
         processor = PeeBotProcessor()
         base_time = datetime(2024, 1, 1, 12, 0, 0)
 

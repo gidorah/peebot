@@ -55,7 +55,7 @@ class ProcessorState(UUID7Model, TimeStampedModel):
     """Maintains processor state for resumption and historical replay.
 
     Each processor has a single row identified by processor_name.
-    The last_processed_at cursor enables resumption after restarts.
+    The last_processed_timestamp cursor enables resumption after restarts.
     """
 
     processor_name = models.CharField(
@@ -63,7 +63,7 @@ class ProcessorState(UUID7Model, TimeStampedModel):
         unique=True,
         help_text="Unique processor identifier",
     )
-    last_processed_at = models.DateTimeField(
+    last_processed_timestamp = models.DateTimeField(
         null=True,
         blank=True,
         help_text="Last successfully analyzed data timestamp",
@@ -109,7 +109,7 @@ class SocialPost(UUID7Model, TimeStampedModel):
         max_length=100,
         blank=True,
         default="",
-        help_text="Platform-specific post ID (e.g., Bluesky post URI). Empty if failed.",
+        help_text="Platform-specific post ID (e.g., Bluesky post URI). Empty if failed.",  # noqa: E501
     )
     content = models.TextField(
         help_text="The posted text content",
@@ -138,4 +138,7 @@ class SocialPost(UUID7Model, TimeStampedModel):
         ]
 
     def __str__(self) -> str:
-        return f"{self.platform}: {self.external_id or 'N/A'} ({self.status}) @ {self.posted_at}"
+        return (
+            f"{self.platform}: {self.external_id or 'N/A'} "
+            f"({self.status}) @ {self.posted_at}"
+        )

@@ -34,11 +34,13 @@ class SeqHandler(logging.Handler):
 
     def emit(self, record: logging.LogRecord) -> None:
         try:
-            # Format the log record using the configured formatter (returns a dict if using JSONRenderer)
+            # Format the log record using the configured formatter
+            # (returns a dict if using JSONRenderer)
             payload_data = self.format(record)
 
-            # If payload_data is a string (JSON), parse it back to dict to add static fields
-            # This is a bit inefficient but ensures we can inject our service tags
+            # If payload_data is a string (JSON), parse it back to dict
+            # to add static fields. This is inefficient but ensures
+            # we can inject our service tags
             if isinstance(payload_data, str):
                 try:
                     event_dict = json.loads(payload_data)

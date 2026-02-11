@@ -78,8 +78,8 @@ async def _run_peebot_processor_async() -> dict[str, Any]:
         state = await processor.load_state()
         log.info(
             "processor_state_loaded",
-            last_processed_at=state.last_processed_at.isoformat()
-            if state.last_processed_at
+            last_processed_timestamp=state.last_processed_timestamp.isoformat()
+            if state.last_processed_timestamp
             else None,
             last_run_at=state.last_run_at.isoformat() if state.last_run_at else None,
         )
@@ -159,11 +159,11 @@ async def _query_readings(
     """Query TelemetryReading for the processor's channel.
 
     Fetches readings from the last window_minutes, starting from
-    last_processed_at if available.
+    last_processed_timestamp if available.
 
     Args:
         processor: The processor instance with channel_pui and window_minutes
-        state: ProcessorState with last_processed_at cursor
+        state: ProcessorState with last_processed_timestamp cursor
 
     Returns:
         List of TelemetryReading objects ordered by timestamp
@@ -174,10 +174,10 @@ async def _query_readings(
     now = timezone.now()
     window_start = now - timedelta(minutes=processor.window_minutes)
 
-    # Use last_processed_at as cursor if available and more recent
-    if state.last_processed_at and state.last_processed_at > window_start:
+    # Use last_processed_timestamp as cursor if available and more recent
+    if state.last_processed_timestamp and state.last_processed_timestamp > window_start:
         # Query from last processed point, but include some overlap for context
-        query_start = state.last_processed_at - timedelta(seconds=30)
+        query_start = state.last_processed_timestamp - timedelta(seconds=30)
     else:
         query_start = window_start
 

@@ -70,7 +70,8 @@ def render_to_clef(logger: Any, name: str, event_dict: dict[str, Any]) -> str:
         logger, name, {}
     )["timestamp"]
 
-    # Return JSON STRING. This ensures ProcessorFormatter passes a valid JSON string to the handler.
+    # Return JSON STRING. Ensures ProcessorFormatter passes a valid
+    # JSON string to the handler.
     return cast(str, structlog.processors.JSONRenderer()(logger, name, event_dict))
 
 

@@ -432,7 +432,7 @@ TelemetryChannel (Regular Table)
                     +------------------+
 
 Each processor:
-1. Queries ProcessorState for last_processed_at
+1. Queries ProcessorState for last_processed_timestamp
 2. Queries TelemetryReading for new data
 3. Analyzes sliding window (e.g., last 10 min)
 4. Detects events and stores results
@@ -445,7 +445,7 @@ Each processor:
 
 2. **Independence**: Each analytics module operates independently with its own schedule and state. No coupling between ingestion and analytics.
 
-3. **Historical Replay**: Modules can replay historical data by adjusting their last_processed_at timestamp. Perfect for development, testing, and backfilling.
+3. **Historical Replay**: Modules can replay historical data by adjusting their last_processed_timestamp timestamp. Perfect for development, testing, and backfilling.
 
 4. **Simplicity**: No event streaming infrastructure (no Kafka). Database is single source of truth.
 
@@ -467,7 +467,7 @@ Each processor:
 **ProcessorState Table:**
 - id: AutoField
 - processor_name: CharField (e.g., 'PeeBot', 'TempAnalyzer')
-- last_processed_at: DateTimeField
+- last_processed_timestamp: DateTimeField
 - last_run_at: DateTimeField
 - state_data: JSONField (processor-specific state)
 - updated_at: DateTimeField
@@ -502,8 +502,8 @@ Each processor has its own periodic task configured in Celery Beat:
 **Processing Flow for PeeBot**:
 
 1. Celery Beat triggers run_pee_bot_detection task every 30 seconds
-2. Task queries ProcessorState to get last_processed_at timestamp
-3. Query TelemetryReading for new data since last_processed_at for channel NODE3000004
+2. Task queries ProcessorState to get last_processed_timestamp timestamp
+3. Query TelemetryReading for new data since last_processed_timestamp for channel NODE3000004
 4. If no new data, skip processing
 5. Query sliding window (last 10 minutes) of readings for trend analysis
 6. Apply detection algorithm (check for increasing tank level pattern)
@@ -801,8 +801,8 @@ Analytics modules poll the database periodically to retrieve new data:
 
 **Flow**:
 1. Celery Beat triggers periodic task (e.g., every 30 seconds)
-2. Task queries ProcessorState table to get last_processed_at
-3. Task queries TelemetryReading for new data since last_processed_at
+2. Task queries ProcessorState table to get last_processed_timestamp
+3. Task queries TelemetryReading for new data since last_processed_timestamp
 4. Task processes data and writes results back to database
 5. Task updates ProcessorState with current timestamp
 

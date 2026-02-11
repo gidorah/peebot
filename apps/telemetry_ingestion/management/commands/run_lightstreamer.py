@@ -82,7 +82,8 @@ class Command(BaseCommand):
             try:
                 loop.add_signal_handler(sig, _signal_handler)
             except NotImplementedError:
-                # Fallback for loops that don't support signal handlers (e.g. some tests)
+                # Fallback for loops that don't support signal handlers
+                # (e.g. some tests)
                 logger.warning(f"Signal handlers not implemented for loop {type(loop)}")
 
         # Step 4: Start Worker and Connection Loop
@@ -100,7 +101,8 @@ class Command(BaseCommand):
                 attempt = 0
 
                 # Wait until shutdown is signaled
-                # Note: If the client library loses connection, it usually retries internally.
+                # Note: If the client library loses connection,
+                # it usually retries internally.
                 # If it raises an exception during connect, we catch it below.
                 await shutdown_event.wait()
 
@@ -204,8 +206,8 @@ class Command(BaseCommand):
                 break
             except Exception as e:
                 logger.error(f"Error in ingestion worker: {e}", exc_info=True)
-                # If we crash, we should try to ack pending items to prevent deadlock on join()
-                # though usually we just loop.
+                # If we crash, try to ack pending items to prevent deadlock
+                # on join(), though usually we just loop.
                 # Ideally we don't crash the loop.
 
     async def flush_buffer(
@@ -230,7 +232,8 @@ class Command(BaseCommand):
                 if not channel_id:
                     # Should be rare if channel_map is up to date
                     logger.info(
-                        f"Incoming PUI {pui} is not in the channel map. Ignoring the reading."
+                        f"Incoming PUI {pui} is not in the channel map. "
+                        "Ignoring the reading."
                     )
                     continue
 
@@ -248,11 +251,13 @@ class Command(BaseCommand):
             if readings:
                 await TelemetryReading.objects.abulk_create(readings)
                 logger.info(
-                    f"Flushed {len(readings)} readings to DB (Acked {queue_items_to_ack} queue items)."
+                    f"Flushed {len(readings)} readings to DB "
+                    f"(Acked {queue_items_to_ack} queue items)."
                 )
             else:
                 logger.debug(
-                    f"Buffer processed but no readings created (Acked {queue_items_to_ack} queue items)."
+                    f"Buffer processed but no readings created "
+                    f"(Acked {queue_items_to_ack} queue items)."
                 )
 
         except Exception as e:

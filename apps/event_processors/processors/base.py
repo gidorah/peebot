@@ -101,7 +101,7 @@ class BaseProcessor(ABC):
         """Load or create processor state from database.
 
         Retrieves the ProcessorState record for this processor, creating
-        it if it doesn't exist. The state includes the last_processed_at
+        it if it doesn't exist. The state includes the last_processed_timestamp
         cursor for resumption support.
 
         Returns:
@@ -114,7 +114,7 @@ class BaseProcessor(ABC):
         state, created = await ProcessorState.objects.aget_or_create(  # type: ignore[attr-defined]
             processor_name=self.processor_name,
             defaults={
-                "last_processed_at": None,
+                "last_processed_timestamp": None,
                 "last_run_at": None,
                 "state_data": None,
             },
@@ -128,7 +128,7 @@ class BaseProcessor(ABC):
     ) -> None:
         """Update the processor state cursor after execution.
 
-        Updates both last_processed_at (data cursor) and last_run_at
+        Updates both last_processed_timestamp (data cursor) and last_run_at
         (execution timestamp) to support resumption and failure tracking.
 
         Args:
@@ -138,14 +138,14 @@ class BaseProcessor(ABC):
         now = timezone.now()
         state.last_run_at = now
         if processed_at:
-            state.last_processed_at = processed_at
+            state.last_processed_timestamp = processed_at
 
         await state.asave()
         logger.debug(
             "processor_state_updated",
             processor_name=self.processor_name,
             last_run_at=now.isoformat(),
-            last_processed_at=processed_at.isoformat() if processed_at else None,
+            last_processed_timestamp=processed_at.isoformat() if processed_at else None,
         )
 
     async def get_state_data(self, state: ProcessorState) -> dict[str, Any] | None:

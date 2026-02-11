@@ -37,8 +37,8 @@ Implement an analytics framework that detects ISS operational events and trigger
 3. TimescaleDB shall be the only persistent store for analytics state and results.
 
 ### 3.3 Reliability (NFR-REL-002)
-1. Processors shall persist state (`last_processed_at`) to allow resumption after failures.
-2. Processors shall support historical replay by adjusting the `last_processed_at` value.
+1. Processors shall persist state (`last_processed_timestamp`) to allow resumption after failures.
+2. Processors shall support historical replay by adjusting the `last_processed_timestamp` value.
 
 ## 4. Constraints
 1. No Kafka or complex event streaming infrastructure (C-003).

@@ -77,7 +77,7 @@ The **PeeBot ISS Telemetry Data Analytics System** is a unified, modular monolit
 
 *   **Reliability (NFR-REL)**
     *   **NFR-REL-001:** The system shall gracefully handle upstream data interruptions without crashing.
-    *   **NFR-REL-002:** Analytics modules must store their state (`last_processed_at`) to allow for resumption and historical replay.
+    *   **NFR-REL-002:** Analytics modules must store their state (`last_processed_timestamp`) to allow for resumption and historical replay.
 
 ### **6. Assumptions & Constraints**
 *   **C-001:** The system must be built using Python 3.14+, Django 5.2+, and TimescaleDB.

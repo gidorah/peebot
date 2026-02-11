@@ -12,7 +12,7 @@ Independent analytics engine. Decoupled from ingestion by a **Polling Architectu
 
 ## ARCHITECTURE: POLLING PATTERN
 1. **Trigger**: Celery Beat runs task (e.g., every 30s for PeeBot).
-2. **State**: Check `ProcessorState` for `last_processed_at`.
+2. **State**: Check `ProcessorState` for `last_processed_timestamp`.
 3. **Query**: Fetch `TelemetryReading` (from `storage`) since last run.
 4. **Window**: Analyze sliding window (e.g., last 10m of readings).
 5. **Detect**: If pattern matches, create `DetectedEvent`.

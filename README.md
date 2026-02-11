@@ -542,7 +542,7 @@ ISS Lightstreamer Feed
 Analytics modules use a **polling pattern**:
 
 1. Celery Beat triggers periodic task (e.g., every 30 seconds)
-2. Query `ProcessorState` for `last_processed_at` timestamp
+2. Query `ProcessorState` for `last_processed_timestamp` timestamp
 3. Query `TelemetryReading` for new data since last check
 4. Analyze sliding window (e.g., last 10 minutes)
 5. Detect events and store results in `DetectedEvent`
@@ -611,7 +611,7 @@ State tracking for analytics modules:
 
 - `id`: AutoField
 - `processor_name`: CharField (e.g., 'PeeBot')
-- `last_processed_at`: DateTimeField
+- `last_processed_timestamp`: DateTimeField
 - `last_run_at`: DateTimeField
 - `state_data`: JSONField
 

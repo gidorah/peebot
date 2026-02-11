@@ -105,7 +105,8 @@ class Command(BaseCommand):
 
             self.stdout.write(
                 self.style.SUCCESS(
-                    f"Successfully processed {count} channels. Created: {created}, Updated: {updated}."
+                    f"Successfully processed {count} channels. "
+                    f"Created: {created}, Updated: {updated}."
                 )
             )
 
@@ -123,20 +124,23 @@ class Command(BaseCommand):
                 elif active_channel:
                     self.stdout.write(
                         self.style.WARNING(
-                            f"Verification failed: Active channel is {active_channel.public_pui}"
+                            f"Verification failed: Active channel is "
+                            f"{active_channel.public_pui}"
                         )
                     )
                 else:
                     self.stdout.write(
                         self.style.WARNING(
-                            "Verification failed: Unexpected error retrieving active channel"
+                            "Verification failed: Unexpected error retrieving "
+                            "active channel"
                         )
                     )
 
             else:
                 self.stdout.write(
                     self.style.WARNING(
-                        f"Verification failed: Expected 1 active channel, found {active_count}"
+                        f"Verification failed: Expected 1 active channel, "
+                        f"found {active_count}"
                     )
                 )
 

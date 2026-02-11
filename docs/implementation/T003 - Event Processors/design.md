@@ -10,7 +10,7 @@ This module implements a polling-based analytics framework using Celery Beat. Pr
 |---------|------------------|----------------------|
 | Sliding window analysis | Native DB query for time range | Complex stateful stream processing |
 | Processor isolation | Independent schedules, no shared state | Failure propagation risk |
-| Historical replay | Adjust `last_processed_at` | Requires separate replay infrastructure |
+| Historical replay | Adjust `last_processed_timestamp` | Requires separate replay infrastructure |
 | Operational complexity | Single DB as source of truth | Kafka/RabbitMQ + monitoring overhead |
 
 ## 2. Module Structure
@@ -56,7 +56,7 @@ Maintains processor state for resumption and replay.
 |-------|------|-------------|
 | `id` | UUIDv7 | PK, time-sortable (inherits `UUID7Model`) |
 | `processor_name` | CharField | Unique processor identifier (unique constraint) |
-| `last_processed_at` | DateTimeField | Last successfully analyzed data timestamp |
+| `last_processed_timestamp` | DateTimeField | Last successfully analyzed data timestamp |
 | `last_run_at` | DateTimeField | Last execution start time |
 | `state_data` | JSONField | Processor-specific state (nullable) |
 | `updated_at` | DateTimeField | Last update (inherits `TimeStampedModel`) |
@@ -91,7 +91,7 @@ Tracks social media posts linked to detected events. Supports multiple platforms
                               ▼
               ┌───────────────────────────────────────┐
               │         ProcessorState.load()         │
-              │    (get last_processed_at cursor)     │
+              │  (get last_processed_timestamp cursor)│
               └───────────────────┬───────────────────┘
                                   │
                                   ▼

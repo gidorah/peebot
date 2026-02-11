@@ -24,7 +24,7 @@ class TestProcessorState:
         """ProcessorState can be created with required fields."""
         state = ProcessorState.objects.create(
             processor_name="test_processor",
-            last_processed_at=timezone.now(),
+            last_processed_timestamp=timezone.now(),
             last_run_at=timezone.now(),
         )
         assert state.id is not None
@@ -53,7 +53,7 @@ class TestProcessorState:
     def test_nullable_fields(self) -> None:
         """Optional fields can be null."""
         state = ProcessorState.objects.create(processor_name="minimal_processor")
-        assert state.last_processed_at is None
+        assert state.last_processed_timestamp is None
         assert state.last_run_at is None
         assert state.state_data is None
 

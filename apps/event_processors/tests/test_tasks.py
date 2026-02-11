@@ -61,7 +61,7 @@ class TestRunPeeBotProcessor:
         """Task successfully detects event and posts to Bluesky."""
         # 1. Setup data: processor state and telemetry readings (increasing trend)
         state = baker.make(
-            ProcessorState, processor_name="pee_bot", last_processed_at=None
+            ProcessorState, processor_name="pee_bot", last_processed_timestamp=None
         )
 
         # Create channel
@@ -100,7 +100,7 @@ class TestRunPeeBotProcessor:
 
         # Verify state updated
         state.refresh_from_db()
-        assert state.last_processed_at is not None
+        assert state.last_processed_timestamp is not None
         assert state.last_run_at is not None
 
         # Verify external calls
@@ -165,7 +165,7 @@ class TestRunPeeBotProcessor:
         self.mock_bluesky.post.assert_called_once()
 
     def test_run_peebot_processor_db_error_triggers_retry(self) -> None:
-        """OperationalError causes the task to retry (verified via exception propagation)."""
+        """OperationalError causes task to retry via exception propagation."""
         baker.make(ProcessorState, processor_name="pee_bot")
 
         # Mock load_state to raise OperationalError
@@ -173,9 +173,11 @@ class TestRunPeeBotProcessor:
             "apps.event_processors.processors.pee_bot.PeeBotProcessor.load_state",
             side_effect=OperationalError("DB down"),
         ):
-            # When calling task directly or with delay().get(), it should raise OperationalError
-            # if retries are exhausted or if we don't mock the retry mechanism itself.
-            # pytest-celery can test retries more thoroughly, but here we just check it raises.
+            # When calling task directly or with delay().get(),
+            # it should raise OperationalError if retries are exhausted
+            # or if we don't mock the retry mechanism itself.
+            # pytest-celery can test retries more thoroughly,
+            # but here we just check it raises.
             with pytest.raises(OperationalError):
                 run_peebot_processor()
 

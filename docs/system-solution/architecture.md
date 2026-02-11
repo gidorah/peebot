@@ -317,7 +317,7 @@ The system deliberately avoids complex event streaming infrastructure (e.g., Kaf
 
 1.  **Sliding Window Analysis**: Analytics modules (like PeeBot) must analyze trends over time (e.g., "is the tank level increasing over the last 10 minutes?"). Querying a time-series database for a window of data is natively supported and efficient, whereas streaming windowing requires complex state management.
 2.  **Independence & Isolation**: Each analytics module operates on its own schedule (e.g., 30s vs. 5m) and maintains its own processing state. Failure in one processor does not block others or the ingestion pipeline.
-3.  **Historical Replay & Backfilling**: By adjusting the `last_processed_at` timestamp in `ProcessorState`, any module can re-process historical data. This is invaluable for testing new algorithms or recovering from downtime.
+3.  **Historical Replay & Backfilling**: By adjusting the `last_processed_timestamp` timestamp in `ProcessorState`, any module can re-process historical data. This is invaluable for testing new algorithms or recovering from downtime.
 4.  **Operational Simplicity**: A single database as the "Single Source of Truth" significantly reduces infrastructure overhead, monitoring complexity, and the potential for data drift between a stream and a store.
 5.  **Future Scalability**: New analytics modules can be added simply by creating a new Celery task and a `ProcessorState` record, with zero changes required to the ingestion pipeline.
 
@@ -344,7 +344,7 @@ Maintains the state for each analytics processor to support resumption and histo
 | Field | Type | Description |
 | :--- | :--- | :--- |
 | `processor_name` | String | Unique name of the processor (e.g., 'PeeBot'). |
-| `last_processed_at`| DateTime | Timestamp of the last data point successfully analyzed. |
+| `last_processed_timestamp`| DateTime | Timestamp of the last data point successfully analyzed. |
 | `last_run_at` | DateTime | Timestamp of the last time the processor execution started. |
 | `state_data` | JSON | Processor-specific state (e.g., sliding window buffers). |
 | `updated_at` | DateTime | Last time the state was updated (from `TimeStampedModel`). |

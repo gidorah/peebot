@@ -211,7 +211,7 @@ class TestBaseProcessorStateHelpers:
         state = await processor.load_state()
 
         assert state.processor_name == processor_name
-        assert state.last_processed_at is None
+        assert state.last_processed_timestamp is None
         assert state.last_run_at is None
         assert state.state_data is None
 
@@ -224,7 +224,7 @@ class TestBaseProcessorStateHelpers:
         now = timezone.now()
         existing = await ProcessorState.objects.acreate(
             processor_name=processor_name,
-            last_processed_at=now,
+            last_processed_timestamp=now,
             last_run_at=now,
             state_data={"cursor": 100},
         )
@@ -232,11 +232,11 @@ class TestBaseProcessorStateHelpers:
         state = await processor.load_state()
 
         assert state.id == existing.id
-        assert state.last_processed_at == now
+        assert state.last_processed_timestamp == now
         assert state.state_data == {"cursor": 100}
 
     async def test_update_state_cursor_updates_timestamps(self) -> None:
-        """update_state_cursor updates both last_run_at and last_processed_at."""
+        """update_state_cursor updates both last_run_at and last_processed_timestamp."""
         processor = TestProcessorUpdateStateCursor()
         processor_name = processor.processor_name
         state = await ProcessorState.objects.acreate(processor_name=processor_name)
@@ -246,7 +246,7 @@ class TestBaseProcessorStateHelpers:
 
         # Reload from database
         await sync_to_async(state.refresh_from_db)()
-        assert state.last_processed_at == processed_timestamp
+        assert state.last_processed_timestamp == processed_timestamp
         assert state.last_run_at is not None
         assert state.last_run_at >= processed_timestamp
 
@@ -256,15 +256,15 @@ class TestBaseProcessorStateHelpers:
         processor_name = processor.processor_name
         state = await ProcessorState.objects.acreate(
             processor_name=processor_name,
-            last_processed_at=timezone.now() - timedelta(hours=1),
+            last_processed_timestamp=timezone.now() - timedelta(hours=1),
         )
 
         await processor.update_state_cursor(state, None)
 
         await sync_to_async(state.refresh_from_db)()
         assert state.last_run_at is not None
-        # last_processed_at should remain unchanged
-        assert state.last_processed_at is not None
+        # last_processed_timestamp should remain unchanged
+        assert state.last_processed_timestamp is not None
 
     async def test_get_state_data_returns_data(self) -> None:
         """get_state_data returns processor-specific state data."""

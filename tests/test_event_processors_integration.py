@@ -49,7 +49,7 @@ def processor_state() -> ProcessorState:
     return baker.make(
         ProcessorState,
         processor_name="pee_bot",
-        last_processed_at=None,
+        last_processed_timestamp=None,
         last_run_at=None,
         state_data={},
     )
@@ -360,7 +360,7 @@ class TestPeeBotProcessorIntegration:
 
         # Assert: State updated
         processor_state.refresh_from_db()
-        assert processor_state.last_processed_at is not None
+        assert processor_state.last_processed_timestamp is not None
         assert processor_state.last_run_at is not None
 
     def test_full_flow_glitch_rejected(
@@ -452,7 +452,7 @@ class TestPeeBotProcessorIntegration:
 
         # Clear old readings and reset cursor to simulate fresh window
         TelemetryReading.objects.all().delete()
-        processor_state.last_processed_at = None
+        processor_state.last_processed_timestamp = None
         processor_state.save()
 
         # Run 2: Create burst readings, event detected
@@ -467,7 +467,7 @@ class TestPeeBotProcessorIntegration:
 
         processor_state.refresh_from_db()
         second_run_at = processor_state.last_run_at
-        second_processed_at = processor_state.last_processed_at
+        second_processed_at = processor_state.last_processed_timestamp
 
         # Assert: State updated
         assert second_run_at is not None
@@ -562,7 +562,7 @@ class TestSocialPostCooldownIntegration:
         )
 
         # Reset processor state to detect new event
-        processor_state.last_processed_at = None
+        processor_state.last_processed_timestamp = None
         processor_state.save()
 
         # Act: Run second time

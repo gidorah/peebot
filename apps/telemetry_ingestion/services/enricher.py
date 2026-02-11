@@ -18,7 +18,7 @@ class TelemetryEnricher:
     @staticmethod
     def enrich(reading: LightstreamerReading) -> dict[str, Any]:
         """
-        Transforms a LightstreamerReading into an enriched dictionary ready for persistence.
+        Transform LightstreamerReading into enriched dictionary for persistence.
         """
         now = datetime.now(tz=UTC)
         reading_ts = None
@@ -32,8 +32,9 @@ class TelemetryEnricher:
                 reading_ts = base_epoch + timedelta(hours=hours_from_soy)
 
                 # Heuristic check for Year Rollover (New Year's Eve)
-                # If calculated time is > 24h in the future, it likely belongs to previous year
-                # (e.g. processing late Dec 31st data when it is already Jan 1st)
+                # If calculated time is > 24h in the future, it likely belongs
+                # to previous year (e.g. processing late Dec 31st data
+                # when it is already Jan 1st)
                 if reading_ts > now + timedelta(hours=24):
                     base_epoch_prev = datetime(
                         now.year - 1, 1, 1, tzinfo=UTC
@@ -41,7 +42,8 @@ class TelemetryEnricher:
                     reading_ts = base_epoch_prev + timedelta(hours=hours_from_soy)
             except (ValueError, TypeError, OverflowError) as e:
                 logger.warning(
-                    f"Could not parse source timestamp '{reading.timestamp}' for {reading.pui}: {e}. Using now()."
+                    f"Could not parse source timestamp '{reading.timestamp}' "
+                    f"for {reading.pui}: {e}. Using now()."
                 )
 
         if reading_ts is None:
