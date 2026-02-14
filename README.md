@@ -149,7 +149,7 @@ To run the full stack in containers with PgBouncer session pooling:
 2. Build and start the services:
    ```bash
    docker compose -f docker/dev/docker-compose.yml up --build -d timescaledb pgbouncer redis
-   docker compose -f docker/dev/docker-compose.yml up --build web worker beat
+   docker compose -f docker/dev/docker-compose.yml up --build web worker beat ingestion
    ```
 3. Run database migrations (one-off):
    ```bash

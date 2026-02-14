@@ -60,12 +60,12 @@ peebot/
 
 ## DEV COMMANDS
 ```bash
-just dev-up        # Start full stack (Docker + Seq)
+just dev-up        # Start full stack (Docker + Seq + Ingestion)
 just dev-down      # Stop stack
 just test          # Run tests (pytest)
 just test-pooled   # Run tests with pgbouncer (pytest)
 uv run python manage.py runserver # Dev server (Logs to Console + Seq)
-uv run python manage.py run_lightstreamer # Ingestion
+uv run python manage.py run_lightstreamer # Ingestion (Manual run)
 # Seq Dashboard: http://localhost:5341 (admin/password)
 ```
 
