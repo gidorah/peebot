@@ -189,7 +189,7 @@ async def _query_readings(
     # Query readings for the channel
     readings: list[TelemetryReading] = [
         reading
-        async for reading in TelemetryReading.objects.filter(  # type: ignore[attr-defined]
+        async for reading in TelemetryReading.objects.filter(
             channel__public_pui=processor.channel_pui,
             timestamp__gte=query_start,
             timestamp__lte=now,
@@ -211,7 +211,7 @@ async def _create_detected_event(
     Returns:
         Created DetectedEvent instance
     """
-    event: DetectedEvent = await DetectedEvent.objects.acreate(  # type: ignore[attr-defined]
+    event: DetectedEvent = await DetectedEvent.objects.acreate(
         event_type=detection.event_type,
         channel_id=processor.channel_pui,
         detected_at=detection.detected_at,

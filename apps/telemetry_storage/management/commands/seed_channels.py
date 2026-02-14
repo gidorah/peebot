@@ -86,7 +86,7 @@ class Command(BaseCommand):
 
                 deleted_at = None if public_pui == target_active_pui else now
 
-                obj, was_created = TelemetryChannel.all_objects.update_or_create(  # type: ignore[misc]
+                obj, was_created = TelemetryChannel.all_objects.update_or_create(
                     public_pui=public_pui,
                     defaults={
                         "description": description,

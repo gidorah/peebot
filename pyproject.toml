@@ -80,12 +80,9 @@ ignore_errors = false
 module = "django.contrib.postgres.*"
 ignore_errors = false
 
-[[tool.mypy.overrides]]
-module = "apps.telemetry_ingestion.management.commands.run_lightstreamer"
-disable_error_code = ["attr-defined"]
-
-# Relax checks on Django infrastructure (models, admin, migrations)
-# These files are heavily metaclass-driven and django-stubs coverage is incomplete
+# Django infrastructure: relax checks on metaclass-heavy modules
+# - models/admin: Currently clean, but guardrails against future ORM metaclass noise
+# - config.settings.*: REQUIRED — dict indexing on LOGGING triggers [index]
 [[tool.mypy.overrides]]
 module = [
     "apps.*.models",
@@ -109,7 +106,7 @@ warn_return_any = true
 strict_equality = true
 
 [tool.django-stubs]
-django_settings_module = "config.settings"
+django_settings_module = "config.settings.development"
 
 [tool.ruff]
 target-version = "py313"

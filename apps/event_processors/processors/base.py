@@ -107,7 +107,7 @@ class BaseProcessor(ABC):
             ProcessorState instance for this processor
         """
         state: ProcessorState
-        state, created = await ProcessorState.objects.aget_or_create(  # type: ignore[attr-defined]
+        state, created = await ProcessorState.objects.aget_or_create(
             processor_name=self.processor_name,
             defaults={
                 "last_processed_timestamp": None,

@@ -110,13 +110,17 @@ class BlueskyClient:
         cooldown_threshold = timezone.now() - timedelta(minutes=self.cooldown_minutes)
 
         try:
-            recent_post = await SocialPost.objects.filter(  # type: ignore[attr-defined]
+            recent_post = await SocialPost.objects.filter(
                 platform=self.PLATFORM,
                 status=SocialPost.Status.SUCCESS,
                 posted_at__gte=cooldown_threshold,
             ).afirst()
 
             if recent_post is None:
+                return True, None
+
+            # posted_at is guaranteed non-null by the posted_at__gte filter above
+            if recent_post.posted_at is None:
                 return True, None
 
             remaining = (
@@ -186,7 +190,7 @@ class BlueskyClient:
 
             post_uri: str = response.uri
 
-            social_post = await SocialPost.objects.acreate(  # type: ignore[attr-defined]
+            social_post = await SocialPost.objects.acreate(
                 event=event,
                 platform=self.PLATFORM,
                 external_id=post_uri,
@@ -240,7 +244,7 @@ class BlueskyClient:
         Returns:
             The created SocialPost record with failed status
         """
-        social_post: SocialPost = await SocialPost.objects.acreate(  # type: ignore[attr-defined]
+        social_post: SocialPost = await SocialPost.objects.acreate(
             event=event,
             platform=self.PLATFORM,
             external_id="",

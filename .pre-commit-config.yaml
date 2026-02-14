@@ -18,16 +18,11 @@ repos:
     hooks:
       - id: mypy
         name: mypy
-        entry: uv run mypy
+        entry: uv run mypy apps/
         language: system
         types: [python]
         require_serial: true
-        exclude: '(?:^|/)(?:migrations|tests)/'
-        # Run on all files if any python file changes, or restrict?
-        # Mypy usually needs full context.
-        # But for speed, let's try to pass filenames.
-        # However, since we use `uv run`, it's fast.
-        # Let's align with Justfile and project config.
-        # If I pass filenames, I need to ensure mypy config allows it.
-        # Safest for consistent results is usually full run or using pre-commit cache.
-        # Let's start with passing filenames (default) which is faster.
+        pass_filenames: false
+        # Run on entire apps/ directory for full context (matches `just dev-check`)
+        # Mypy needs full context for Django's metaclasses and module overrides
+        # Exclusions (migrations, tests) handled by pyproject.toml config
