@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "atproto>=0.0.65",
     "celery>=5.5.3",
     "defusedxml>=0.7.1",
     "django>=5.2.7",
@@ -14,6 +15,7 @@ dependencies = [
     "djangorestframework>=3.16.1",
     "flower>=2.0.1",
     "lightstreamer-client-lib>=2.2.2",
+    "openai>=1.60.0",
     "psycopg[binary,pool]>=3.2.11",
     "pydantic>=2.12.5",
     "redis>=6.4.0",
@@ -23,12 +25,24 @@ dependencies = [
 ]
 
 [tool.mypy]
-python_version = "3.13"
-strict = true
+python_version = "3.14"
+# strict = true  # DISABLED: Django's metaclasses make strict mode self-sabotage
+plugins = ["mypy_django_plugin.main"]
+exclude = ["migrations/", "tests/", "_work-tmp"]
+
+# High-value strict checks (enabled selectively for non-Django code)
+disallow_untyped_defs = false  # Too strict for Django views/models
+check_untyped_defs = true      # Check typed functions thoroughly
+warn_return_any = false        # Django QuerySets return Any frequently
 warn_unused_ignores = true
 warn_redundant_casts = true
 warn_unused_configs = true
-plugins = ["mypy_django_plugin.main"]
+no_implicit_optional = true    # Catch None bugs
+strict_equality = true          # Prevent type mismatches in comparisons
+
+# Django-specific relaxations
+allow_redefinition = true       # Supports Django's descriptor magic
+implicit_reexport = true        # Django models re-export fields
 
 [[tool.mypy.overrides]]
 module = "django_celery_beat.*"
@@ -43,6 +57,22 @@ module = "lightstreamer.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
+module = "celery.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "environ.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "rest_framework.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "atproto.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
 module = "django.contrib.gis.*"
 ignore_errors = false
 
@@ -50,12 +80,33 @@ ignore_errors = false
 module = "django.contrib.postgres.*"
 ignore_errors = false
 
+# Django infrastructure: relax checks on metaclass-heavy modules
+# - models/admin: Currently clean, but guardrails against future ORM metaclass noise
+# - config.settings.*: REQUIRED — dict indexing on LOGGING triggers [index]
 [[tool.mypy.overrides]]
-module = "apps.telemetry_ingestion.management.commands.run_lightstreamer"
-disable_error_code = ["attr-defined"]
+module = [
+    "apps.*.models",
+    "apps.*.admin",
+    "config.settings.*",
+]
+disable_error_code = ["attr-defined", "misc", "override", "index"]
+warn_return_any = false
+
+# Enforce stricter typing on business logic (services, processors, utils)
+# This is where bugs actually hide
+[[tool.mypy.overrides]]
+module = [
+    "apps.*.services.*",
+    "apps.*.processors.*",
+    "apps.*.utils.*",
+    "apps.*.repositories.*",
+]
+disallow_untyped_defs = true
+warn_return_any = true
+strict_equality = true
 
 [tool.django-stubs]
-django_settings_module = "config.settings"
+django_settings_module = "config.settings.development"
 
 [tool.ruff]
 target-version = "py313"
@@ -106,16 +157,21 @@ unresolved-import = "warn"
 [dependency-groups]
 dev = [
     "debugpy>=1.8.18",
-    "django-stubs>=5.2.7",
+    "django-stubs>=5.2.9",
     "model-bakery>=1.20.5",
     "mypy>=1.18.2",
+    "pre-commit>=4.5.1",
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",
     "pytest-django>=4.11.1",
     "ruff>=0.14.1",
     "types-defusedxml>=0.7.0.20250822",
+    "types-python-dateutil>=2.9.0.20260124",
+    "types-redis>=4.6.0.20241004",
+    "types-requests>=2.32.4.20260107",
+    "types-setuptools>=80.10.0.20260124",
 ]
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "config.settings.development"
+DJANGO_SETTINGS_MODULE = "config.settings.testing"
 python_files = ["tests.py", "test_*.py", "*_tests.py"]

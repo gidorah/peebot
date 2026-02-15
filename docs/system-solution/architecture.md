@@ -48,7 +48,7 @@ All versions are **MANDATORY**. Do not upgrade without RFC.
 | **Queue** | Celery + Redis | `5.3+` / `7.2` | Polling and background tasks. |
 | **AI Client** | openai (Python SDK) | `1.x` | Generic client compatible with OpenRouter. |
 | **AI Provider**| DeepSeek V3 | `Latest` | Via OpenRouter. |
-| **Social** | tweepy | `4.14+` | Twitter API v2 wrapper. |
+| **Social** | atproto | `0.0.65+` | Bluesky AT Protocol SDK. |
 | **Validation** | Pydantic | `2.x` | High-performance data validation for ingestion. |
 | **Logging** | Structlog + Seq | `24.x` | Structured logging with centralized ingestion. |
 | **Pkg Manager** | uv | `Latest` | Fast resolution and locking. |
@@ -127,7 +127,7 @@ peebot/
 │   │   ├── processors/
 │   │   │   └── pee_bot.py           # Urination detector logic
 │   │   ├── services/
-│   │   │   ├── twitter_client.py
+│   │   │   ├── bluesky_client.py
 │   │   │   └── joke_generator.py
 │   │   └── tasks.py                 # Celery periodic tasks
 │   └── dashboards/                  # Module: Web Interface
@@ -204,7 +204,7 @@ Used primarily for the `dashboards` module to retrieve historical or current sta
 **Purpose**: Shared foundations, base models, and project-wide utilities.
 
 **Key Components**:
-1.  **Base Models**: 
+1.  **Base Models**:
     - `TimeStampedModel`: Provides `created_at` and `updated_at`.
     - `UUID7Model`: Provides `id = UUIDField` (defaulting to UUIDv7).
     - `SoftDeleteModel`: Provides `deleted_at` and custom manager.
@@ -257,7 +257,7 @@ The single source of truth for all ISS telemetry data, optimized as a TimescaleD
 - **Query Index**: Optimized for `(channel, -timestamp)` for trend analysis.
 - **Audit Index**: `(created_at, timestamp)` for ingestion performance monitoring.
 
-**Retention Policy**: 
+**Retention Policy**:
 -   **Compression**: 7 days.
 -   **Retention**: 30 days.
 
@@ -317,7 +317,7 @@ The system deliberately avoids complex event streaming infrastructure (e.g., Kaf
 
 1.  **Sliding Window Analysis**: Analytics modules (like PeeBot) must analyze trends over time (e.g., "is the tank level increasing over the last 10 minutes?"). Querying a time-series database for a window of data is natively supported and efficient, whereas streaming windowing requires complex state management.
 2.  **Independence & Isolation**: Each analytics module operates on its own schedule (e.g., 30s vs. 5m) and maintains its own processing state. Failure in one processor does not block others or the ingestion pipeline.
-3.  **Historical Replay & Backfilling**: By adjusting the `last_processed_at` timestamp in `ProcessorState`, any module can re-process historical data. This is invaluable for testing new algorithms or recovering from downtime.
+3.  **Historical Replay & Backfilling**: By adjusting the `last_processed_timestamp` timestamp in `ProcessorState`, any module can re-process historical data. This is invaluable for testing new algorithms or recovering from downtime.
 4.  **Operational Simplicity**: A single database as the "Single Source of Truth" significantly reduces infrastructure overhead, monitoring complexity, and the potential for data drift between a stream and a store.
 5.  **Future Scalability**: New analytics modules can be added simply by creating a new Celery task and a `ProcessorState` record, with zero changes required to the ingestion pipeline.
 
@@ -344,7 +344,7 @@ Maintains the state for each analytics processor to support resumption and histo
 | Field | Type | Description |
 | :--- | :--- | :--- |
 | `processor_name` | String | Unique name of the processor (e.g., 'PeeBot'). |
-| `last_processed_at`| DateTime | Timestamp of the last data point successfully analyzed. |
+| `last_processed_timestamp`| DateTime | Timestamp of the last data point successfully analyzed. |
 | `last_run_at` | DateTime | Timestamp of the last time the processor execution started. |
 | `state_data` | JSON | Processor-specific state (e.g., sliding window buffers). |
 | `updated_at` | DateTime | Last time the state was updated (from `TimeStampedModel`). |
@@ -359,7 +359,7 @@ Maintains the state for each analytics processor to support resumption and histo
                                 v
                            [DetectedEvent]
                                 +
-                         [Twitter Client] <--(Check Cooldown)-- [ProcessorState]
+                         [Bluesky Client] <--(Check Cooldown)-- [ProcessorState]
 ```
 
 **Implementation Note**:

@@ -54,14 +54,18 @@ peebot/
 7.  **Temporary Artifacts**:
     - MUST use `_work-tmp/` for temporary scripts, logs, or intermediate docs.
     - These files are ephemeral and will be deleted at the end of the session.
+8.  **Testing**:
+    - ALWAYS use `just test` (or `just test-pooled`) for running tests.
+    - NEVER run `pytest` directly - the Justfile ensures proper environment setup (Docker, DB, etc.).
 
 ## DEV COMMANDS
 ```bash
-just dev-up        # Start full stack (Docker + Seq)
+just dev-up        # Start full stack (Docker + Seq + Ingestion)
 just dev-down      # Stop stack
 just test          # Run tests (pytest)
+just test-pooled   # Run tests with pgbouncer (pytest)
 uv run python manage.py runserver # Dev server (Logs to Console + Seq)
-uv run python manage.py run_lightstreamer # Ingestion
+uv run python manage.py run_lightstreamer # Ingestion (Manual run)
 # Seq Dashboard: http://localhost:5341 (admin/password)
 ```
 

@@ -56,7 +56,7 @@ def test_seed_channels_command(mock_pui_list_xml: str) -> None:
         assert "Successfully processed 2 channels" in output
         assert "Verification passed: Only NODE3000004 is active" in output
 
-        assert TelemetryChannel.all_objects.count() == 2  # type: ignore[misc]
+        assert TelemetryChannel.all_objects.count() == 2
 
         upa = TelemetryChannel.objects.get(public_pui="NODE3000004")
         assert upa.description == "Urine Processor Assembly"
@@ -66,7 +66,7 @@ def test_seed_channels_command(mock_pui_list_xml: str) -> None:
         with pytest.raises(TelemetryChannel.DoesNotExist):
             TelemetryChannel.objects.get(public_pui="AIRLOCK000001")
 
-        airlock = TelemetryChannel.all_objects.get(public_pui="AIRLOCK000001")  # type: ignore[misc]
+        airlock = TelemetryChannel.all_objects.get(public_pui="AIRLOCK000001")
         assert airlock.description == "Airlock Power"
         assert airlock.deleted_at is not None
 
@@ -91,7 +91,7 @@ def test_seed_channels_idempotency(mock_pui_list_xml: str) -> None:
         out = StringIO()
 
         call_command("seed_channels", stdout=out)
-        assert TelemetryChannel.all_objects.count() == 2  # type: ignore[misc]
+        assert TelemetryChannel.all_objects.count() == 2
 
         call_command("seed_channels", stdout=out)
-        assert TelemetryChannel.all_objects.count() == 2  # type: ignore[misc]
+        assert TelemetryChannel.all_objects.count() == 2

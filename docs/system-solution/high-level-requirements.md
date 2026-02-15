@@ -1,20 +1,20 @@
 # PeeBot - Software Requirements Specification (SRS)
 
 ### **1. Executive Summary**
-The **PeeBot ISS Telemetry Data Analytics System** is a unified, modular monolith application designed to ingest, store, and analyze real-time telemetry data from the International Space Station (ISS). Its primary novelty function ("PeeBot") is to detect usage patterns of the Urine Processor Assembly (UPA) and automatically generate humorous, educational social media engagement via Twitter. Beyond this, the system serves as a robust foundation for general telemetry analysis, featuring high-throughput ingestion (up to 10k msg/sec), a TimescaleDB-backed "Single Source of Truth," and a real-time WebSocket dashboard. The project prioritizes operational simplicity through a single-deployment unit architecture while ensuring scalability via asynchronous processing and independent polling-based analytics modules.
+The **PeeBot ISS Telemetry Data Analytics System** is a unified, modular monolith application designed to ingest, store, and analyze real-time telemetry data from the International Space Station (ISS). Its primary novelty function ("PeeBot") is to detect usage patterns of the Urine Processor Assembly (UPA) and automatically generate humorous, educational social media engagement via Bluesky. Beyond this, the system serves as a robust foundation for general telemetry analysis, featuring high-throughput ingestion (up to 10k msg/sec), a TimescaleDB-backed "Single Source of Truth," and a real-time WebSocket dashboard. The project prioritizes operational simplicity through a single-deployment unit architecture while ensuring scalability via asynchronous processing and independent polling-based analytics modules.
 
 ### **2. Business Objectives**
 *   **BO-1:** Ingest real-time streaming telemetry data from the ISS Lightstreamer service with high reliability and zero data duplication.
 *   **BO-2:** Detect specific operational events on the ISS (initially UPA tank filling) using sliding-window trend analysis.
-*   **BO-3:** Automate public engagement by posting humorous, context-aware updates to Twitter when specific events are detected.
+*   **BO-3:** Automate public engagement by posting humorous, context-aware updates to Bluesky when specific events are detected.
 *   **BO-4:** Provide a low-latency web dashboard for visualizing real-time telemetry, historical trends, and system events.
 *   **BO-5:** Maintain a maintainable, operationally simple codebase that avoids the complexity of distributed microservices or event streaming infrastructure (Kafka).
 
 ### **3. User Personas & Stories**
-*   **Persona: Space Enthusiast (Twitter Follower)**
+*   **Persona: Space Enthusiast (Bluesky Follower)**
     *   **Description:** A member of the general public interested in space technology and humor.
     *   **User Stories:**
-        *   "As a Space Enthusiast, I want to see funny tweets when the ISS astronauts use the bathroom so that I feel a relatable connection to space life."
+        *   "As a Space Enthusiast, I want to see funny posts when the ISS astronauts use the bathroom so that I feel a relatable connection to space life."
 *   **Persona: Telemetry Analyst (Dashboard User)**
     *   **Description:** A user monitoring the system's data integrity and historical trends.
     *   **User Stories:**
@@ -53,7 +53,7 @@ The **PeeBot ISS Telemetry Data Analytics System** is a unified, modular monolit
     *   **FR-PROC-002:** The PeeBot processor shall query the `TelemetryReading` table every 30 seconds for new data on channel `NODE3000004` (UPA Tank Level).
     *   **FR-PROC-003:** The processor shall detect a "Fill Event" by analyzing the sliding window of the last 10 minutes for a consistent increasing trend.
     *   **FR-PROC-004:** Upon detection, the system shall generate "dry, scientific, slightly absurd" humorous text using an integration with an external LLM API.
-    *   **FR-PROC-005:** The system shall post the generated text to Twitter via the Twitter API, subject to a minimum 30-minute cooldown period between tweets.
+    *   **FR-PROC-005:** The system shall post the generated text to Bluesky via the AT Protocol API, subject to a minimum 30-minute cooldown period between posts.
 
 *   **Feature: Real-Time Dashboard (Module: `dashboards`)**
     *   **FR-DASH-001:** The system shall provide a web interface displaying live status of key telemetry channels.
@@ -77,13 +77,13 @@ The **PeeBot ISS Telemetry Data Analytics System** is a unified, modular monolit
 
 *   **Reliability (NFR-REL)**
     *   **NFR-REL-001:** The system shall gracefully handle upstream data interruptions without crashing.
-    *   **NFR-REL-002:** Analytics modules must store their state (`last_processed_at`) to allow for resumption and historical replay.
+    *   **NFR-REL-002:** Analytics modules must store their state (`last_processed_timestamp`) to allow for resumption and historical replay.
 
 ### **6. Assumptions & Constraints**
 *   **C-001:** The system must be built using Python 3.14+, Django 5.2+, and TimescaleDB.
 *   **C-002:** Deployment target is a single VPS managed by Coolify.
 *   **C-003:** No Kafka or complex event streaming infrastructure is permitted.
-*   **C-004:** The Twitter API usage must respect the Free/Basic tier rate limits unless otherwise specified.
+*   **C-004:** The Bluesky API usage must respect the AT Protocol rate limits unless otherwise specified.
 *   **A-001:** It is assumed that the Lightstreamer connection library is available or can be custom-implemented.
 *   **A-002:** The specific LLM provider for the Joke Generator will be selected during the implementation phase, but the architecture must support a generic API integration.
 

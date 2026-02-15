@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 TelemetryCallback = Callable[[dict[str, dict[str, Any]]], Coroutine[Any, Any, None]]
 
 
-class SubListener(SubscriptionListener):  # type: ignore[misc]
+class SubListener(SubscriptionListener):
     def __init__(
         self,
         callback: TelemetryCallback,
@@ -55,7 +55,7 @@ class SubListener(SubscriptionListener):  # type: ignore[misc]
         future.add_done_callback(_log_callback_exception)
 
 
-class StatusListener(ClientListener):  # type: ignore[misc]
+class StatusListener(ClientListener):
     def onListenStart(self) -> None:
         logger.info("Lightstreamer: Listen start")
 

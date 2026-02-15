@@ -62,7 +62,6 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # Third-party apps
     "rest_framework",
-    "django_celery_beat",
     # Project apps
     "apps.core",
     "apps.telemetry_storage",
@@ -178,5 +177,22 @@ CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes hard limit
 CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 minutes soft limit
 
-# Celery Beat scheduler configuration (for periodic tasks)
-CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+# Celery Beat uses the default PersistentScheduler (file-based).
+# Schedule is defined statically in config/celery.py via app.conf.beat_schedule.
+# See ADR-009 in docs/system-solution/tech-decisions.md for rationale.
+
+# ==============================================================================
+# External API Configuration
+# ==============================================================================
+
+# OpenRouter / LLM Configuration
+OPENROUTER_API_KEY = env("OPENROUTER_API_KEY", default=None)
+OPENROUTER_BASE_URL = env("OPENROUTER_BASE_URL", default="https://openrouter.ai/api/v1")
+OPENROUTER_MODEL = env("OPENROUTER_MODEL", default="deepseek/deepseek-chat")
+JOKE_GENERATOR_MAX_RETRIES = env.int("JOKE_GENERATOR_MAX_RETRIES", default=3)
+JOKE_GENERATOR_BASE_DELAY = env.float("JOKE_GENERATOR_BASE_DELAY", default=1.0)
+
+# Bluesky API Configuration
+BLUESKY_HANDLE = env("BLUESKY_HANDLE", default=None)
+BLUESKY_APP_PASSWORD = env("BLUESKY_APP_PASSWORD", default=None)
+BLUESKY_COOLDOWN_MINUTES = env.int("BLUESKY_COOLDOWN_MINUTES", default=30)

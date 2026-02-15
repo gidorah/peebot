@@ -44,9 +44,17 @@ dev-migrate:
 dev-createsuperuser:
 	{{dev-compose}} run --rm web uv run python manage.py createsuperuser
 
-# Run pytest suite (accepts additional args)
+# Run pytest suite in Docker (accepts additional args)
 dev-test *args:
 	{{dev-compose}} run --rm web uv run pytest {{args}}
+
+# Run pytest suite locally (direct DB connection for test DB creation)
+# Uses direct TimescaleDB connection because:
+# 1. pytest-django needs to CREATE/DROP test_peebot database
+# 2. PgBouncer can't route to non-existent databases
+# 3. This matches production practice where migrations also bypass PgBouncer
+test *args:
+	DOTENV_PATH=.env.local uv run pytest {{args}}
 
 # Run linting and type checks inside the web container
 dev-check:

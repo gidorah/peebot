@@ -1,10 +1,10 @@
 # Product Guide
 
 ## Initial Concept
-PeeBot is a Django modular monolith for ISS telemetry analytics (TimescaleDB), specifically detecting Urine Processor Assembly activity (NODE3000004) to post humorous tweets.
+PeeBot is a Django modular monolith for ISS telemetry analytics (TimescaleDB), specifically detecting Urine Processor Assembly activity (NODE3000004) to post humorous updates to Bluesky.
 
 ## Target Audience
-The primary audience consists of space enthusiasts and the general public on Twitter who appreciate a blend of space science and humor.
+The primary audience consists of space enthusiasts and the general public on Bluesky who appreciate a blend of space science and humor.
 
 ## Core Goals
 1.  **Engagement:** Create entertaining, humorous content derived from actual ISS telemetry events.
@@ -13,7 +13,7 @@ The primary audience consists of space enthusiasts and the general public on Twi
 ## MVP Features
 -   **Ingestion:** Real-time ingestion of Lightstreamer data for the UPA (Urine Processor Assembly).
 -   **Analytics:** Reliable detection of "Pee Events" using sliding window analytics on the incoming telemetry stream.
--   **Automation:** An automated tweeting mechanism triggered specifically by detected events.
+-   **Automation:** An automated posting mechanism triggered specifically by detected events.
 
 ## Tone & Personality
 The bot's persona is humorous and slightly irreverent (e.g., "Somebody's busy up there! 🚽"), aiming to make mundane telemetry data fun and relatable.

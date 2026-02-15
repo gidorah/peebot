@@ -33,7 +33,7 @@ class TestTelemetryEnricher:
         assert result["timestamp"] == datetime(2026, 1, 1, tzinfo=UTC)
 
     def test_enrich_rollover_case(self):
-        """Test the rollover logic: server is in Jan 1, but receives data from Dec 31."""
+        """Test rollover logic: server in Jan 1 receives data from Dec 31."""
         mock_now = datetime(2026, 1, 1, 1, 0, 0, tzinfo=UTC)
         hours_from_soy = 8748.0
 

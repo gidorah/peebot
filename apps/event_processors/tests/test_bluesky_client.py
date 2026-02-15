@@ -1,0 +1,401 @@
+"""Tests for the BlueskyClient service.
+
+Verifies cooldown enforcement, posting functionality, error handling,
+and SocialPost record creation.
+"""
+
+from __future__ import annotations
+
+from datetime import timedelta
+from decimal import Decimal
+from unittest.mock import MagicMock, patch
+
+import pytest
+import pytest_asyncio
+from django.utils import timezone
+
+from apps.event_processors.models import DetectedEvent, SocialPost
+from apps.event_processors.services.bluesky_client import (
+    BlueskyClient,
+    BlueskyClientError,
+    BlueskyCooldownError,
+)
+
+
+class TestBlueskyClientInitialization:
+    """Tests for BlueskyClient initialization."""
+
+    @patch("apps.event_processors.services.bluesky_client.Client")
+    @patch("apps.event_processors.services.bluesky_client.settings")
+    def test_init_with_all_credentials(
+        self, mock_settings: MagicMock, mock_client_class: MagicMock
+    ) -> None:
+        """BlueskyClient initializes with all required credentials."""
+        mock_settings.BLUESKY_HANDLE = "peebot.bsky.social"
+        mock_settings.BLUESKY_APP_PASSWORD = "app-password-123"
+        mock_settings.BLUESKY_COOLDOWN_MINUTES = None
+
+        mock_client = MagicMock()
+        mock_client_class.return_value = mock_client
+
+        client = BlueskyClient()
+
+        assert client.client is not None
+        assert client.cooldown_minutes == 30  # Default
+        assert client._authenticated is False
+        assert client._handle == "peebot.bsky.social"
+        mock_client.login.assert_not_called()
+
+    @patch("apps.event_processors.services.bluesky_client.Client")
+    @patch("apps.event_processors.services.bluesky_client.settings")
+    def test_init_with_custom_cooldown(
+        self, mock_settings: MagicMock, mock_client_class: MagicMock
+    ) -> None:
+        """BlueskyClient uses custom cooldown when provided."""
+        mock_settings.BLUESKY_HANDLE = "peebot.bsky.social"
+        mock_settings.BLUESKY_APP_PASSWORD = "app-password-123"
+        mock_settings.BLUESKY_COOLDOWN_MINUTES = 60
+
+        mock_client_class.return_value = MagicMock()
+
+        client = BlueskyClient()
+
+        assert client.cooldown_minutes == 60
+
+    @patch("apps.event_processors.services.bluesky_client.settings")
+    def test_init_missing_handle_raises_error(self, mock_settings: MagicMock) -> None:
+        """BlueskyClient raises error when handle missing."""
+        mock_settings.BLUESKY_HANDLE = None
+        mock_settings.BLUESKY_APP_PASSWORD = "app-password-123"
+
+        with pytest.raises(BlueskyClientError) as exc_info:
+            BlueskyClient()
+
+        assert "BLUESKY_HANDLE" in str(exc_info.value)
+
+    @patch("apps.event_processors.services.bluesky_client.settings")
+    def test_init_missing_app_password_raises_error(
+        self, mock_settings: MagicMock
+    ) -> None:
+        """BlueskyClient raises error when app password missing."""
+        mock_settings.BLUESKY_HANDLE = "peebot.bsky.social"
+        mock_settings.BLUESKY_APP_PASSWORD = None
+
+        with pytest.raises(BlueskyClientError) as exc_info:
+            BlueskyClient()
+
+        assert "BLUESKY_APP_PASSWORD" in str(exc_info.value)
+
+    @patch("apps.event_processors.services.bluesky_client.settings")
+    def test_init_reports_all_missing_credentials(
+        self, mock_settings: MagicMock
+    ) -> None:
+        """BlueskyClient error lists all missing credentials."""
+        mock_settings.BLUESKY_HANDLE = None
+        mock_settings.BLUESKY_APP_PASSWORD = None
+
+        with pytest.raises(BlueskyClientError) as exc_info:
+            BlueskyClient()
+
+        error_msg = str(exc_info.value)
+        assert "BLUESKY_HANDLE" in error_msg
+        assert "BLUESKY_APP_PASSWORD" in error_msg
+
+    @pytest.mark.asyncio
+    @patch("apps.event_processors.services.bluesky_client.Client")
+    @patch("apps.event_processors.services.bluesky_client.settings")
+    async def test_ensure_authenticated_login_failure_raises_error(
+        self, mock_settings: MagicMock, mock_client_class: MagicMock
+    ) -> None:
+        """_ensure_authenticated raises error when login fails."""
+        from atproto.exceptions import AtProtocolError
+
+        mock_settings.BLUESKY_HANDLE = "peebot.bsky.social"
+        mock_settings.BLUESKY_APP_PASSWORD = "wrong-password"
+        mock_settings.BLUESKY_COOLDOWN_MINUTES = None
+
+        mock_client = MagicMock()
+        mock_client.login.side_effect = AtProtocolError("Invalid credentials")
+        mock_client_class.return_value = mock_client
+
+        client = BlueskyClient()
+
+        with pytest.raises(BlueskyClientError) as exc_info:
+            await client._ensure_authenticated()
+
+        assert "authenticate" in str(exc_info.value).lower()
+
+
+@pytest.mark.asyncio
+@pytest.mark.django_db(transaction=True)
+class TestBlueskyClientCooldown:
+    """Tests for cooldown enforcement."""
+
+    @pytest_asyncio.fixture(autouse=True)
+    async def cleanup_social_posts(self):
+        """Clean up SocialPost records before each test."""
+        await SocialPost.objects.filter(platform="bluesky").adelete()
+        yield
+        await SocialPost.objects.filter(platform="bluesky").adelete()
+
+    def _create_mock_client(self) -> BlueskyClient:
+        """Create BlueskyClient with mocked settings."""
+        with (
+            patch(
+                "apps.event_processors.services.bluesky_client.settings"
+            ) as mock_settings,
+            patch(
+                "apps.event_processors.services.bluesky_client.Client"
+            ) as mock_client,
+        ):
+            mock_settings.BLUESKY_HANDLE = "peebot.bsky.social"
+            mock_settings.BLUESKY_APP_PASSWORD = "app-password-123"
+            mock_settings.BLUESKY_COOLDOWN_MINUTES = 30
+            mock_client.return_value = MagicMock()
+            client = BlueskyClient()
+            client._authenticated = True
+            return client
+
+    @pytest_asyncio.fixture
+    async def detected_event(self) -> DetectedEvent:
+        """Create a DetectedEvent for testing."""
+        return await DetectedEvent.objects.acreate(
+            event_type="urination",
+            channel_id="NODE3000004",
+            detected_at=timezone.now(),
+            confidence=Decimal("0.85"),
+        )
+
+    async def test_check_cooldown_no_posts_returns_true(self) -> None:
+        """Cooldown check returns True when no posts exist."""
+        mock_client = self._create_mock_client()
+        can_post, remaining = await mock_client.check_cooldown()
+
+        assert can_post is True
+        assert remaining is None
+
+    async def test_check_cooldown_recent_post_blocks(
+        self, detected_event: DetectedEvent
+    ) -> None:
+        """Cooldown check returns False when recent post exists."""
+        mock_client = self._create_mock_client()
+        await SocialPost.objects.acreate(
+            event=detected_event,
+            platform="bluesky",
+            external_id="at://did:plc:xxx/app.bsky.feed.post/yyy",
+            content="Recent post",
+            posted_at=timezone.now() - timedelta(minutes=15),  # Within 30min
+            status=SocialPost.Status.SUCCESS,
+        )
+
+        can_post, remaining = await mock_client.check_cooldown()
+
+        assert can_post is False
+        assert remaining is not None
+        assert remaining.total_seconds() > 0
+
+    async def test_check_cooldown_old_post_allows(
+        self, detected_event: DetectedEvent
+    ) -> None:
+        """Cooldown check returns True when only old posts exist."""
+        mock_client = self._create_mock_client()
+        await SocialPost.objects.acreate(
+            event=detected_event,
+            platform="bluesky",
+            external_id="at://did:plc:xxx/app.bsky.feed.post/yyy",
+            content="Old post",
+            posted_at=timezone.now() - timedelta(minutes=45),  # Outside 30min
+            status=SocialPost.Status.SUCCESS,
+        )
+
+        can_post, remaining = await mock_client.check_cooldown()
+
+        assert can_post is True
+        assert remaining is None
+
+    async def test_check_cooldown_only_checks_bluesky_posts(
+        self, detected_event: DetectedEvent
+    ) -> None:
+        """Cooldown check only considers bluesky platform posts."""
+        mock_client = self._create_mock_client()
+        await SocialPost.objects.acreate(
+            event=detected_event,
+            platform="twitter",  # Different platform
+            external_id="12345",
+            content="Twitter post",
+            posted_at=timezone.now() - timedelta(minutes=5),
+            status=SocialPost.Status.SUCCESS,
+        )
+
+        can_post, remaining = await mock_client.check_cooldown()
+
+        assert can_post is True  # Should not block on twitter posts
+
+    async def test_failed_post_does_not_trigger_cooldown(
+        self, detected_event: DetectedEvent
+    ) -> None:
+        """Failed posts do not count toward cooldown."""
+        mock_client = self._create_mock_client()
+
+        await SocialPost.objects.acreate(
+            event=detected_event,
+            platform="bluesky",
+            external_id="",
+            content="Failed post",
+            posted_at=None,
+            status=SocialPost.Status.FAILED,
+            error_message="Some error",
+        )
+
+        can_post, remaining = await mock_client.check_cooldown()
+
+        assert can_post is True
+        assert remaining is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.django_db(transaction=True)
+class TestBlueskyClientPost:
+    """Tests for posting functionality."""
+
+    @pytest_asyncio.fixture(autouse=True)
+    async def cleanup_social_posts(self):
+        """Clean up SocialPost records before each test."""
+        await SocialPost.objects.filter(platform="bluesky").adelete()
+        yield
+        await SocialPost.objects.filter(platform="bluesky").adelete()
+
+    def _create_mock_client(self) -> BlueskyClient:
+        """Create BlueskyClient with mocked atproto client."""
+        with (
+            patch(
+                "apps.event_processors.services.bluesky_client.settings"
+            ) as mock_settings,
+            patch(
+                "apps.event_processors.services.bluesky_client.Client"
+            ) as mock_client,
+        ):
+            mock_settings.BLUESKY_HANDLE = "peebot.bsky.social"
+            mock_settings.BLUESKY_APP_PASSWORD = "app-password-123"
+            mock_settings.BLUESKY_COOLDOWN_MINUTES = 30
+            mock_atproto = MagicMock()
+            mock_client.return_value = mock_atproto
+            client = BlueskyClient()
+            client._authenticated = True
+            return client
+
+    @pytest_asyncio.fixture
+    async def detected_event(self) -> DetectedEvent:
+        """Create a DetectedEvent for testing."""
+        return await DetectedEvent.objects.acreate(
+            event_type="urination",
+            channel_id="NODE3000004",
+            detected_at=timezone.now(),
+            confidence=Decimal("0.85"),
+        )
+
+    async def test_post_success_creates_social_post(
+        self, detected_event: DetectedEvent
+    ) -> None:
+        """Successful post creates SocialPost record."""
+        mock_client = self._create_mock_client()
+        mock_response = MagicMock()
+        mock_response.uri = "at://did:plc:xxx/app.bsky.feed.post/yyy"
+        mock_response.cid = "bafyreiabc123"
+        mock_client.client.send_post.return_value = mock_response
+
+        post_uri = await mock_client.post("Test post content", detected_event)
+
+        assert post_uri == "at://did:plc:xxx/app.bsky.feed.post/yyy"
+
+        social_post = await SocialPost.objects.filter(event=detected_event).afirst()
+        assert social_post is not None
+        assert social_post.platform == "bluesky"
+        assert social_post.external_id == "at://did:plc:xxx/app.bsky.feed.post/yyy"
+        assert social_post.content == "Test post content"
+        assert social_post.status == SocialPost.Status.SUCCESS
+
+    async def test_post_during_cooldown_raises_error(
+        self, detected_event: DetectedEvent
+    ) -> None:
+        """Posting during cooldown raises BlueskyCooldownError."""
+        mock_client = self._create_mock_client()
+        await SocialPost.objects.acreate(
+            event=detected_event,
+            platform="bluesky",
+            external_id="at://did:plc:xxx/app.bsky.feed.post/previous",
+            content="Previous post",
+            posted_at=timezone.now() - timedelta(minutes=10),
+            status=SocialPost.Status.SUCCESS,
+        )
+
+        with pytest.raises(BlueskyCooldownError) as exc_info:
+            await mock_client.post("Should not post", detected_event)
+
+        assert "cooldown" in str(exc_info.value).lower()
+
+    async def test_post_api_error_raises_client_error(
+        self, detected_event: DetectedEvent
+    ) -> None:
+        """API error raises BlueskyClientError."""
+        from atproto.exceptions import AtProtocolError
+
+        mock_client = self._create_mock_client()
+        mock_client.client.send_post.side_effect = AtProtocolError("API Error")
+
+        with pytest.raises(BlueskyClientError):
+            await mock_client.post("Test content", detected_event)
+
+    async def test_post_empty_response_returns_none(
+        self, detected_event: DetectedEvent
+    ) -> None:
+        """Empty API response returns None and creates failed SocialPost."""
+        mock_client = self._create_mock_client()
+        mock_response = MagicMock()
+        mock_response.uri = None
+        mock_client.client.send_post.return_value = mock_response
+
+        result = await mock_client.post("Test content", detected_event)
+
+        assert result is None
+
+        social_post = await SocialPost.objects.filter(event=detected_event).afirst()
+        assert social_post is not None
+        assert social_post.status == SocialPost.Status.FAILED
+        assert social_post.external_id == ""
+        assert "No response" in social_post.error_message
+
+    async def test_post_api_error_creates_failed_social_post(
+        self, detected_event: DetectedEvent
+    ) -> None:
+        """API error creates SocialPost with failed status."""
+        from atproto.exceptions import AtProtocolError
+
+        mock_client = self._create_mock_client()
+        mock_client.client.send_post.side_effect = AtProtocolError("API Error")
+
+        with pytest.raises(BlueskyClientError):
+            await mock_client.post("Test content", detected_event)
+
+        social_post = await SocialPost.objects.filter(event=detected_event).afirst()
+        assert social_post is not None
+        assert social_post.status == SocialPost.Status.FAILED
+        assert social_post.content == "Test content"
+        assert "API error" in social_post.error_message
+
+    async def test_successful_post_has_success_status(
+        self, detected_event: DetectedEvent
+    ) -> None:
+        """Successful post creates SocialPost with success status."""
+        mock_client = self._create_mock_client()
+        mock_response = MagicMock()
+        mock_response.uri = "at://did:plc:xxx/app.bsky.feed.post/zzz"
+        mock_client.client.send_post.return_value = mock_response
+
+        await mock_client.post("Test post", detected_event)
+
+        social_post = await SocialPost.objects.filter(event=detected_event).afirst()
+        assert social_post is not None
+        assert social_post.status == SocialPost.Status.SUCCESS
+        assert social_post.external_id == "at://did:plc:xxx/app.bsky.feed.post/zzz"
+        assert social_post.error_message == ""

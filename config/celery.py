@@ -7,9 +7,7 @@ with Django settings. It auto-discovers tasks from all installed apps.
 
 import os
 
-from celery import Celery, Task
-from celery.app import shared_task
-from celery.worker.request import Request
+from celery import Celery
 
 # Set the default Django settings module for the 'celery' program.
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.base")
@@ -25,15 +23,10 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 # This will look for tasks.py files in each app
 app.autodiscover_tasks()
 
-
-@shared_task(bind=True)
-def debug_task(self: Task) -> None:
-    """Debug task to test Celery is working correctly."""
-
-    request: Request = self.request
-    task_id: str = request.id
-
-    if task_id.count("a") > 0:
-        raise TypeError
-
-    print("Celery is working correctly!")
+# Celery Beat schedule for periodic tasks
+app.conf.beat_schedule = {
+    "peebot-processor": {
+        "task": "apps.event_processors.tasks.run_peebot_processor",
+        "schedule": 30.0,  # Run every 30 seconds
+    },
+}

@@ -48,7 +48,7 @@ peebot/
 |   |-- event_processors/          # Analytics and event detection
 |   |   |-- models.py              # DetectedEvent, ProcessorState
 |   |   |-- processors/            # PeeBot and other detectors
-|   |   |-- services/              # Twitter client, joke generator
+|   |   |-- services/              # Bluesky client, joke generator
 |   |   +-- tasks.py               # Celery periodic tasks
 |   |
 |   +-- dashboards/                # Web interface
@@ -149,7 +149,7 @@ To run the full stack in containers with PgBouncer session pooling:
 2. Build and start the services:
    ```bash
    docker compose -f docker/dev/docker-compose.yml up --build -d timescaledb pgbouncer redis
-   docker compose -f docker/dev/docker-compose.yml up --build web worker beat
+   docker compose -f docker/dev/docker-compose.yml up --build web worker beat ingestion
    ```
 3. Run database migrations (one-off):
    ```bash
@@ -319,6 +319,16 @@ DATABASE_URL=postgresql://user:password@localhost:5432/peebot
 # Celery Configuration
 CELERY_BROKER_URL=redis://localhost:6379/0
 CELERY_RESULT_BACKEND=redis://localhost:6379/0
+
+# Event processor integrations
+OPENROUTER_API_KEY=your-openrouter-key
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+OPENROUTER_MODEL=deepseek/deepseek-chat
+JOKE_GENERATOR_MAX_RETRIES=3
+JOKE_GENERATOR_BASE_DELAY=1.0
+BLUESKY_HANDLE=your-handle.bsky.social
+BLUESKY_APP_PASSWORD=your-app-password
+BLUESKY_COOLDOWN_MINUTES=30
 ```
 
 ## Settings Management
@@ -360,7 +370,7 @@ DJANGO_SETTINGS_MODULE=config.settings.testing uv run pytest
 
 ### External APIs
 - **Lightstreamer Client** - ISS telemetry ingestion
-- **Tweepy** - Twitter API integration
+- **atproto** - Bluesky AT Protocol SDK for social media posting
 
 ### Data Validation
 - **Pydantic V2** - High-performance data validation for ingestion
@@ -434,6 +444,9 @@ uv run celery -A config beat --loglevel=info
 # Run Flower monitoring dashboard
 uv run celery -A config flower
 # Dashboard available at http://localhost:5555
+
+# Inspect scheduled tasks
+uv run celery -A config inspect scheduled
 
 ```
 
@@ -521,7 +534,7 @@ ISS Lightstreamer Feed
 [DetectedEvent Table]
          |
          v
-[External Actions] <- Twitter, Email, etc.
+[External Actions] <- Bluesky, Email, etc.
 ```
 
 ### Polling Architecture
@@ -529,11 +542,22 @@ ISS Lightstreamer Feed
 Analytics modules use a **polling pattern**:
 
 1. Celery Beat triggers periodic task (e.g., every 30 seconds)
-2. Query `ProcessorState` for `last_processed_at` timestamp
+2. Query `ProcessorState` for `last_processed_timestamp` timestamp
 3. Query `TelemetryReading` for new data since last check
 4. Analyze sliding window (e.g., last 10 minutes)
 5. Detect events and store results in `DetectedEvent`
 6. Update `ProcessorState` with current timestamp
+
+## Event Processors
+
+The `event_processors` module runs polling-based analytics over recent telemetry
+windows. The initial processor, `PeeBotProcessor`, detects UPA tank fill events
+and can publish a short Bluesky post with a generated joke when a valid event is
+found. Processor state is stored in `ProcessorState` to ensure safe resumption
+after restarts.
+
+To run processors locally, start a Celery worker and beat scheduler, then
+monitor scheduled tasks (see the Celery section above).
 
 ## Database Schema
 
@@ -587,7 +611,7 @@ State tracking for analytics modules:
 
 - `id`: AutoField
 - `processor_name`: CharField (e.g., 'PeeBot')
-- `last_processed_at`: DateTimeField
+- `last_processed_timestamp`: DateTimeField
 - `last_run_at`: DateTimeField
 - `state_data`: JSONField
 

@@ -280,6 +280,46 @@ services:
     networks:
       - peebot_network
 
+  # ----------------------------------------------------------------------------
+  # Ingestion Service - Lightstreamer Bridge
+  # ----------------------------------------------------------------------------
+  ingestion:
+    build:
+      context: ../..
+      dockerfile: docker/dev/Dockerfile
+    container_name: peebot_ingestion_dev
+    restart: unless-stopped
+
+    command: >-
+      sh -c "uv sync --frozen --dev && uv run python manage.py run_lightstreamer"
+
+    env_file:
+      - ../../.env
+
+    user: "${UID:-1000}:${GID:-1000}"
+
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-peebot_user}:${POSTGRES_PASSWORD:-password}@pgbouncer:6432/${POSTGRES_DB:-peebot}?application_name=django-ingestion
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      REDIS_URL: redis://redis:6379/0
+      SEQ_SERVER_URL: http://seq:80
+      SERVICE_NAME: peebot-ingestion
+
+    volumes:
+      - ../..:/workspace
+
+    depends_on:
+      web:
+        condition: service_started
+      pgbouncer:
+        condition: service_healthy
+      seq:
+        condition: service_started
+
+    networks:
+      - peebot_network
+
 # ==============================================================================
 # Volumes - Persistent Data Storage
 # ==============================================================================

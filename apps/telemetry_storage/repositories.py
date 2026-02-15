@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, TypedDict, cast
+from typing import Any, TypedDict
 
 from django.db.models import QuerySet
 
@@ -48,4 +48,4 @@ class DjangoTelemetryRepository(TelemetryRepositoryInterface):
         )
 
     def create_reading(self, reading_data: ReadingData) -> TelemetryReading:
-        return cast(TelemetryReading, TelemetryReading.objects.create(**reading_data))
+        return TelemetryReading.objects.create(**reading_data)

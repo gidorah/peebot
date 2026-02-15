@@ -32,5 +32,9 @@ Connects synchronous, multi-threaded Lightstreamer SDK to Django Async loop.
 
 ## DEV COMMANDS
 ```bash
+# In Docker (Automatic via just dev-up)
+docker logs -f peebot_ingestion_dev
+
+# Manual Execution
 uv run python manage.py run_lightstreamer
 ```
