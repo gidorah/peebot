@@ -118,8 +118,7 @@ redis_data/
 # ------------------------------------------------------------------------------
 # Celery
 # ------------------------------------------------------------------------------
-celerybeat-schedule
-celerybeat-schedule.*
+celerybeat-schedule*
 celerybeat.pid
 celery_worker.state
 worker*.state
