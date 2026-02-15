@@ -233,3 +233,38 @@ class TestRunPeeBotProcessor:
         assert result["event_detected"] is True
         assert result["post_published"] is False
         self.mock_bluesky.post.assert_not_called()
+
+    def test_run_peebot_processor_cursor_advances_past_burst(self) -> None:
+        """Cursor is set to latest reading timestamp (not burst start) after detection."""
+        baker.make(ProcessorState, processor_name="pee_bot")
+        channel: Any = baker.make(
+            "telemetry_storage.TelemetryChannel", public_pui="NODE3000004"
+        )
+
+        # Create burst readings
+        now = timezone.now()
+        readings = []
+        for i in range(11):
+            ts = now - timedelta(seconds=60) + timedelta(seconds=i * 3)
+            val = Decimal("10.0") + Decimal(str(i * 0.1))
+            readings.append(
+                baker.make(
+                    TelemetryReading,
+                    channel=channel,
+                    timestamp=ts,
+                    value=val,
+                    calibrated_data=val,
+                )
+            )
+
+        result = run_peebot_processor()
+        assert result["event_detected"] is True
+
+        # Verify cursor is at latest reading, not burst start
+        state = ProcessorState.objects.get(processor_name="pee_bot")
+        latest_reading_ts = max(r.timestamp for r in readings)
+        event = DetectedEvent.objects.get(event_type="urination")
+
+        # Cursor must be at or after the latest reading (not at burst start)
+        assert state.last_processed_timestamp >= latest_reading_ts
+        assert state.last_processed_timestamp > event.detected_at

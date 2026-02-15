@@ -128,8 +128,9 @@ async def _run_peebot_processor_async() -> dict[str, Any]:
         post_success = await _try_post_to_bluesky(event, log)
         result["post_published"] = post_success
 
-        # Step 7: Update processor state cursor
-        await processor.update_state_cursor(state, processed_at=detection.detected_at)
+        # Step 7: Update processor state cursor (advance past the burst)
+        latest_timestamp = max(r.timestamp for r in readings)
+        await processor.update_state_cursor(state, processed_at=latest_timestamp)
         log.info("processor_state_updated")
 
         return result

@@ -60,3 +60,18 @@
     *   **Zero DB overhead**: No `PeriodicTask` table polling, no extra migration tables, no Django Admin schedule management to maintain.
     *   **Reversible**: `django_celery_beat` remains as a dependency and can be re-enabled if runtime schedule management becomes a real need (e.g., multiple processors with operator-adjustable intervals).
 *   **Alternative Rejected**: `DatabaseScheduler` with a seeding management command (`update_or_create` pattern) was considered for future-proofing but rejected as premature complexity.
+
+## ADR-010: Event Detection vs. Posting Cooldown Separation
+*   **Decision**: Apply 30-minute cooldown to social media posting only, not to event detection. Fix cursor advancement to prevent duplicate detection.
+*   **Status**: Accepted.
+*   **Context**: Code review identified a cursor bug where `ProcessorState.last_processed_timestamp` was set to `detection.detected_at` (burst start time) after event detection. On the next run, readings from the middle of the already-detected burst would be re-queried, potentially causing duplicate event detection. Initial fix attempt added a 30-minute cooldown on event detection itself, but documentation research (FR-PROC-005, design.md flowchart) revealed the 30-minute cooldown was specified only for Bluesky posting, not detection.
+*   **Rationale**:
+    *   **Documented Intent**: FR-PROC-005 states "30-minute cooldown period between **posts**". The design.md flowchart shows `DetectedEvent.create()` happening **before** the cooldown check. Events are always persisted; cooldown only gates posting.
+    *   **Multiple Events**: Real-world scenario may have multiple urination events within 30 minutes. Suppressing detection would lose valuable data. The system should detect all events but rate-limit social announcements.
+    *   **Cursor Fix as Root Solution**: Setting `last_processed_timestamp = max(r.timestamp for r in readings)` (latest reading) instead of `detection.detected_at` (burst start) naturally prevents re-detection without needing a separate cooldown mechanism. The processor window advances past the entire burst.
+    *   **Separation of Concerns**: Event detection (analytics accuracy) and social posting (rate-limiting, spam prevention) are distinct concerns with different requirements.
+*   **Implementation**:
+    *   `apps/event_processors/tasks.py` Step 7: Cursor updated to `max(r.timestamp for r in readings)` after both detection and no-detection paths.
+    *   Bluesky posting cooldown remains via `BlueskyClient.check_cooldown()` querying `SocialPost` table.
+    *   Test added: `test_run_peebot_processor_cursor_advances_past_burst` verifies cursor is at latest reading, not burst start.
+*   **Alternative Rejected**: Event detection cooldown querying `DetectedEvent` table was implemented but reverted after documentation research revealed it contradicted the documented architecture.
