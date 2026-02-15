@@ -49,3 +49,14 @@
 *   **Rationale**:
     *   **Backpressure**: When the `asyncio.Queue` is full (`maxsize=50000`), the producer loop drops the oldest message (`get_nowait()`) to make room for new data. This prevents memory leaks and ensures we always ingest the freshest data during bursts.
     *   **Loop Safety**: The consumer loop tracks the exact number of items pulled from the queue and guarantees `task_done()` is called for that count in a `finally` block. This prevents the pipeline from hanging (deadlock on `queue.join()`) even if the DB flush operation fails or raises an exception.
+
+## ADR-009: Celery Beat Scheduling Strategy
+*   **Decision**: Static code-defined `beat_schedule` with Celery's default `PersistentScheduler`. Remove `DatabaseScheduler`.
+*   **Status**: Accepted.
+*   **Context**: The initial T003 implementation configured `DatabaseScheduler` (via `django_celery_beat`) in Django settings while simultaneously defining the schedule statically in `config/celery.py`. `DatabaseScheduler` seeds from the static dict on first run but then the DB takes precedence — subsequent code changes to intervals are silently ignored, creating a disconnect between version control and runtime behavior.
+*   **Rationale**:
+    *   **Single task, fixed interval**: PeeBot has one periodic task (`run_peebot_processor`) at a fixed 30-second interval. The operational overhead of DB-managed schedules is unjustified.
+    *   **Version-controlled schedules**: Static `beat_schedule` ensures schedule changes are reviewed in PRs and deployed deterministically, eliminating "stale DB entry" drift.
+    *   **Zero DB overhead**: No `PeriodicTask` table polling, no extra migration tables, no Django Admin schedule management to maintain.
+    *   **Reversible**: `django_celery_beat` remains as a dependency and can be re-enabled if runtime schedule management becomes a real need (e.g., multiple processors with operator-adjustable intervals).
+*   **Alternative Rejected**: `DatabaseScheduler` with a seeding management command (`update_or_create` pattern) was considered for future-proofing but rejected as premature complexity.

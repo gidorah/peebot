@@ -62,7 +62,6 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # Third-party apps
     "rest_framework",
-    "django_celery_beat",
     # Project apps
     "apps.core",
     "apps.telemetry_storage",
@@ -178,8 +177,9 @@ CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes hard limit
 CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 minutes soft limit
 
-# Celery Beat scheduler configuration (for periodic tasks)
-CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+# Celery Beat uses the default PersistentScheduler (file-based).
+# Schedule is defined statically in config/celery.py via app.conf.beat_schedule.
+# See ADR-009 in docs/system-solution/tech-decisions.md for rationale.
 
 # ==============================================================================
 # External API Configuration

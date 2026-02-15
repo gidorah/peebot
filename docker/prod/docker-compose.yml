@@ -337,8 +337,7 @@ services:
     command: >-
       sh -c "uv sync --frozen &&
              uv run celery -A config beat
-             --loglevel=info
-             --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+             --loglevel=info"
 
     env_file:
       - ../../.env
