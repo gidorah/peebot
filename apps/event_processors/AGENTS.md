@@ -24,10 +24,6 @@ Independent analytics engine. Decoupled from ingestion by a **Polling Architectu
 - `tasks.py`: Celery tasks orchestrating the polling logic.
 - `services/`: `BlueskyClient` for notifications.
 
-## STATUS: SCAFFOLDING
-- Infrastructure (Celery/Beat) is ready.
-- Logic is documented but implementation is **PENDING**.
-- Models defined in `docs/ISS Telemetry Data Analytics System.md`.
 
 ## DEPENDENCIES
 - `telemetry_storage`: Source of telemetry readings.
