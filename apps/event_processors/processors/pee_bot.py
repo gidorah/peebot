@@ -16,7 +16,7 @@ Detection Logic:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 import structlog
@@ -52,6 +52,23 @@ class BurstInfo:
         return self.end_value - self.start_value
 
 
+@dataclass
+class FillEvent:
+    """A detected tank fill event based on net change over a time window."""
+
+    window_start_time: datetime
+    window_end_time: datetime
+    start_value: Decimal
+    end_value: Decimal
+    peak_value: Decimal
+    net_delta: Decimal
+    readings_in_window: int
+
+    @property
+    def duration_seconds(self) -> float:
+        return (self.window_end_time - self.window_start_time).total_seconds()
+
+
 class PeeBotProcessor(BaseProcessor):
     """Processor for detecting UPA (Urine Processing Assembly) fill events.
 
@@ -79,6 +96,72 @@ class PeeBotProcessor(BaseProcessor):
     STABILITY_CHECK_SECONDS = 15.0
     GLITCH_REVERSION_SECONDS = 15.0
     MIN_DELTA_THRESHOLD = Decimal("0.5")  # Minimum tank level change to qualify
+
+    def _detect_fill_event(
+        self,
+        readings: list[TelemetryReading],
+        *,
+        window_seconds: float,
+        net_delta_threshold: Decimal,
+    ) -> FillEvent | None:
+        """Detect a fill event using net-change-over-window.
+
+        Notes:
+        - Expects readings to be chronologically sorted.
+        - Uses the raw `TelemetryReading.value` field (integer-like % values).
+        - Returns the earliest qualifying event.
+
+        Args:
+            readings: Chronologically sorted TelemetryReading list.
+            window_seconds: Sliding window size in seconds.
+            net_delta_threshold: Minimum net rise required within the window.
+
+        Returns:
+            FillEvent if a candidate window meets the threshold, else None.
+        """
+        if len(readings) < 2:
+            return None
+
+        end_idx = 0
+
+        for start_idx, start_reading in enumerate(readings):
+            if end_idx < start_idx:
+                end_idx = start_idx
+
+            window_end_time = start_reading.timestamp + timedelta(
+                seconds=window_seconds
+            )
+
+            while (
+                end_idx + 1 < len(readings)
+                and readings[end_idx + 1].timestamp <= window_end_time
+            ):
+                end_idx += 1
+
+            if end_idx <= start_idx:
+                continue
+
+            start_val = readings[start_idx].value
+            end_val = readings[end_idx].value
+            net_delta = end_val - start_val
+
+            if net_delta < net_delta_threshold:
+                continue
+
+            window_slice = readings[start_idx : end_idx + 1]
+            peak_val = max(r.value for r in window_slice)
+
+            return FillEvent(
+                window_start_time=window_slice[0].timestamp,
+                window_end_time=window_slice[-1].timestamp,
+                start_value=start_val,
+                end_value=end_val,
+                peak_value=peak_val,
+                net_delta=net_delta,
+                readings_in_window=len(window_slice),
+            )
+
+        return None
 
     async def analyze(self, readings: list[TelemetryReading]) -> DetectionResult | None:
         """Analyze readings to detect fill events.
