@@ -1,7 +1,7 @@
 """PeeBot Processor - UPA Tank Level Event Detection.
 
 This module implements the PeeBotProcessor which detects urination (fill) events
-from the UPA Tank Level telemetry channel (NODE3000004). It uses burst detection
+from the UPA Tank Level telemetry channel (NODE3000005). It uses burst detection
 with glitch filtering to distinguish real fills from sensor noise.
 
 Detection Logic:
@@ -55,12 +55,12 @@ class BurstInfo:
 class PeeBotProcessor(BaseProcessor):
     """Processor for detecting UPA (Urine Processing Assembly) fill events.
 
-    Monitors the UPA Tank Level channel (NODE3000004) to detect sustained
+    Monitors the UPA Tank Level channel (NODE3000005) to detect sustained
     increases in tank level that indicate urination/fill events. Uses burst
     detection with glitch filtering to avoid false positives from sensor noise.
 
     Configuration (per design.md section 4.4):
-    - Channel: NODE3000004 (UPA Tank Level sensor)
+    - Channel: NODE3000005 (UPA Tank Level sensor)
     - Poll interval: 30 seconds
     - Observation window: 10 minutes (for context and post-burst validation)
     - Min burst duration: 30 seconds (minimum sustained increase)
@@ -69,7 +69,7 @@ class PeeBotProcessor(BaseProcessor):
     """
 
     processor_name = "pee_bot"
-    channel_pui = "NODE3000004"
+    channel_pui = "NODE3000005"
     poll_interval_seconds = 30
     window_minutes = 10
 

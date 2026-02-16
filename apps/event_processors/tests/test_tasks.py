@@ -62,7 +62,7 @@ class TestRunPeeBotProcessor:
 
         # Create channel
         channel: Any = baker.make(
-            "telemetry_storage.TelemetryChannel", public_pui="NODE3000004"
+            "telemetry_storage.TelemetryChannel", public_pui="NODE3000005"
         )
 
         # Create readings showing a burst (30s duration, 1% increase)
@@ -91,7 +91,7 @@ class TestRunPeeBotProcessor:
 
         # Verify DetectedEvent created
         event = DetectedEvent.objects.get(event_type="urination")
-        assert event.channel_id == "NODE3000004"
+        assert event.channel_id == "NODE3000005"
         assert event.confidence > 0
 
         # Verify state updated
@@ -107,7 +107,7 @@ class TestRunPeeBotProcessor:
         """Task runs but detects no event with flat readings."""
         baker.make(ProcessorState, processor_name="pee_bot")
         channel: Any = baker.make(
-            "telemetry_storage.TelemetryChannel", public_pui="NODE3000004"
+            "telemetry_storage.TelemetryChannel", public_pui="NODE3000005"
         )
 
         now = timezone.now()
@@ -130,7 +130,7 @@ class TestRunPeeBotProcessor:
         """Task detects event but respects Bluesky cooldown."""
         baker.make(ProcessorState, processor_name="pee_bot")
         channel: Any = baker.make(
-            "telemetry_storage.TelemetryChannel", public_pui="NODE3000004"
+            "telemetry_storage.TelemetryChannel", public_pui="NODE3000005"
         )
 
         # Readings showing a burst
@@ -187,7 +187,7 @@ class TestRunPeeBotProcessor:
         ):
             # Create some readings to trigger analyze
             channel: Any = baker.make(
-                "telemetry_storage.TelemetryChannel", public_pui="NODE3000004"
+                "telemetry_storage.TelemetryChannel", public_pui="NODE3000005"
             )
             baker.make(
                 TelemetryReading,
@@ -209,7 +209,7 @@ class TestRunPeeBotProcessor:
         """Task handles joke generation failure gracefully."""
         baker.make(ProcessorState, processor_name="pee_bot")
         channel: Any = baker.make(
-            "telemetry_storage.TelemetryChannel", public_pui="NODE3000004"
+            "telemetry_storage.TelemetryChannel", public_pui="NODE3000005"
         )
 
         # Burst readings
@@ -238,7 +238,7 @@ class TestRunPeeBotProcessor:
         """Cursor is set to latest reading timestamp (not burst start) after detection."""
         baker.make(ProcessorState, processor_name="pee_bot")
         channel: Any = baker.make(
-            "telemetry_storage.TelemetryChannel", public_pui="NODE3000004"
+            "telemetry_storage.TelemetryChannel", public_pui="NODE3000005"
         )
 
         # Create burst readings

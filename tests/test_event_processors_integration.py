@@ -32,10 +32,10 @@ if TYPE_CHECKING:
 
 @pytest.fixture
 def upa_channel() -> TelemetryChannel:
-    """Create the UPA Tank Level channel (NODE3000004)."""
+    """Create the UPA Tank Level channel (NODE3000005)."""
     return baker.make(
         TelemetryChannel,
-        public_pui="NODE3000004",
+        public_pui="NODE3000005",
         description="UPA Waste Water Tank Quantity",
         ops_nom="UPA WW TK QTY",
         eng_nom="Node 3 UPA Wastewater Tank",
@@ -345,7 +345,7 @@ class TestPeeBotProcessorIntegration:
 
         event = events.first()
         assert event is not None
-        assert event.channel_id == "NODE3000004"
+        assert event.channel_id == "NODE3000005"
         assert Decimal("0.0") <= event.confidence <= Decimal("1.0")
         assert event.detected_at is not None
         assert event.metadata is not None

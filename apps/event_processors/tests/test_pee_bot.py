@@ -37,7 +37,7 @@ class TestPeeBotProcessorConfiguration:
         processor = PeeBotProcessor()
 
         assert processor.processor_name == "pee_bot"
-        assert processor.channel_pui == "NODE3000004"
+        assert processor.channel_pui == "NODE3000005"
         assert processor.poll_interval_seconds == 30
         assert processor.window_minutes == 10
 
@@ -96,7 +96,7 @@ class TestPeeBotProcessorAnalyze:
         assert result.detected_at == burst_start
         assert Decimal("0.0") <= result.confidence <= Decimal("1.0")
         assert result.metadata["duration_seconds"] == 45.0
-        assert result.metadata["channel_id"] == "NODE3000004"
+        assert result.metadata["channel_id"] == "NODE3000005"
         assert "tank_level_start" in result.metadata
         assert "tank_level_end" in result.metadata
         assert "delta" in result.metadata

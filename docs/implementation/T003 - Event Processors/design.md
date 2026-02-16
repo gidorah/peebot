@@ -165,7 +165,7 @@ An abstract base class that all processors must inherit. Defines the contract fo
 
 | Configuration | Default | Description |
 |---------------|---------|-------------|
-| Channel | `NODE3000004` | UPA Tank Level sensor |
+| Channel | `NODE3000005` | UPA Tank Level sensor |
 | Poll interval | 30 seconds | How often to check for new data |
 | Observation window | 5-10 minutes | How far back to query readings for context |
 | Min burst duration | 30 seconds | Minimum sustained increase to qualify as fill |
@@ -175,7 +175,7 @@ An abstract base class that all processors must inherit. Defines the contract fo
 
 **Detection Logic: Burst Detection with Glitch Filtering**
 
-1. **Query**: Fetch last 5-10 minutes of readings for `NODE3000004`
+1. **Query**: Fetch last 5-10 minutes of readings for `NODE3000005`
 2. **Detect Rising Edge**: Identify periods where level is increasing
 3. **Burst Validation**: Check if increase is sustained for 30s–2min AND exceeds delta threshold
 4. **Glitch Rejection**: If level reverts to baseline within ~15 seconds of increase, classify as glitch and ignore
