@@ -20,7 +20,7 @@
 - [x] Task: Create Seeding Command
     - [x] Subtask: Implement `apps/telemetry_storage/management/commands/seed_channels.py`.
     - [x] Subtask: Logic to parse `docs/PUIList.xml` and map XML tags to model fields (`Public_PUI` -> `public_pui`, `OPS_NOM` -> `ops_nom`, etc.).
-    - [x] Subtask: Logic to set `is_active=True` ONLY for `NODE3000004`, False for others (Implemented via `SoftDeleteModel.deleted_at`).
+    - [x] Subtask: Logic to set `is_active=True` ONLY for `NODE3000005`, False for others (Implemented via `SoftDeleteModel.deleted_at`).
     - [x] Subtask: Logic to update existing records (idempotency).
 - [x] Task: Test Seeding Command
     - [x] Subtask: Write test case verifying all channels are imported with correct field mapping.

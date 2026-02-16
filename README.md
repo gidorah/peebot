@@ -584,7 +584,7 @@ Stores individual telemetry readings with time-based partitioning:
 Metadata for ~400 ISS telemetry channels:
 
 - `id`: AutoField
-- `public_pui`: CharField (unique, e.g., "NODE3000004")
+- `public_pui`: CharField (unique, e.g., "NODE3000005")
 - `description`: TextField
 - `ops_nom`: CharField
 - `eng_nom`: CharField

@@ -11,7 +11,7 @@ Implement an analytics framework that detects ISS operational events and trigger
 3. The system shall not use event streaming infrastructure for analytics data flow.
 
 ### 2.2 PeeBot Processor (FR-PROC-002, FR-PROC-003)
-1. The processor shall poll for new data on channel `NODE3000004` (UPA Tank Level) every 30 seconds.
+1. The processor shall poll for new data on channel `NODE3000005` (UPA Tank Level) every 30 seconds.
 2. The processor shall detect a "Fill Event" when the tank level shows a sustained increase (burst) lasting 30 seconds to 2 minutes, distinguishing real fills from sensor glitches.
 3. The processor shall reject glitches where the level immediately reverts to baseline after a spike.
 4. The processor shall persist its processing state to support resumption after restarts.

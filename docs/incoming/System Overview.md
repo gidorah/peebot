@@ -370,7 +370,7 @@ TelemetryReading (Hypertable)
 
 TelemetryChannel (Regular Table)
   - id: AutoField (primary key)
-  - item_id: CharField (unique, e.g., "NODE3000004")
+  - item_id: CharField (unique, e.g., "NODE3000005")
   - description: TextField
   - module_name: CharField
   - unit: CharField
@@ -478,7 +478,7 @@ Each processor:
 
 2. **PeeBot Processor**:
    - Queries `TelemetryReading` from `telemetry_storage` module (via imports or repository)
-   - Monitors NODE3000004 (Urine Processor Assembly Tank Level)
+   - Monitors NODE3000005 (Urine Processor Assembly Tank Level)
    - Detects tank filling pattern (increasing trend over 5-10 minutes)
    - Generates humorous tweets using joke generation service
    - Posts to Twitter with cooldown period (minimum 30 minutes between tweets)
@@ -503,7 +503,7 @@ Each processor has its own periodic task configured in Celery Beat:
 
 1. Celery Beat triggers run_pee_bot_detection task every 30 seconds
 2. Task queries ProcessorState to get last_processed_timestamp timestamp
-3. Query TelemetryReading for new data since last_processed_timestamp for channel NODE3000004
+3. Query TelemetryReading for new data since last_processed_timestamp for channel NODE3000005
 4. If no new data, skip processing
 5. Query sliding window (last 10 minutes) of readings for trend analysis
 6. Apply detection algorithm (check for increasing tank level pattern)

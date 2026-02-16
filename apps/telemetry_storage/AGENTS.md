@@ -10,7 +10,7 @@
 
 ## MODELS (MATCH README SPEC)
 1. **TelemetryChannel**:
-   - `public_pui`: Unique ISS identifier (e.g., 'NODE3000004').
+   - `public_pui`: Unique ISS identifier (e.g., 'NODE3000005').
    - Metadata: `description`, `ops_nom`, `eng_nom`, `unit`.
    - **Active State**: Managed via `SoftDeleteModel`. Active = `deleted_at IS NULL`.
 2. **TelemetryReading**:

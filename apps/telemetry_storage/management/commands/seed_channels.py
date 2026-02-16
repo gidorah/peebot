@@ -40,7 +40,7 @@ class Command(BaseCommand):
             created = 0
 
             now = timezone.now()
-            target_active_pui = "NODE3000004"
+            target_active_pui = "NODE3000005"
 
             for symbol in symbols:
                 pui_elem = symbol.find("Public_PUI")

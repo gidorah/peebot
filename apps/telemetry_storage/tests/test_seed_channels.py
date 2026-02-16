@@ -14,7 +14,7 @@ def mock_pui_list_xml() -> str:
 <ISSLivePUIList>
     <Discipline name="EVA">
         <Symbol>
-            <Public_PUI>NODE3000004</Public_PUI>
+            <Public_PUI>NODE3000005</Public_PUI>
             <Description>Urine Processor Assembly</Description>
             <OPS_NOM>UPA_STATUS</OPS_NOM>
             <ENG_NOM>UPA Status Eng</ENG_NOM>
@@ -54,11 +54,11 @@ def test_seed_channels_command(mock_pui_list_xml: str) -> None:
 
         output = out.getvalue()
         assert "Successfully processed 2 channels" in output
-        assert "Verification passed: Only NODE3000004 is active" in output
+        assert "Verification passed: Only NODE3000005 is active" in output
 
         assert TelemetryChannel.all_objects.count() == 2
 
-        upa = TelemetryChannel.objects.get(public_pui="NODE3000004")
+        upa = TelemetryChannel.objects.get(public_pui="NODE3000005")
         assert upa.description == "Urine Processor Assembly"
         assert upa.ops_nom == "UPA_STATUS"
         assert upa.deleted_at is None

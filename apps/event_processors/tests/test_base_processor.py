@@ -26,7 +26,7 @@ class ConcreteProcessor(BaseProcessor):
     """Concrete implementation for testing abstract base class."""
 
     processor_name = "test_processor"
-    channel_pui = "NODE3000004"
+    channel_pui = "NODE3000005"
     poll_interval_seconds = 30
     window_minutes = 5
 
@@ -52,7 +52,7 @@ class ConcreteProcessor(BaseProcessor):
 class MissingNameProcessor(BaseProcessor):
     """Processor missing required processor_name attribute."""
 
-    channel_pui = "NODE3000004"
+    channel_pui = "NODE3000005"
 
     async def analyze(self, readings: list[TelemetryReading]) -> DetectionResult | None:
         return None
@@ -130,7 +130,7 @@ class TestBaseProcessorInitialization:
         """Processor with all required attributes initializes successfully."""
         processor = ConcreteProcessor()
         assert processor.processor_name == "test_processor"
-        assert processor.channel_pui == "NODE3000004"
+        assert processor.channel_pui == "NODE3000005"
         assert processor.poll_interval_seconds == 30
         assert processor.window_minutes == 5
 

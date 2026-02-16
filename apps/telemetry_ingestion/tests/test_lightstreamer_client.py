@@ -21,7 +21,7 @@ class TestLightstreamerClientService:
         """
         # Arrange
         mock_callback = AsyncMock()
-        item_names = ["NODE3000004", "AIRLOCK000001"]
+        item_names = ["NODE3000005", "AIRLOCK000001"]
         service = LightstreamerClientService(
             item_names=item_names, callback=mock_callback
         )
@@ -73,7 +73,7 @@ class TestLightstreamerClientService:
 
         # Mock an ItemUpdate object from Lightstreamer
         mock_update = MagicMock()
-        mock_update.getItemName.return_value = "NODE3000004"
+        mock_update.getItemName.return_value = "NODE3000005"
         mock_update.getChangedFields.return_value = {"Value": "10.5"}
 
         # Act
@@ -85,5 +85,5 @@ class TestLightstreamerClientService:
         # to allow the event loop to execute the scheduled callback.
         await asyncio.sleep(0)
 
-        expected_data = {"NODE3000004": {"Value": "10.5"}}
+        expected_data = {"NODE3000005": {"Value": "10.5"}}
         mock_callback.assert_called_once_with(expected_data)

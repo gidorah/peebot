@@ -45,17 +45,17 @@ class FillEvent:
 class PeeBotProcessor(BaseProcessor):
     """Processor for detecting UPA (Urine Processing Assembly) fill events.
 
-    Monitors the UPA Tank Level channel (NODE3000005) to detect sustained
-    increases in tank level that indicate urination/fill events. Uses burst
-    detection with glitch filtering to avoid false positives from sensor noise.
+    Monitors ``NODE3000005`` (WSTA tank quantity %) to detect urination/fill
+    events from integer-percentage telemetry.
 
     Configuration (per design.md section 4.4):
     - Channel: NODE3000005 (UPA Tank Level sensor)
     - Poll interval: 30 seconds
-    - Observation window: 10 minutes (for context and post-burst validation)
-    - Min burst duration: 10 seconds (minimum sustained increase)
-    - Max burst duration: 30 seconds (expected upper bound for urination)
-    - Stability check window: 60 seconds (post-burst validation period)
+    - Observation window: 10 minutes (for context and post-fill validation)
+    - Detection window: 30 seconds (net-change-over-window)
+    - Net delta threshold: +2% (minimum rise to qualify)
+    - Stability check window: 60 seconds (post-fill validation period)
+    - Stability tolerance: 1% (allowed jitter/drop during stability)
     """
 
     processor_name = "pee_bot"
