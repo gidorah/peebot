@@ -102,13 +102,7 @@ class PeeBotProcessor(BaseProcessor):
     GLITCH_REVERSION_SECONDS = 15.0
     MIN_DELTA_THRESHOLD = Decimal("2")
 
-    def _detect_fill_event(
-        self,
-        readings: list[TelemetryReading],
-        *,
-        window_seconds: float,
-        net_delta_threshold: Decimal,
-    ) -> FillEvent | None:
+    def _detect_fill_event(self, readings: list[TelemetryReading]) -> FillEvent | None:
         """Detect a fill event using net-change-over-window.
 
         Notes:
@@ -116,16 +110,14 @@ class PeeBotProcessor(BaseProcessor):
         - Uses the raw `TelemetryReading.value` field (integer-like % values).
         - Returns the earliest qualifying event.
 
-        Args:
-            readings: Chronologically sorted TelemetryReading list.
-            window_seconds: Sliding window size in seconds.
-            net_delta_threshold: Minimum net rise required within the window.
-
         Returns:
             FillEvent if a candidate window meets the threshold, else None.
         """
         if len(readings) < 2:
             return None
+
+        window_seconds = self.DETECTION_WINDOW_SECONDS
+        net_delta_threshold = self.NET_DELTA_THRESHOLD
 
         end_idx = 0
 
@@ -168,80 +160,84 @@ class PeeBotProcessor(BaseProcessor):
 
         return None
 
+    def _check_stability(
+        self, fill_event: FillEvent, readings: list[TelemetryReading]
+    ) -> bool:
+        """Validate post-fill stability.
+
+        After a true fill event, the tank level should remain elevated.
+        This check allows normal ±1% jitter by enforcing a floor:
+        all readings in the stability window must be >= (end_value - tolerance).
+
+        Notes:
+        - Expects readings to be chronologically sorted.
+        - Uses the raw `TelemetryReading.value` field (integer-like % values).
+        """
+        stability_end_time = fill_event.window_end_time + timedelta(
+            seconds=self.STABILITY_WINDOW_SECONDS
+        )
+        stability_readings = [
+            r
+            for r in readings
+            if fill_event.window_end_time < r.timestamp <= stability_end_time
+        ]
+
+        if len(stability_readings) < 1:
+            return True
+
+        floor = fill_event.end_value - self.STABILITY_TOLERANCE
+        return all(r.value >= floor for r in stability_readings)
+
     async def analyze(self, readings: list[TelemetryReading]) -> DetectionResult | None:
-        """Analyze readings to detect fill events.
+        """Analyze readings to detect a fill event.
 
-        Implements burst detection with glitch filtering:
-        1. Identifies rising edges (sustained increases)
-        2. Validates burst duration is within acceptable range
-        3. Filters glitches (spikes that revert quickly)
-        4. Checks post-burst stability
-
-        Args:
-            readings: List of TelemetryReading objects ordered by timestamp
-
-        Returns:
-            DetectionResult if event detected, None otherwise
+        Orchestration for the net-change-over-window detector:
+        1. Sort readings chronologically
+        2. Detect the earliest fill event candidate via `_detect_fill_event`
+        3. Run a post-fill stability check
+        4. Return a `DetectionResult` with event metadata
         """
         if len(readings) < 3:
             return None
 
-        # Sort readings by timestamp to ensure chronological order
         sorted_readings = sorted(readings, key=lambda r: r.timestamp)
 
-        # Detect bursts in the readings
-        bursts = self._detect_bursts(sorted_readings)
+        fill_event = self._detect_fill_event(sorted_readings)
 
-        if not bursts:
-            logger.debug("no_bursts_detected", readings_count=len(readings))
+        if fill_event is None:
+            logger.debug("no_fill_event_detected", readings_count=len(readings))
             return None
 
-        for burst in bursts:
-            log = logger.bind(
-                burst_start=burst.start_time.isoformat(),
-                burst_end=burst.end_time.isoformat(),
-                delta=str(burst.delta),
-                duration=burst.duration_seconds,
-            )
+        log = logger.bind(
+            window_start=fill_event.window_start_time.isoformat(),
+            window_end=fill_event.window_end_time.isoformat(),
+            net_delta=str(fill_event.net_delta),
+            duration=fill_event.duration_seconds,
+        )
 
-            # Validate burst duration
-            if not self._is_valid_burst_duration(burst):
-                log.debug("invalid_burst_duration")
-                continue
+        if not self._check_stability(fill_event, sorted_readings):
+            log.info("rejected_as_unstable_post_fill")
+            return None
 
-            # Check if it's a glitch (quick reversion)
-            if self._is_glitch(burst, sorted_readings):
-                log.info("rejected_as_glitch")
-                continue
+        confidence = self.get_confidence(sorted_readings)
+        log.info("fill_event_detected", confidence=str(confidence))
 
-            # Check post-burst stability
-            if not self._check_post_burst_stability(burst, sorted_readings):
-                log.info("rejected_as_unstable_post_burst")
-                continue
-
-            # Calculate confidence based on trend strength
-            confidence = self.get_confidence(sorted_readings)
-
-            log.info("fill_event_detected", confidence=str(confidence))
-
-            # Create detection result
-            return DetectionResult(
-                event_type="urination",
-                detected_at=burst.start_time,
-                confidence=confidence,
-                metadata={
-                    "burst_start": burst.start_time.isoformat(),
-                    "burst_end": burst.end_time.isoformat(),
-                    "duration_seconds": burst.duration_seconds,
-                    "tank_level_start": str(burst.start_value),
-                    "tank_level_end": str(burst.end_value),
-                    "delta": str(burst.delta),
-                    "readings_count": burst.readings_count,
-                    "channel_id": self.channel_pui,
-                },
-            )
-
-        return None
+        return DetectionResult(
+            event_type="urination",
+            detected_at=fill_event.window_start_time,
+            confidence=confidence,
+            metadata={
+                "window_start": fill_event.window_start_time.isoformat(),
+                "window_end": fill_event.window_end_time.isoformat(),
+                "duration_seconds": fill_event.duration_seconds,
+                "tank_level_start": str(fill_event.start_value),
+                "tank_level_end": str(fill_event.end_value),
+                "peak_value": str(fill_event.peak_value),
+                "net_delta": str(fill_event.net_delta),
+                "readings_in_window": fill_event.readings_in_window,
+                "channel_id": self.channel_pui,
+            },
+        )
 
     def _detect_bursts(self, readings: list[TelemetryReading]) -> list[BurstInfo]:
         """Detect rising-edge bursts in the readings.
