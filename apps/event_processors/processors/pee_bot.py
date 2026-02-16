@@ -194,7 +194,7 @@ class PeeBotProcessor(BaseProcessor):
             log.info("rejected_as_unstable_post_fill")
             return None
 
-        confidence = self.get_confidence(sorted_readings)
+        confidence = self.get_confidence(sorted_readings, fill_event)
         log.info("fill_event_detected", confidence=str(confidence))
 
         return DetectionResult(
@@ -214,47 +214,47 @@ class PeeBotProcessor(BaseProcessor):
             },
         )
 
-    def get_confidence(self, readings: list[TelemetryReading]) -> Decimal:
-        """Calculate detection confidence based on trend strength and consistency.
+    def get_confidence(
+        self,
+        readings: list[TelemetryReading],
+        fill_event: FillEvent | None = None,
+    ) -> Decimal:
+        """Calculate detection confidence for integer-percentage tank readings.
 
-        Confidence factors:
-        - Trend consistency (R² of linear fit): 40% weight
-        - Signal-to-noise ratio: 30% weight
-        - Sample density (readings per minute): 30% weight
-
-        Args:
-            readings: List of TelemetryReading objects
-
-        Returns:
-            Decimal confidence value between 0.0 and 1.0
+        This confidence model is intentionally simple and data-driven:
+        - Delta magnitude: larger net rise => higher confidence
+        - Stability confirmations: more post-fill readings holding elevation => higher
+        - Density: more readings inside the detection window => higher
         """
         if len(readings) < 3:
             return Decimal("0.0")
 
         sorted_readings = sorted(readings, key=lambda r: r.timestamp)
-        values = [float(r.calibrated_data or r.value) for r in sorted_readings]
-        timestamps = [r.timestamp.timestamp() for r in sorted_readings]
 
-        # Calculate trend consistency using linear regression R²
-        r_squared = self._calculate_r_squared(timestamps, values)
+        if fill_event is None:
+            fill_event = self._detect_fill_event(sorted_readings)
 
-        # Calculate signal-to-noise ratio
-        snr = self._calculate_snr(values)
+        if fill_event is None:
+            return Decimal("0.0")
 
-        # Calculate sample density (readings per minute)
-        time_span_minutes = (timestamps[-1] - timestamps[0]) / 60.0
-        if time_span_minutes > 0:
-            sample_density = min(len(readings) / time_span_minutes / 2, 1.0)
-        else:
-            sample_density = 0.0
+        stability_end_time = fill_event.window_end_time + timedelta(
+            seconds=self.STABILITY_WINDOW_SECONDS
+        )
+        floor = fill_event.end_value - self.STABILITY_TOLERANCE
+        stability_readings_count = sum(
+            1
+            for r in sorted_readings
+            if fill_event.window_end_time < r.timestamp <= stability_end_time
+            and r.value >= floor
+        )
 
-        # Weighted combination
-        confidence = r_squared * 0.4 + snr * 0.3 + sample_density * 0.3
+        delta_score = min(float(fill_event.net_delta) / 4.0, 1.0)
+        stability_score = min(stability_readings_count / 5.0, 1.0)
+        density_score = min(fill_event.readings_in_window / 6.0, 1.0)
 
-        # Clamp to 0.0-1.0 range
-        confidence = max(0.0, min(1.0, confidence))
-
-        return Decimal(str(round(confidence, 2)))
+        raw = delta_score * 0.4 + stability_score * 0.3 + density_score * 0.3
+        raw = max(0.0, min(1.0, raw))
+        return Decimal(str(round(raw, 2)))
 
     def _calculate_r_squared(self, x: list[float], y: list[float]) -> float:
         """Calculate R² (coefficient of determination) for linear fit.
