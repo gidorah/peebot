@@ -69,12 +69,6 @@ class PeeBotProcessor(BaseProcessor):
     STABILITY_WINDOW_SECONDS = 60.0
     STABILITY_TOLERANCE = Decimal("1")
 
-    MIN_BURST_DURATION_SECONDS = 10.0
-    MAX_BURST_DURATION_SECONDS = 30.0
-    STABILITY_CHECK_SECONDS = 60.0
-    GLITCH_REVERSION_SECONDS = 15.0
-    MIN_DELTA_THRESHOLD = Decimal("2")
-
     def _detect_fill_event(self, readings: list[TelemetryReading]) -> FillEvent | None:
         """Detect a fill event using net-change-over-window.
 
@@ -253,78 +247,3 @@ class PeeBotProcessor(BaseProcessor):
         raw = delta_score * 0.4 + stability_score * 0.3 + density_score * 0.3
         raw = max(0.0, min(1.0, raw))
         return Decimal(str(round(raw, 2)))
-
-    def _calculate_r_squared(self, x: list[float], y: list[float]) -> float:
-        """Calculate R² (coefficient of determination) for linear fit.
-
-        Args:
-            x: Independent variable values (timestamps)
-            y: Dependent variable values (tank levels)
-
-        Returns:
-            R² value between 0.0 and 1.0
-        """
-        n = len(x)
-        if n < 2:
-            return 0.0
-
-        # Calculate means
-        mean_x = sum(x) / n
-        mean_y = sum(y) / n
-
-        # Calculate slope (m) and intercept (b) for y = mx + b
-        numerator = sum((x[i] - mean_x) * (y[i] - mean_y) for i in range(n))
-        denominator = sum((x[i] - mean_x) ** 2 for i in range(n))
-
-        if denominator == 0:
-            return 0.0
-
-        slope = numerator / denominator
-        intercept = mean_y - slope * mean_x
-
-        # Calculate predicted values
-        y_pred = [slope * xi + intercept for xi in x]
-
-        # Calculate R²
-        ss_res = sum((y[i] - y_pred[i]) ** 2 for i in range(n))
-        ss_tot = sum((y[i] - mean_y) ** 2 for i in range(n))
-
-        if ss_tot == 0:
-            return 1.0 if ss_res == 0 else 0.0
-
-        r_squared = 1 - (ss_res / ss_tot)
-        return max(0.0, min(1.0, r_squared))
-
-    def _calculate_snr(self, values: list[float]) -> float:
-        """Calculate signal-to-noise ratio.
-
-        Uses the ratio of signal range to standard deviation.
-
-        Args:
-            values: List of tank level values
-
-        Returns:
-            Normalized SNR value between 0.0 and 1.0
-        """
-        if len(values) < 2:
-            return 0.0
-
-        mean_val = sum(values) / len(values)
-
-        # Calculate standard deviation
-        variance = sum((v - mean_val) ** 2 for v in values) / len(values)
-        std_dev = variance**0.5
-
-        # Calculate signal range
-        signal_range = max(values) - min(values)
-
-        if std_dev == 0:
-            return 1.0 if signal_range > 0 else 0.0
-
-        # SNR = signal_range / std_dev
-        snr = signal_range / std_dev
-
-        # Normalize: assume SNR > 10 is excellent (1.0)
-        normalized_snr = min(snr / 10.0, 1.0)
-
-        return float(max(0.0, normalized_snr))
