@@ -95,25 +95,34 @@ def create_burst_readings(
     channel: TelemetryChannel,
     *,
     burst_duration_seconds: int = 45,
-    baseline: Decimal = Decimal("25.0"),
+    baseline: Decimal = Decimal("25"),
     delta_per_reading: Decimal = Decimal("0.15"),
-    interval_seconds: int = 3,
+    interval_seconds: int = 5,
     start_offset_seconds: int = 120,
+    net_delta: int = 3,
+    include_noise_bounce: bool = False,
 ) -> list[TelemetryReading]:
-    """Create readings simulating a sustained burst (fill event).
+    """Create readings simulating a fill event for the PeeBot net-change detector.
+
+    The PeeBotProcessor detects fills by sliding a 30-second window and checking
+    for a net rise >= 2% (integer-like % readings), then validating post-fill
+    stability over a 60-second window.
 
     Pattern:
-    1. Pre-burst baseline (30 seconds)
-    2. Sustained increase over burst_duration_seconds
-    3. Post-burst stabilization (15 seconds at new level)
+    1. Pre-fill baseline (30 seconds)
+    2. Fill rise completed within ~30 seconds (optionally with a ±1% bounce)
+    3. Post-fill stabilization (>= 60 seconds at the new level)
 
     Args:
         channel: The telemetry channel to associate readings with.
-        burst_duration_seconds: Duration of the increasing trend.
-        baseline: Starting tank level percentage.
-        delta_per_reading: How much level increases per reading during burst.
+        burst_duration_seconds: Kept for backward-compat; rise occurs early and
+            then holds for the remainder of the pattern.
+        baseline: Starting tank level percentage (integer-like).
+        delta_per_reading: Backward-compat; not used for the integer step model.
         interval_seconds: Time between readings.
         start_offset_seconds: How far back from now to start the pattern.
+        net_delta: Net rise over the fill (e.g., 3 means 25 -> 28).
+        include_noise_bounce: If True, include a mid-fill -1% bounce.
 
     Returns:
         List of created TelemetryReading objects.
@@ -131,40 +140,57 @@ def create_burst_readings(
                 channel=channel,
                 timestamp=current_time,
                 value=baseline,
-                calibrated_data=baseline,
+                calibrated_data=None,
                 status_class="normal",
             )
         )
         current_time += timedelta(seconds=interval_seconds)
 
-    # Phase 2: Sustained burst (increasing trend)
-    burst_readings_count = burst_duration_seconds // interval_seconds
-    current_value = baseline
-    for _ in range(burst_readings_count):
-        current_value += delta_per_reading
+    # Phase 2: Fill rise (must complete within 30 seconds for detector window)
+    baseline_int = int(baseline)
+    end_value = Decimal(str(baseline_int + net_delta))
+
+    if include_noise_bounce and net_delta >= 3:
+        # Example: 25 -> 26 -> 27 -> 26 -> 27 -> 28
+        fill_values = [
+            baseline_int,
+            baseline_int + 1,
+            baseline_int + 2,
+            baseline_int + 1,
+            baseline_int + 2,
+            baseline_int + 3,
+        ]
+    else:
+        # Example: 25 -> 26 -> 27 -> 28
+        fill_values = list(range(baseline_int, baseline_int + net_delta + 1))
+
+    # Keep the rise tight; ignore burst_duration_seconds for detection semantics.
+    for v in fill_values:
         readings.append(
             baker.make(
                 TelemetryReading,
                 channel=channel,
                 timestamp=current_time,
-                value=current_value,
-                calibrated_data=current_value,
+                value=Decimal(str(v)),
+                calibrated_data=None,
                 status_class="normal",
             )
         )
         current_time += timedelta(seconds=interval_seconds)
 
-    # Phase 3: Post-burst stabilization (15 seconds at new level)
-    post_burst_readings = 15 // interval_seconds
-    stable_value = current_value
-    for _ in range(post_burst_readings):
+    # Phase 3: Post-fill stabilization (>= 60 seconds)
+    # Ensure stability window has at least one confirming reading.
+    post_fill_seconds = max(70, burst_duration_seconds)
+    post_fill_readings = post_fill_seconds // interval_seconds
+    stable_value = end_value
+    for _ in range(post_fill_readings):
         readings.append(
             baker.make(
                 TelemetryReading,
                 channel=channel,
                 timestamp=current_time,
                 value=stable_value,
-                calibrated_data=stable_value,
+                calibrated_data=None,
                 status_class="normal",
             )
         )
@@ -176,9 +202,9 @@ def create_burst_readings(
 def create_glitch_readings(
     channel: TelemetryChannel,
     *,
-    baseline: Decimal = Decimal("25.0"),
-    spike_value: Decimal = Decimal("30.0"),
-    interval_seconds: int = 3,
+    baseline: Decimal = Decimal("25"),
+    spike_value: Decimal = Decimal("32"),
+    interval_seconds: int = 5,
     start_offset_seconds: int = 60,
 ) -> list[TelemetryReading]:
     """Create readings simulating a sensor glitch (spike that immediately reverts).
@@ -203,7 +229,7 @@ def create_glitch_readings(
                 channel=channel,
                 timestamp=current_time,
                 value=baseline,
-                calibrated_data=baseline,
+                calibrated_data=None,
                 status_class="normal",
             )
         )
@@ -216,7 +242,7 @@ def create_glitch_readings(
             channel=channel,
             timestamp=current_time,
             value=spike_value,
-            calibrated_data=spike_value,
+            calibrated_data=None,
             status_class="normal",
         )
     )
@@ -231,7 +257,7 @@ def create_glitch_readings(
                 channel=channel,
                 timestamp=current_time,
                 value=baseline,
-                calibrated_data=baseline,
+                calibrated_data=None,
                 status_class="normal",
             )
         )
@@ -243,9 +269,9 @@ def create_glitch_readings(
 def create_flat_readings(
     channel: TelemetryChannel,
     *,
-    value: Decimal = Decimal("25.0"),
+    value: Decimal = Decimal("25"),
     count: int = 20,
-    interval_seconds: int = 3,
+    interval_seconds: int = 5,
     start_offset_seconds: int = 60,
 ) -> list[TelemetryReading]:
     """Create flat readings with no trend.
@@ -263,7 +289,7 @@ def create_flat_readings(
                 channel=channel,
                 timestamp=current_time,
                 value=value,
-                calibrated_data=value,
+                calibrated_data=None,
                 status_class="normal",
             )
         )
@@ -275,10 +301,10 @@ def create_flat_readings(
 def create_decreasing_readings(
     channel: TelemetryChannel,
     *,
-    start_value: Decimal = Decimal("30.0"),
-    delta_per_reading: Decimal = Decimal("0.1"),
+    start_value: Decimal = Decimal("30"),
+    delta_per_reading: Decimal = Decimal("1"),
     count: int = 20,
-    interval_seconds: int = 3,
+    interval_seconds: int = 5,
     start_offset_seconds: int = 60,
 ) -> list[TelemetryReading]:
     """Create readings with a decreasing trend (UPA processing).
@@ -297,7 +323,7 @@ def create_decreasing_readings(
                 channel=channel,
                 timestamp=current_time,
                 value=current_value,
-                calibrated_data=current_value,
+                calibrated_data=None,
                 status_class="normal",
             )
         )
@@ -322,13 +348,13 @@ class TestPeeBotProcessorIntegration:
         processor_state: ProcessorState,
         mock_external_services: dict[str, MagicMock],
     ) -> None:
-        """Sustained burst pattern triggers event detection and Bluesky post."""
-        # Arrange: Create realistic burst readings (45 seconds, ~2.25% increase)
+        """Fill event triggers event detection and Bluesky post."""
+        # Arrange: Create integer % fill that completes within detector window.
         readings = create_burst_readings(
             upa_channel,
-            burst_duration_seconds=45,
-            baseline=Decimal("25.0"),
-            delta_per_reading=Decimal("0.15"),
+            baseline=Decimal("25"),
+            net_delta=3,
+            include_noise_bounce=True,
         )
         assert len(readings) > 0, "Test setup: readings should be created"
 
@@ -369,8 +395,8 @@ class TestPeeBotProcessorIntegration:
         # Arrange: Create glitch readings
         readings = create_glitch_readings(
             upa_channel,
-            baseline=Decimal("25.0"),
-            spike_value=Decimal("32.0"),  # Significant spike
+            baseline=Decimal("25"),
+            spike_value=Decimal("32"),  # Significant spike
         )
         assert len(readings) > 0, "Test setup: readings should be created"
 
@@ -395,7 +421,7 @@ class TestPeeBotProcessorIntegration:
         # Arrange: Create flat readings
         readings = create_flat_readings(
             upa_channel,
-            value=Decimal("25.0"),
+            value=Decimal("25"),
             count=30,
         )
         assert len(readings) > 0, "Test setup: readings should be created"
@@ -417,8 +443,8 @@ class TestPeeBotProcessorIntegration:
         # Arrange
         readings = create_decreasing_readings(
             upa_channel,
-            start_value=Decimal("30.0"),
-            delta_per_reading=Decimal("0.1"),
+            start_value=Decimal("30"),
+            delta_per_reading=Decimal("1"),
             count=30,
         )
         assert len(readings) > 0
@@ -452,11 +478,7 @@ class TestPeeBotProcessorIntegration:
         processor_state.save()
 
         # Run 2: Create burst readings, event detected
-        create_burst_readings(
-            upa_channel,
-            burst_duration_seconds=45,
-            start_offset_seconds=120,
-        )
+        create_burst_readings(upa_channel, start_offset_seconds=120, net_delta=3)
 
         result2 = run_peebot_processor()
         assert result2["event_detected"] is True
@@ -470,19 +492,19 @@ class TestPeeBotProcessorIntegration:
         assert second_run_at > first_run_at
         assert second_processed_at is not None
 
-    def test_burst_too_short_no_event(
+    def test_net_delta_below_threshold_no_event(
         self,
         upa_channel: TelemetryChannel,
         processor_state: ProcessorState,
         mock_external_services: dict[str, MagicMock],
     ) -> None:
-        """Burst shorter than 30 seconds does NOT trigger event."""
-        # Arrange: Create short burst (only 15 seconds)
+        """Net delta < +2% within the window does NOT trigger event."""
+        # Arrange: Create a small rise (+1%) which should be rejected.
         readings = create_burst_readings(
             upa_channel,
-            burst_duration_seconds=15,  # Too short
-            baseline=Decimal("25.0"),
-            delta_per_reading=Decimal("0.2"),
+            baseline=Decimal("25"),
+            net_delta=1,
+            include_noise_bounce=False,
         )
         assert len(readings) > 0
 
@@ -506,15 +528,15 @@ class TestPeeBotProcessorIntegration:
             TelemetryReading,
             channel=upa_channel,
             timestamp=now - timedelta(seconds=10),
-            value=Decimal("25.0"),
-            calibrated_data=Decimal("25.0"),
+            value=Decimal("25"),
+            calibrated_data=None,
         )
         baker.make(
             TelemetryReading,
             channel=upa_channel,
             timestamp=now - timedelta(seconds=5),
-            value=Decimal("26.0"),
-            calibrated_data=Decimal("26.0"),
+            value=Decimal("26"),
+            calibrated_data=None,
         )
 
         # Act
@@ -537,7 +559,7 @@ class TestSocialPostCooldownIntegration:
     ) -> None:
         """Second event within 30 minutes should NOT trigger Bluesky post."""
         # Arrange: Create burst and run first time
-        create_burst_readings(upa_channel, burst_duration_seconds=45)
+        create_burst_readings(upa_channel, net_delta=3)
 
         result1 = run_peebot_processor()
         assert result1["event_detected"] is True
@@ -553,8 +575,8 @@ class TestSocialPostCooldownIntegration:
         TelemetryReading.objects.all().delete()  # Clear old readings
         create_burst_readings(
             upa_channel,
-            burst_duration_seconds=45,
             start_offset_seconds=60,
+            net_delta=3,
         )
 
         # Reset processor state to detect new event
