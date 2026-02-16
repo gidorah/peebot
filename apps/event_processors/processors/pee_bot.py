@@ -7,7 +7,7 @@ with glitch filtering to distinguish real fills from sensor noise.
 Detection Logic:
 1. Query last 5-10 minutes of readings for the UPA Tank Level channel
 2. Identify rising edges (periods where level is increasing)
-3. Validate burst is sustained for 30s-2min AND exceeds minimum delta
+3. Validate burst is sustained for 10-30s AND exceeds minimum delta
 4. Filter glitches: if level reverts to baseline within 15 seconds, ignore
 5. Verify post-burst stability (level stays elevated or slowly decreases)
 6. Create DetectedEvent with confidence score based on trend consistency
@@ -80,9 +80,9 @@ class PeeBotProcessor(BaseProcessor):
     - Channel: NODE3000005 (UPA Tank Level sensor)
     - Poll interval: 30 seconds
     - Observation window: 10 minutes (for context and post-burst validation)
-    - Min burst duration: 30 seconds (minimum sustained increase)
-    - Max burst duration: 2 minutes (expected upper bound for urination)
-    - Stability check window: 15 seconds (post-burst validation period)
+    - Min burst duration: 10 seconds (minimum sustained increase)
+    - Max burst duration: 30 seconds (expected upper bound for urination)
+    - Stability check window: 60 seconds (post-burst validation period)
     """
 
     processor_name = "pee_bot"
@@ -91,11 +91,16 @@ class PeeBotProcessor(BaseProcessor):
     window_minutes = 10
 
     # Detection thresholds (from design.md)
-    MIN_BURST_DURATION_SECONDS = 30.0
-    MAX_BURST_DURATION_SECONDS = 120.0  # 2 minutes
-    STABILITY_CHECK_SECONDS = 15.0
+    DETECTION_WINDOW_SECONDS = 30.0
+    NET_DELTA_THRESHOLD = Decimal("2")
+    STABILITY_WINDOW_SECONDS = 60.0
+    STABILITY_TOLERANCE = Decimal("1")
+
+    MIN_BURST_DURATION_SECONDS = 10.0
+    MAX_BURST_DURATION_SECONDS = 30.0
+    STABILITY_CHECK_SECONDS = 60.0
     GLITCH_REVERSION_SECONDS = 15.0
-    MIN_DELTA_THRESHOLD = Decimal("0.5")  # Minimum tank level change to qualify
+    MIN_DELTA_THRESHOLD = Decimal("2")
 
     def _detect_fill_event(
         self,
@@ -310,7 +315,7 @@ class PeeBotProcessor(BaseProcessor):
             burst: BurstInfo to validate
 
         Returns:
-            True if burst duration is valid (30s-2min)
+            True if burst duration is valid (10s-30s)
         """
         duration = burst.duration_seconds
         return (
