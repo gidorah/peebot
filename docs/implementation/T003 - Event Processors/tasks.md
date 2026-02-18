@@ -50,12 +50,13 @@
 
 - [x] **Step 8**: Implement `PeeBotProcessor` class.
     - *File*: `apps/event_processors/processors/pee_bot.py`
-    - *Task*: Inherit from `BaseProcessor`. Set channel to `NODE3000004`. Implement `analyze()` with burst detection and glitch filtering logic per design.md section 4.4.
+    - *Task*: Inherit from `BaseProcessor`. Set channel to `NODE3000005`. Implement `analyze()` using a net-change-over-window fill detector with a post-fill stability check per design.md section 4.4.
     - *Test*: `apps/event_processors/tests/test_pee_bot.py` — test with mock readings:
-        - Sustained burst (30s-2min) with stable post-burst → event detected
-        - Spike that immediately reverts → glitch rejected, no event
+        - Clear fill (+2% net in <=30s) with stable post-fill → event detected
+        - Fill with ±1% mid-fill noise bounce → event detected
+        - Boundary oscillation (50%↔51%) → no event
+        - Fill that quickly reverts below stability floor → no event
         - Flat/decreasing readings → no event
-        - Burst too short (< 30s) → no event
         - Insufficient data → no event
 
 - [x] **Step 9**: Implement confidence calculation.

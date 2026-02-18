@@ -62,22 +62,36 @@ class TestRunPeeBotProcessor:
 
         # Create channel
         channel: Any = baker.make(
-            "telemetry_storage.TelemetryChannel", public_pui="NODE3000004"
+            "telemetry_storage.TelemetryChannel", public_pui="NODE3000005"
         )
 
-        # Create readings showing a burst (30s duration, 1% increase)
+        # Create readings that match the redesigned detector:
+        # integer-ish % values, optional -1% bounce, net +2% within 30s.
         now = timezone.now()
         readings = []
+        values = [
+            Decimal("19"),
+            Decimal("20"),
+            Decimal("21"),
+            Decimal("20"),
+            Decimal("21"),
+            Decimal("22"),
+            Decimal("22"),
+            Decimal("22"),
+            Decimal("22"),
+            Decimal("22"),
+            Decimal("22"),
+        ]
         for i in range(11):  # 30 seconds at 3s intervals
             ts = now - timedelta(seconds=60) + timedelta(seconds=i * 3)
-            val = Decimal("10.0") + Decimal(str(i * 0.1))
+            val = values[i]
             readings.append(
                 baker.make(
                     TelemetryReading,
                     channel=channel,
                     timestamp=ts,
                     value=val,
-                    calibrated_data=val,
+                    calibrated_data=None,
                 )
             )
 
@@ -91,7 +105,7 @@ class TestRunPeeBotProcessor:
 
         # Verify DetectedEvent created
         event = DetectedEvent.objects.get(event_type="urination")
-        assert event.channel_id == "NODE3000004"
+        assert event.channel_id == "NODE3000005"
         assert event.confidence > 0
 
         # Verify state updated
@@ -107,7 +121,7 @@ class TestRunPeeBotProcessor:
         """Task runs but detects no event with flat readings."""
         baker.make(ProcessorState, processor_name="pee_bot")
         channel: Any = baker.make(
-            "telemetry_storage.TelemetryChannel", public_pui="NODE3000004"
+            "telemetry_storage.TelemetryChannel", public_pui="NODE3000005"
         )
 
         now = timezone.now()
@@ -130,20 +144,33 @@ class TestRunPeeBotProcessor:
         """Task detects event but respects Bluesky cooldown."""
         baker.make(ProcessorState, processor_name="pee_bot")
         channel: Any = baker.make(
-            "telemetry_storage.TelemetryChannel", public_pui="NODE3000004"
+            "telemetry_storage.TelemetryChannel", public_pui="NODE3000005"
         )
 
-        # Readings showing a burst
+        # Readings showing a fill event (net +2% within 30s)
         now = timezone.now()
+        values = [
+            Decimal("19"),
+            Decimal("20"),
+            Decimal("21"),
+            Decimal("20"),
+            Decimal("21"),
+            Decimal("22"),
+            Decimal("22"),
+            Decimal("22"),
+            Decimal("22"),
+            Decimal("22"),
+            Decimal("22"),
+        ]
         for i in range(11):
             ts = now - timedelta(seconds=60) + timedelta(seconds=i * 3)
-            val = Decimal("10.0") + Decimal(str(i * 0.1))
+            val = values[i]
             baker.make(
                 TelemetryReading,
                 channel=channel,
                 timestamp=ts,
                 value=val,
-                calibrated_data=val,
+                calibrated_data=None,
             )
 
         # Simulate cooldown active by making post() raise BlueskyCooldownError
@@ -187,7 +214,7 @@ class TestRunPeeBotProcessor:
         ):
             # Create some readings to trigger analyze
             channel: Any = baker.make(
-                "telemetry_storage.TelemetryChannel", public_pui="NODE3000004"
+                "telemetry_storage.TelemetryChannel", public_pui="NODE3000005"
             )
             baker.make(
                 TelemetryReading,
@@ -209,20 +236,33 @@ class TestRunPeeBotProcessor:
         """Task handles joke generation failure gracefully."""
         baker.make(ProcessorState, processor_name="pee_bot")
         channel: Any = baker.make(
-            "telemetry_storage.TelemetryChannel", public_pui="NODE3000004"
+            "telemetry_storage.TelemetryChannel", public_pui="NODE3000005"
         )
 
-        # Burst readings
+        # Fill readings (net +2% within 30s)
         now = timezone.now()
+        values = [
+            Decimal("19"),
+            Decimal("20"),
+            Decimal("21"),
+            Decimal("20"),
+            Decimal("21"),
+            Decimal("22"),
+            Decimal("22"),
+            Decimal("22"),
+            Decimal("22"),
+            Decimal("22"),
+            Decimal("22"),
+        ]
         for i in range(11):
             ts = now - timedelta(seconds=60) + timedelta(seconds=i * 3)
-            val = Decimal("10.0") + Decimal(str(i * 0.1))
+            val = values[i]
             baker.make(
                 TelemetryReading,
                 channel=channel,
                 timestamp=ts,
                 value=val,
-                calibrated_data=val,
+                calibrated_data=None,
             )
 
         # Mock joke generation returning None
@@ -238,22 +278,35 @@ class TestRunPeeBotProcessor:
         """Cursor is set to latest reading timestamp (not burst start) after detection."""
         baker.make(ProcessorState, processor_name="pee_bot")
         channel: Any = baker.make(
-            "telemetry_storage.TelemetryChannel", public_pui="NODE3000004"
+            "telemetry_storage.TelemetryChannel", public_pui="NODE3000005"
         )
 
-        # Create burst readings
+        # Create fill readings (net +2% within 30s)
         now = timezone.now()
         readings = []
+        values = [
+            Decimal("19"),
+            Decimal("20"),
+            Decimal("21"),
+            Decimal("20"),
+            Decimal("21"),
+            Decimal("22"),
+            Decimal("22"),
+            Decimal("22"),
+            Decimal("22"),
+            Decimal("22"),
+            Decimal("22"),
+        ]
         for i in range(11):
             ts = now - timedelta(seconds=60) + timedelta(seconds=i * 3)
-            val = Decimal("10.0") + Decimal(str(i * 0.1))
+            val = values[i]
             readings.append(
                 baker.make(
                     TelemetryReading,
                     channel=channel,
                     timestamp=ts,
                     value=val,
-                    calibrated_data=val,
+                    calibrated_data=None,
                 )
             )
 

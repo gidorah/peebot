@@ -12,7 +12,7 @@ from apps.telemetry_ingestion.services.validator import (
 class TestValidator:
     def test_validate_payload_success_full(self):
         """Verify validation with a complete payload."""
-        pui = "NODE3000004"
+        pui = "NODE3000005"
         data = {
             "Value": "85.5",
             "TimeStamp": "123.456",
@@ -33,7 +33,7 @@ class TestValidator:
 
     def test_validate_payload_success_minimal(self):
         """Verify validation with only required fields."""
-        pui = "NODE3000004"
+        pui = "NODE3000005"
         data = {"Value": "100"}
 
         result = validate_payload(pui, data)
@@ -46,7 +46,7 @@ class TestValidator:
 
     def test_validate_payload_missing_value(self):
         """Payload without 'Value' should return None (dropped)."""
-        pui = "NODE3000004"
+        pui = "NODE3000005"
         data = {"TimeStamp": "123.456"}  # Missing Value
 
         result = validate_payload(pui, data)
@@ -54,7 +54,7 @@ class TestValidator:
 
     def test_validate_payload_invalid_value_type(self):
         """Non-numeric value should return None (validation error)."""
-        pui = "NODE3000004"
+        pui = "NODE3000005"
         data = {"Value": "not-a-number"}
 
         result = validate_payload(pui, data)

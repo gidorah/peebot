@@ -12,7 +12,7 @@ class TestTelemetryEnricher:
         mock_now = datetime(2026, 6, 1, tzinfo=UTC)
 
         reading = LightstreamerReading(
-            pui="NODE3000004",
+            pui="NODE3000005",
             value=Decimal("10.5"),
             timestamp=24.0,
             status_class=None,
@@ -28,7 +28,7 @@ class TestTelemetryEnricher:
 
             result = TelemetryEnricher.enrich(reading)
 
-        assert result["pui"] == "NODE3000004"
+        assert result["pui"] == "NODE3000005"
         assert result["value"] == Decimal("10.5")
         assert result["timestamp"] == datetime(2026, 1, 1, tzinfo=UTC)
 
@@ -38,7 +38,7 @@ class TestTelemetryEnricher:
         hours_from_soy = 8748.0
 
         reading = LightstreamerReading(
-            pui="NODE3000004", Value="10.5", TimeStamp=str(hours_from_soy)
+            pui="NODE3000005", Value="10.5", TimeStamp=str(hours_from_soy)
         )
 
         with patch(
@@ -59,7 +59,7 @@ class TestTelemetryEnricher:
 
     def test_enrich_missing_timestamp(self):
         """Verify it defaults to 'now' if timestamp is missing."""
-        reading = LightstreamerReading(pui="NODE3000004", Value="10.5", TimeStamp=None)
+        reading = LightstreamerReading(pui="NODE3000005", Value="10.5", TimeStamp=None)
 
         with patch("django.utils.timezone.now") as mock_now_func:
             fixed_now = datetime(2026, 1, 1, tzinfo=UTC)
@@ -71,7 +71,7 @@ class TestTelemetryEnricher:
     def test_enrich_invalid_timestamp_fallback(self):
         """Verify it handles invalid/overflow timestamps by falling back to 'now'."""
         reading = LightstreamerReading(
-            pui="NODE3000004",
+            pui="NODE3000005",
             Value="10.5",
             TimeStamp=1e18,
         )

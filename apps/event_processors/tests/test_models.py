@@ -66,7 +66,7 @@ class TestDetectedEvent:
         """DetectedEvent can be created with all required fields."""
         event = DetectedEvent.objects.create(
             event_type="urination",
-            channel_id="NODE3000004",
+            channel_id="NODE3000005",
             detected_at=timezone.now(),
             confidence=Decimal("0.85"),
             metadata={"burst_duration_seconds": 45},
@@ -107,7 +107,7 @@ class TestSocialPost:
         """Create a DetectedEvent for FK relationship tests."""
         return DetectedEvent.objects.create(
             event_type="urination",
-            channel_id="NODE3000004",
+            channel_id="NODE3000005",
             detected_at=timezone.now(),
             confidence=Decimal("0.90"),
         )

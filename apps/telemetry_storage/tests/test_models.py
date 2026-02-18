@@ -11,19 +11,19 @@ class TestTelemetryChannel:
 
     def test_create_telemetry_channel(self):
         channel = TelemetryChannel.objects.create(
-            public_pui="NODE3000004",
+            public_pui="NODE3000005",
             description="Urine Processor Assembly (UPA) Output",
             ops_nom="UPA Output",
             eng_nom="UPA Output Eng",
             unit="lb/hr",
         )
-        assert str(channel) == "NODE3000004 (UPA Output)"
+        assert str(channel) == "NODE3000005 (UPA Output)"
         assert channel.created_at is not None
         assert channel.is_active is True  # From SoftDeleteModel
 
     def test_soft_delete_channel(self):
         channel = TelemetryChannel.objects.create(
-            public_pui="NODE3000004",
+            public_pui="NODE3000005",
             description="UPA",
             ops_nom="UPA",
             eng_nom="UPA",
@@ -41,7 +41,7 @@ class TestTelemetryReading:
 
     def test_create_telemetry_reading_with_uuid7(self):
         channel = TelemetryChannel.objects.create(
-            public_pui="NODE3000004",
+            public_pui="NODE3000005",
             description="UPA",
             ops_nom="UPA",
             eng_nom="UPA",
@@ -62,7 +62,7 @@ class TestTelemetryReading:
 
     def test_composite_uniqueness_constraint(self):
         channel = TelemetryChannel.objects.create(
-            public_pui="NODE3000004",
+            public_pui="NODE3000005",
             description="UPA",
             ops_nom="UPA",
             eng_nom="UPA",

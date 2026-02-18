@@ -35,7 +35,7 @@ class Migration(migrations.Migration):
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('id', models.UUIDField(default=uuid.uuid7, editable=False, primary_key=True, serialize=False)),
                 ('event_type', models.CharField(help_text="Event category (e.g., 'urination', 'temp_spike')", max_length=50)),
-                ('channel_id', models.CharField(help_text="PUI of source channel (e.g., 'NODE3000004')", max_length=50)),
+                ('channel_id', models.CharField(help_text="PUI of source channel (e.g., 'NODE3000005')", max_length=50)),
                 ('detected_at', models.DateTimeField(help_text='Logical timestamp of event occurrence')),
                 ('confidence', models.DecimalField(decimal_places=2, help_text='Detection confidence (0.00–1.00)', max_digits=3)),
                 ('metadata', models.JSONField(blank=True, default=dict, help_text='Processor-specific detection details (trend data, thresholds, etc.)')),

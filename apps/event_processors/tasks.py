@@ -47,8 +47,8 @@ def run_peebot_processor(self: Any) -> dict[str, Any]:
     This task is triggered by Celery Beat every 30 seconds. It:
     1. Applies random jitter (0-5s) to prevent thundering herd
     2. Loads processor state from database
-    3. Queries TelemetryReading for NODE3000004 channel
-    4. Runs burst detection analysis
+    3. Queries TelemetryReading for NODE3000005 channel
+    4. Runs fill-event detection analysis
     5. Creates DetectedEvent if event found
     6. Generates joke and posts to Bluesky (with cooldown check)
     7. Updates processor state cursor
@@ -128,7 +128,7 @@ async def _run_peebot_processor_async() -> dict[str, Any]:
         post_success = await _try_post_to_bluesky(event, log)
         result["post_published"] = post_success
 
-        # Step 7: Update processor state cursor (advance past the burst)
+        # Step 7: Update processor state cursor (advance past processed readings)
         latest_timestamp = max(r.timestamp for r in readings)
         await processor.update_state_cursor(state, processed_at=latest_timestamp)
         log.info("processor_state_updated")

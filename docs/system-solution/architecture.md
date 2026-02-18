@@ -226,7 +226,7 @@ Contains metadata for the ~400 ISS telemetry channels monitored by the system.
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| `public_pui` | String | Public Program Unique Identifier (e.g., "NODE3000004"). Unique. |
+| `public_pui` | String | Public Program Unique Identifier (e.g., "NODE3000005"). Unique. |
 | `description` | String | Human-readable description of the sensor. |
 | `ops_nom` | String | Operations Nomenclature. |
 | `eng_nom` | String | Engineering Nomenclature. |
@@ -367,7 +367,7 @@ Maintains the state for each analytics processor to support resumption and histo
 
 **PeeBot Specifics**:
 -   **Schedule**: Every 30 seconds.
--   **Target**: NODE3000004 (UPA Tank Level).
+-   **Target**: NODE3000005 (UPA Tank Level).
 -   **Logic**: Detect increasing trend over 5-10 minutes.
 -   **Cooldown**: **30 Minutes** between tweets (Incoming Doc standard).
 -   **AI**: DeepSeek V3 (via OpenRouter) for "Dry, scientific, slightly absurd" humor.

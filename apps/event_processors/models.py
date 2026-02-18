@@ -24,7 +24,7 @@ class DetectedEvent(UUID7Model, TimeStampedModel):
     )
     channel_id = models.CharField(
         max_length=50,
-        help_text="PUI of source channel (e.g., 'NODE3000004')",
+        help_text="PUI of source channel (e.g., 'NODE3000005')",
     )
     detected_at = models.DateTimeField(
         help_text="Logical timestamp of event occurrence",

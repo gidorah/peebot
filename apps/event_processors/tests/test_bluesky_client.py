@@ -161,7 +161,7 @@ class TestBlueskyClientCooldown:
         """Create a DetectedEvent for testing."""
         return await DetectedEvent.objects.acreate(
             event_type="urination",
-            channel_id="NODE3000004",
+            channel_id="NODE3000005",
             detected_at=timezone.now(),
             confidence=Decimal("0.85"),
         )
@@ -289,7 +289,7 @@ class TestBlueskyClientPost:
         """Create a DetectedEvent for testing."""
         return await DetectedEvent.objects.acreate(
             event_type="urination",
-            channel_id="NODE3000004",
+            channel_id="NODE3000005",
             detected_at=timezone.now(),
             confidence=Decimal("0.85"),
         )

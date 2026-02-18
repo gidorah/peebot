@@ -12,7 +12,7 @@ The current `PeeBotProcessor` cannot detect real urination events due to 4 compo
 
 | # | Issue | Current | Required |
 |---|-------|---------|----------|
-| 1 | **Wrong channel** | `NODE3000004` (UPA state enum) | `NODE3000005` (WSTA tank qty %) |
+| 1 | **Wrong channel** | `NODE3000005` (UPA state enum) | `NODE3000005` (WSTA tank qty %) |
 | 2 | **Broken detection paradigm** | Strictly monotonic burst detection | Net-change-over-window |
 | 3 | **Wrong duration thresholds** | 30–120s | 10–30s (real fills are 10–25s) |
 | 4 | **Wrong delta threshold** | 0.5 (continuous) | 2 (integer %, noise-immune) |
@@ -27,11 +27,11 @@ Root cause: The algorithm was designed against assumed sensor behavior. Real dat
 
 **File:** `apps/event_processors/processors/pee_bot.py`
 
-Change `channel_pui` from `NODE3000004` to `NODE3000005`.
+Change `channel_pui` from `NODE3000005` to `NODE3000005`.
 
 ```python
 # Before
-channel_pui = "NODE3000004"
+channel_pui = "NODE3000005"
 
 # After
 channel_pui = "NODE3000005"
@@ -39,7 +39,7 @@ channel_pui = "NODE3000005"
 
 **Ripple effects:**
 - Update `DetectedEvent.channel_id` references in test fixtures
-- Update docstrings referencing `NODE3000004`
+- Update docstrings referencing `NODE3000005`
 - Update `design.md` section 4.4 channel reference
 
 ---
@@ -396,7 +396,7 @@ Update fixtures to:
 
 The `channel_id` field has no default — it's set by the processor at event creation time. The value will automatically change because `PeeBotProcessor.channel_pui` changes. No model migration needed.
 
-Verify: `help_text` on `channel_id` references `NODE3000004` as an example — update to `NODE3000005`.
+Verify: `help_text` on `channel_id` references `NODE3000005` as an example — update to `NODE3000005`.
 
 ---
 

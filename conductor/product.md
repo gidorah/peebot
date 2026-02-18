@@ -1,7 +1,7 @@
 # Product Guide
 
 ## Initial Concept
-PeeBot is a Django modular monolith for ISS telemetry analytics (TimescaleDB), specifically detecting Urine Processor Assembly activity (NODE3000004) to post humorous updates to Bluesky.
+PeeBot is a Django modular monolith for ISS telemetry analytics (TimescaleDB), specifically detecting Urine Processor Assembly activity (NODE3000005) to post humorous updates to Bluesky.
 
 ## Target Audience
 The primary audience consists of space enthusiasts and the general public on Bluesky who appreciate a blend of space science and humor.
