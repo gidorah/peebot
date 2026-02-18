@@ -13,7 +13,7 @@ Implement the `apps/telemetry_storage` module to serve as the "Single Source of 
             -   `ops_nom`: CharField (Operations Nomenclature)
             -   `eng_nom`: CharField (Engineering Nomenclature)
             -   `unit`: CharField
-            -   `is_active`: BooleanField (default False, except NODE3000005)
+            -   `is_active` (logical): Managed via `SoftDeleteModel.deleted_at`; `deleted_at IS NULL` → active. Only `NODE3000005` is active after seeding.
             -   `created_at`: DateTimeField
             -   `updated_at`: DateTimeField
     -   `TelemetryReading`: Time-series data points (Hypertable).
