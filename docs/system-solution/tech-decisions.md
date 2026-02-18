@@ -75,3 +75,18 @@
     *   Bluesky posting cooldown remains via `BlueskyClient.check_cooldown()` querying `SocialPost` table.
     *   Test added: `test_run_peebot_processor_cursor_advances_past_burst` verifies cursor is at latest reading, not burst start.
 *   **Alternative Rejected**: Event detection cooldown querying `DetectedEvent` table was implemented but reverted after documentation research revealed it contradicted the documented architecture.
+
+## ADR-011: Duplicate Reading Prevention via Composite Unique Constraint
+*   **Decision**: Enforce `(channel, timestamp)` composite uniqueness on `TelemetryReading` and use `ignore_conflicts=True` on all batch inserts.
+*   **Status**: Accepted.
+*   **Context**: The initial data model defined a `UniqueConstraint(fields=["id", "timestamp"])`, which is semantically a no-op since `id` (UUIDv7) is already globally unique per row. On service restart, Lightstreamer re-broadcasts the latest snapshot values for all subscribed channels. These arrive with identical `(channel, timestamp)` pairs as readings already persisted in the previous session — but the useless constraint cannot prevent them, resulting in duplicate rows and violating BO-1 ("zero data duplication"). A compounding defect in the ingestion path called `abulk_create(readings)` without `ignore_conflicts=True`, meaning any genuine constraint violation would raise an `IntegrityError` and silently abort the entire batch via the broad `except Exception` handler.
+*   **Rationale**:
+    *   **Logical Deduplication Key**: `(channel, timestamp)` is the true uniqueness predicate — at most one reading should exist per channel at any given instant.
+    *   **Restart Safety**: With `ignore_conflicts=True`, duplicate `(channel, timestamp)` pairs on restart are silently skipped by PostgreSQL (`ON CONFLICT DO NOTHING`). First-write-wins semantics prevent data loss while keeping the database clean.
+    *   **TimescaleDB Compatibility**: All unique indexes on a hypertable must include the partition key (`timestamp`). The constraint `(channel_id, timestamp)` satisfies this requirement without touching the composite primary key `(id, timestamp)` established for the hypertable.
+    *   **Analytics Correctness**: Analytics modules query `TelemetryReading` ordered by `timestamp`. Duplicate timestamps for the same channel cause the sliding-window algorithm to produce unstable `net_delta` values. Enforcing uniqueness at the database layer eliminates this edge case without any changes to the algorithm.
+*   **Implementation**:
+    *   `apps/telemetry_storage/models.py`: Replace `UniqueConstraint(fields=["id", "timestamp"], name="unique_id_timestamp")` with `UniqueConstraint(fields=["channel", "timestamp"], name="unique_channel_timestamp")`.
+    *   Migration `0004_fix_unique_constraint`: Drop `unique_id_timestamp`, add `unique_channel_timestamp`.
+    *   `apps/telemetry_ingestion/management/commands/run_lightstreamer.py`: Add `ignore_conflicts=True` to `abulk_create()` call.
+*   **Alternative Rejected**: Application-layer deduplication (checking for existing readings before insert) was rejected. It adds latency, introduces race conditions under concurrent ingestion, and provides weaker guarantees than a database-enforced constraint.
