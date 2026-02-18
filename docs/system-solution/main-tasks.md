@@ -6,9 +6,10 @@
 
 These tasks address architectural changes and bugs in the **currently implemented** code (`apps/core` and `apps/telemetry_storage`).
 
-- [ ] **Refactor (Storage)**: Update `TelemetryReading` unique constraint.
+- [x] **Refactor (Storage)**: Update `TelemetryReading` unique constraint.
     - *Goal*: Change from `(id, timestamp)` to `(channel, timestamp)` for deterministic deduplication.
     - *Files*: `apps/telemetry_storage/models.py`.
+    - **Completion Date**: 2026-02-18 (T004 — Phases 1–3 complete)
 
 - [ ] **Fix (Core)**: Resolve `timezone.datetime` attribute error.
     - *Goal*: Replace incorrect `timezone.datetime` usage with `timezone.now()` or `datetime` module.

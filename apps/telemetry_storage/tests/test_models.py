@@ -60,7 +60,8 @@ class TestTelemetryReading:
         assert reading.created_at is not None
         assert reading.value == 10.5
 
-    def test_composite_uniqueness_constraint(self):
+    def test_unique_channel_timestamp_constraint(self):
+        """FR-DEDUP-001: at most one reading per (channel, timestamp) pair."""
         channel = TelemetryChannel.objects.create(
             public_pui="NODE3000005",
             description="UPA",
@@ -69,21 +70,15 @@ class TestTelemetryReading:
             unit="lb/hr",
         )
         ts = timezone.now()
-        reading = TelemetryReading.objects.create(
+        TelemetryReading.objects.create(
             channel=channel,
             timestamp=ts,
             value=10.5,
         )
 
-        # Primary Key is (id, timestamp).
-        # Since 'id' is auto-generated and unique, we test the constraint
-        # by manually providing the same ID and timestamp if possible,
-        # but Django's auto-id makes this hard to trigger via ORM
-        # without manual ID injection.
-
         with pytest.raises(IntegrityError):
+            # Same channel + same timestamp → must violate unique_channel_timestamp
             TelemetryReading.objects.create(
-                id=reading.id,
                 channel=channel,
                 timestamp=ts,
                 value=20.0,

@@ -249,7 +249,9 @@ class Command(BaseCommand):
                 )
 
             if readings:
-                await TelemetryReading.objects.abulk_create(readings)
+                await TelemetryReading.objects.abulk_create(
+                    readings, ignore_conflicts=True
+                )
                 logger.info(
                     f"Flushed {len(readings)} readings to DB "
                     f"(Acked {queue_items_to_ack} queue items)."
