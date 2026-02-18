@@ -30,11 +30,12 @@ def test_get_active_channels() -> None:
 async def test_repository_bulk_create_async() -> None:
     channel = await sync_to_async(baker.make)(TelemetryChannel, public_pui="ASYNC_TEST")
 
-    # Creating data dictionaries (DTOs) instead of model instances
+    # Each reading must have a distinct timestamp to satisfy unique_channel_timestamp.
+    base_ts = timezone.now()
     readings_data: list[ReadingData] = [
         {
             "channel": channel,
-            "timestamp": timezone.now(),
+            "timestamp": base_ts + datetime.timedelta(seconds=i),
             "value": float(i),
             "metadata": {"test": True},
         }
@@ -48,6 +49,29 @@ async def test_repository_bulk_create_async() -> None:
 
     count = await TelemetryReading.objects.acount()
     assert count == 10
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.asyncio
+async def test_bulk_create_ignores_duplicate() -> None:
+    """FR-DEDUP-002/003: duplicate (channel, timestamp) is silently skipped; the
+    first-written value is kept and no exception is raised."""
+    channel = await sync_to_async(baker.make)(TelemetryChannel, public_pui="DEDUP_TEST")
+    ts = timezone.now()
+
+    first = TelemetryReading(channel=channel, timestamp=ts, value=1.0)
+    duplicate = TelemetryReading(channel=channel, timestamp=ts, value=2.0)
+
+    # No exception should be raised
+    await TelemetryReading.objects.abulk_create(
+        [first, duplicate], ignore_conflicts=True
+    )
+
+    count = await TelemetryReading.objects.acount()
+    assert count == 1
+
+    persisted = await TelemetryReading.objects.aget(channel=channel, timestamp=ts)
+    assert float(persisted.value) == 1.0
 
 
 @pytest.mark.django_db

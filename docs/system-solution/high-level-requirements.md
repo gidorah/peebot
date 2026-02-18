@@ -45,7 +45,7 @@ The **PeeBot ISS Telemetry Data Analytics System** is a unified, modular monolit
     *   **FR-STO-001:** The system shall store all telemetry readings in a TimescaleDB hypertable partitioned by time (1-day chunks).
     *   **FR-STO-002:** The system shall automatically compress data chunks older than 7 days.
     *   **FR-STO-003:** The system shall automatically delete data chunks older than 30 days (Retention Policy).
-    *   **FR-STO-004:** The system shall ensure data uniqueness based on the composite key of `id` and `timestamp`.
+    *   **FR-STO-004:** The system shall ensure data uniqueness based on the composite key of `channel` and `timestamp` to prevent duplicate readings on service restart.
     *   **FR-STO-005:** The system shall maintain metadata for ~400 telemetry channels, including Public PUI, nomenclature (Ops/Eng), and units.
 
 *   **Feature: Event Processing - PeeBot (Module: `event_processors`)**

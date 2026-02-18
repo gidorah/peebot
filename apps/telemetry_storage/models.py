@@ -37,6 +37,6 @@ class TelemetryReading(UUID7Model, TimeStampedModel):
         ]
         constraints = [
             models.UniqueConstraint(
-                fields=["id", "timestamp"], name="unique_id_timestamp"
+                fields=["channel", "timestamp"], name="unique_channel_timestamp"
             )
         ]
