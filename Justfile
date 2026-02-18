@@ -36,9 +36,19 @@ dev-django-shell:
 dev-python *args:
 	{{dev-compose}} run --rm web uv run python {{args}}
 
-# Apply database migrations via the web container
+# Apply database migrations via the web container (through PgBouncer)
+# WARNING: PgBouncer enforces query_timeout=30s. Use dev-migrate-direct for
+# heavy migrations (bulk DML, index builds, TimescaleDB decompression).
 dev-migrate:
 	{{dev-compose}} run --rm web uv run python manage.py migrate
+
+# Apply migrations bypassing PgBouncer (direct TimescaleDB on port 5432)
+# Use this for: bulk-DML migrations, index builds, TimescaleDB decompression ops,
+# or any migration that takes >30 seconds.
+dev-migrate-direct:
+	{{dev-compose}} run --rm \
+		-e DATABASE_URL="postgresql://${POSTGRES_USER:-peebot_user}:${POSTGRES_PASSWORD:-password}@timescaledb:5432/${POSTGRES_DB:-peebot}?application_name=django-migrate" \
+		web uv run python manage.py migrate
 
 # Create a Django superuser through the web container
 dev-createsuperuser:
