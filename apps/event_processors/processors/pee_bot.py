@@ -13,6 +13,7 @@ Detection approach (data-driven):
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -69,7 +70,9 @@ class PeeBotProcessor(BaseProcessor):
     STABILITY_WINDOW_SECONDS = 60.0
     STABILITY_TOLERANCE = Decimal("1")
 
-    def _detect_fill_event(self, readings: list[TelemetryReading]) -> FillEvent | None:
+    def _detect_fill_event(
+        self, readings: Sequence[TelemetryReading]
+    ) -> FillEvent | None:
         """Detect a fill event using net-change-over-window.
 
         Notes:
@@ -128,7 +131,7 @@ class PeeBotProcessor(BaseProcessor):
         return None
 
     def _check_stability(
-        self, fill_event: FillEvent, readings: list[TelemetryReading]
+        self, fill_event: FillEvent, readings: Sequence[TelemetryReading]
     ) -> bool:
         """Validate post-fill stability.
 
@@ -155,7 +158,9 @@ class PeeBotProcessor(BaseProcessor):
         floor = fill_event.end_value - self.STABILITY_TOLERANCE
         return all(r.value >= floor for r in stability_readings)
 
-    async def analyze(self, readings: list[TelemetryReading]) -> DetectionResult | None:
+    async def analyze(
+        self, readings: Sequence[TelemetryReading]
+    ) -> DetectionResult | None:
         """Analyze readings to detect a fill event.
 
         Orchestration for the net-change-over-window detector:
@@ -208,7 +213,7 @@ class PeeBotProcessor(BaseProcessor):
 
     def get_confidence(
         self,
-        readings: list[TelemetryReading],
+        readings: Sequence[TelemetryReading],
         fill_event: FillEvent | None = None,
     ) -> Decimal:
         """Calculate detection confidence for integer-percentage tank readings.

@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import random
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from datetime import datetime
 from decimal import Decimal
 from typing import Any
@@ -66,7 +67,9 @@ class BaseProcessor(ABC):
         await asyncio.sleep(delay)
 
     @abstractmethod
-    async def analyze(self, readings: list[TelemetryReading]) -> DetectionResult | None:
+    async def analyze(
+        self, readings: Sequence[TelemetryReading]
+    ) -> DetectionResult | None:
         """Analyze readings to detect events.
 
         Implementations should analyze the provided telemetry readings
@@ -82,7 +85,7 @@ class BaseProcessor(ABC):
         pass
 
     @abstractmethod
-    def get_confidence(self, readings: list[TelemetryReading]) -> Decimal:
+    def get_confidence(self, readings: Sequence[TelemetryReading]) -> Decimal:
         """Calculate detection confidence score.
 
         Returns a confidence score between 0.0 and 1.0 based on the
