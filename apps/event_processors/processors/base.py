@@ -77,7 +77,7 @@ class BaseProcessor(ABC):
         if no event is found.
 
         Args:
-            readings: List of TelemetryReading objects to analyze
+            readings: Sequence of TelemetryReading objects to analyze
 
         Returns:
             DetectionResult with event metadata, or None
@@ -92,7 +92,7 @@ class BaseProcessor(ABC):
         strength and consistency of the detected pattern.
 
         Args:
-            readings: List of TelemetryReading objects used for detection
+            readings: Sequence of TelemetryReading objects used for detection
 
         Returns:
             Decimal confidence value (0.0-1.0)
