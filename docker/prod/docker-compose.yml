@@ -91,20 +91,23 @@ services:
       timescaledb:
         condition: service_healthy
 
+    entrypoint: ["/usr/local/bin/pgbouncer-entrypoint.sh"]
+    command: ["/etc/pgbouncer/pgbouncer.ini"]
+
     environment:
+      # Required: the entrypoint script generates /etc/pgbouncer/userlist.txt
+      # from this value at container start. userlist.txt is never committed to
+      # git — this is the only Coolify-compatible approach.
+      PGBOUNCER_AUTH_PASSWORD: ${PGBOUNCER_AUTH_PASSWORD}
       # Allow PgBouncer to discover database credentials
       POSTGRES_DB: ${POSTGRES_DB:-peebot}
       POSTGRES_USER: ${POSTGRES_USER:-peebot_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
 
-    ports:
-      - "6432:6432"  # PgBouncer port (restrict to app containers via firewall)
-
     volumes:
       - ../../docker/prod/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
-      - ../../docker/prod/pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro
-      # Mount TLS certificates (required for production)
-      # - ./certs:/etc/pgbouncer/certs:ro
+      # NOTE: userlist.txt is NOT mounted — generated at runtime by entrypoint.sh
+      - ../../docker/prod/pgbouncer/entrypoint.sh:/usr/local/bin/pgbouncer-entrypoint.sh:ro
 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432"]

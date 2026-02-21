@@ -82,7 +82,7 @@
 
 ## Phase 3: Parameterize init-timescale
 
-- [ ] **Step 10**: Create shell wrapper for database initialization.
+- [x] **Step 10**: Create shell wrapper for database initialization.
     - *File*: `docker/scripts/init-timescale.sh` (new)
     - *Task*: Write a Bash script that:
         1. Sets `set -euo pipefail` for strict error handling.
@@ -96,7 +96,7 @@
     - *Note*: Keep the original `init-timescale.sql` for reference/dev. The prod compose will mount `.sh` instead.
     - *Verification*: Script passes `shellcheck` without errors. Test with a password containing a single quote to confirm escaping works.
 
-- [ ] **Step 11**: Update prod compose to use shell initializer.
+- [x] **Step 11**: Update prod compose to use shell initializer.
     - *File*: `docker/prod/docker-compose.yml` (TimescaleDB service)
     - *Task*:
         1. Change the volume mount from `init-timescale.sql` to `init-timescale.sh`:
@@ -106,12 +106,12 @@
 
 ## Phase 4: PgBouncer Production Config
 
-- [ ] **Step 12**: Disable TLS for internal Docker network.
+- [x] **Step 12**: Disable TLS for internal Docker network.
     - *File*: `docker/prod/pgbouncer/pgbouncer.ini`
     - *Task*: Change `client_tls_sslmode = prefer` to `client_tls_sslmode = disable`. Change `server_tls_sslmode = require` to `server_tls_sslmode = disable`. Add a comment explaining this is safe because all communication is within the Docker bridge network.
     - *Verification*: PgBouncer starts without TLS certificate errors.
 
-- [ ] **Step 13**: Resize connection pools for conservative deployment.
+- [x] **Step 13**: Resize connection pools for conservative deployment.
     - *File*: `docker/prod/pgbouncer/pgbouncer.ini`
     - *Task*: Update pool parameters:
         - `default_pool_size = 10` (from 25)
@@ -122,7 +122,7 @@
         - `max_db_connections = 20` (from 40)
     - *Verification*: Values are consistent with TimescaleDB's `max_connections = 50`.
 
-- [ ] **Step 14**: Create PgBouncer entrypoint script for runtime `userlist.txt` generation.
+- [x] **Step 14**: Create PgBouncer entrypoint script for runtime `userlist.txt` generation.
     - *File*: `docker/prod/pgbouncer/entrypoint.sh` (new)
     - *Task*: Write a Bash script that:
         1. Sets `set -euo pipefail`.
@@ -134,7 +134,7 @@
     - *Why*: The production `userlist.txt` is gitignored (`**/prod/**/userlist.txt`). Coolify clones the repo fresh on each deploy, so the file won't exist. Without it, PgBouncer fails to start. Generating at runtime from env vars is the only Coolify-compatible approach.
     - *Verification*: Script passes `shellcheck`. PgBouncer starts and connects to TimescaleDB.
 
-- [ ] **Step 14a**: Update prod compose to use PgBouncer entrypoint.
+- [x] **Step 14a**: Update prod compose to use PgBouncer entrypoint.
     - *File*: `docker/prod/docker-compose.yml` (PgBouncer service)
     - *Task*:
         1. Remove the `userlist.txt` volume mount (`../../docker/prod/pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro`).
