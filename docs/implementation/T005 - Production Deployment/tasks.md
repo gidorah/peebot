@@ -146,17 +146,17 @@
 
 ## Phase 5: Compose Rewrite
 
-- [ ] **Step 15**: Remove source code volume mounts from all app services.
+- [x] **Step 15**: Remove source code volume mounts from all app services.
     - *File*: `docker/prod/docker-compose.yml`
     - *Task*: Remove `- ../..:/workspace` from `web`, `worker`, `beat` services. Remove `uv_cache` volume from all services. Keep only infrastructure volumes (`static_files`, `media_files` on web).
     - *Verification*: No `../../` workspace mounts remain on app services.
 
-- [ ] **Step 16**: Remove `uv sync` from all runtime commands.
+- [x] **Step 16**: Remove `uv sync` from all runtime commands.
     - *File*: `docker/prod/docker-compose.yml`
     - *Task*: Remove `uv sync --frozen &&` prefix from all `command:` directives. Commands become direct process invocations (e.g., `gunicorn config.wsgi:application ...`, `celery -A config worker ...`). Dependencies are already in the image.
     - *Verification*: Each service command starts the process directly without `sh -c` or `uv sync`.
 
-- [ ] **Step 17**: Add ingestion service.
+- [x] **Step 17**: Add ingestion service.
     - *File*: `docker/prod/docker-compose.yml`
     - *Task*: Add new service block:
         ```yaml
@@ -189,18 +189,18 @@
         ```
     - *Verification*: `docker compose config` validates successfully.
 
-- [ ] **Step 18**: Remove Daphne service.
+- [x] **Step 18**: Remove Daphne service.
     - *File*: `docker/prod/docker-compose.yml`
     - *Task*: Delete the entire `daphne:` service block. Remove any port mapping for 8001.
     - *Verification*: No `daphne` service in compose config.
 
-- [ ] **Step 19**: Remove `env_file` directives.
+- [x] **Step 19**: Remove `env_file` directives.
     - *File*: `docker/prod/docker-compose.yml`
     - *Task*: Remove `env_file: ../../.env` from all services (`web`, `worker`, `beat`, and newly added `ingestion`). Coolify injects env vars directly into the container environment.
     - *Note*: The `environment:` block with Docker DNS URLs (`pgbouncer:6432`, `redis:6379`) remains — these are internal compose-level values, not secrets.
     - *Verification*: No `env_file` references in compose config.
 
-- [ ] **Step 20**: Resize resource limits and fix TimescaleDB tuning for conservative deployment.
+- [x] **Step 20**: Resize resource limits and fix TimescaleDB tuning for conservative deployment.
     - *File*: `docker/prod/docker-compose.yml`
     - *Task*:
         1. Update all `deploy.resources` blocks per the resource allocation table in design.md Section 4.1.
@@ -219,7 +219,7 @@
         5. Update Redis maxmemory from 512mb to 256mb.
     - *Verification*: Sum of memory limits is ~4.25 GB. Sum of CPU limits is ~3.75. TimescaleDB starts with correct tuning (verify with `SHOW shared_buffers;` via `docker exec`).
 
-- [ ] **Step 21**: Remove external port exposure for infrastructure services.
+- [x] **Step 21**: Remove external port exposure for infrastructure services.
     - *File*: `docker/prod/docker-compose.yml`
     - *Task*: Remove `ports:` blocks from `timescaledb`, `pgbouncer`, and `redis` services. These are accessible only via Docker DNS within `peebot_network_prod`. Keep `ports: - "8000:8000"` on `web` only.
     - *Verification*: Only port 8000 is mapped to the host.
