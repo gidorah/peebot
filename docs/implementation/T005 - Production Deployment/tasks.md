@@ -250,7 +250,7 @@
 
 ## Phase 7: Deployment Pipeline
 
-- [ ] **Step 24**: Add production Justfile recipes.
+- [x] **Step 24**: Add production Justfile recipes.
     - *File*: `Justfile`
     - *Task*: Add recipes:
         ```
@@ -262,19 +262,19 @@
         ```
     - *Verification*: `just --list` shows new recipes.
 
-- [ ] **Step 25**: Document first-time deployment runbook.
+- [x] **Step 25**: Document first-time deployment runbook.
     - *File*: `docs/implementation/T005 - Production Deployment/design.md` (Section 9 already contains this)
     - *Task*: Verify the runbook in design.md Section 9 is complete and accurate. No separate file needed — the design doc already covers this.
     - *Verification*: Runbook covers: env var setup, deploy, healthcheck wait, migrate, seed, superuser, ingestion verification, Celery verification.
 
 ## Phase 8: Project Documentation Updates
 
-- [ ] **Step 26**: Update project roadmap.
+- [x] **Step 26**: Update project roadmap.
     - *File*: `docs/system-solution/main-tasks.md`
     - *Task*: Add a new section "Phase 4: Production Deployment (T005)" with subtask entries matching Steps 1-25 of this plan.
     - *Verification*: Roadmap reflects T005 as the next major milestone.
 
-- [ ] **Step 27**: Add ADRs to tech-decisions.md.
+- [x] **Step 27**: Add ADRs to tech-decisions.md.
     - *File*: `docs/system-solution/tech-decisions.md`
     - *Task*: Add three new ADRs:
         - **ADR-012**: Baked Docker Images for Production (multi-stage build, no volume mounts, no runtime `uv sync`).
