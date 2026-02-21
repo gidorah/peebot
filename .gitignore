@@ -76,6 +76,8 @@ db.sqlite3-journal
 
 # Keep .env.example for reference (DO NOT IGNORE)
 !.env.example
+# Keep production env template (DO NOT IGNORE)
+!.env.production.example
 
 # ------------------------------------------------------------------------------
 # Virtual Environments

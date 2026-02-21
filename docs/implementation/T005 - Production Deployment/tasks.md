@@ -226,7 +226,7 @@
 
 ## Phase 6: Environment Variable Documentation
 
-- [ ] **Step 22**: Create production environment template.
+- [x] **Step 22**: Create production environment template.
     - *File*: `.env.production.example` (new, at repo root)
     - *Task*: Create a template file documenting all required production environment variables with:
         - Clear section headers (Django, Database, External APIs)
@@ -236,7 +236,7 @@
         - Notes on which vars are set in Coolify UI vs. compose internal
     - *Verification*: File is committed to Git (not in `.gitignore`).
 
-- [ ] **Step 23**: Document Coolify configuration steps.
+- [x] **Step 23**: Document Coolify configuration steps.
     - *File*: `docs/implementation/T005 - Production Deployment/coolify-setup.md` (new)
     - *Task*: Step-by-step guide for configuring the Coolify project:
         1. Create new "Docker Compose" resource in Coolify
