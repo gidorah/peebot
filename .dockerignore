@@ -232,3 +232,10 @@ cython_debug/
 # Translations (if using, remove this)
 *.mo
 *.pot
+
+# Added for T005
+tests/
+docker/dev/
+docker/scripts/
+logs/
+.env.docker

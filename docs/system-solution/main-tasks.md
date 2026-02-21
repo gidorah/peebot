@@ -43,3 +43,14 @@ These tasks address architectural changes and bugs in the **currently implemente
 - [x] **T003-6 (Celery)**: Implement Celery task and Beat schedule (30s interval).
 - [x] **T003-7 (Testing)**: Unit tests for processor logic, integration test for full flow.
 - **T003 Completion Date**: 2026-02-06
+
+## Phase 4: Production Deployment (T005)
+
+- [ ] **T005-1 (Dockerfile)**: Write multi-stage production Dockerfile with baked dependencies, non-root user, and entrypoint script.
+- [ ] **T005-2 (Settings)**: Harden `config/settings/production.py` — stdout logging, proxy SSL trust, CSRF origins.
+- [ ] **T005-3 (DB Init)**: Parameterize `init-timescale.sql` password via shell wrapper (`init-timescale.sh`).
+- [ ] **T005-4 (PgBouncer)**: Resize production PgBouncer pools for 4vCPU/8GB VPS, disable internal TLS.
+- [ ] **T005-5 (Compose)**: Rewrite `docker/prod/docker-compose.yml` — baked images, add ingestion, remove Daphne, conservative resources, no external infra ports.
+- [ ] **T005-6 (Env Docs)**: Create `.env.production.example` and Coolify setup guide.
+- [ ] **T005-7 (Pipeline)**: Add production Justfile recipes and first-time deployment runbook.
+- [ ] **T005-8 (ADRs)**: Record ADR-012 (Baked Images), ADR-013 (Stdout Logging), ADR-014 (Coolify Deployment).
