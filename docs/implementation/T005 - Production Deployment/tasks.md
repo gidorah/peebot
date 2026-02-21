@@ -26,12 +26,12 @@
 
 ## Phase 2: Production Django Settings
 
-- [ ] **Step 5**: Replace file-based logging with stdout-only.
+- [x] **Step 5**: Replace file-based logging with stdout-only.
     - *File*: `config/settings/production.py`
     - *Task*: Replace the entire `LOGGING` dict. Remove the `file` handler. Keep only the `console` handler with `logging.StreamHandler` writing to stdout. Set root logger to `INFO` level. Remove any reference to `logs/django.log`.
     - *Verification*: `DJANGO_SETTINGS_MODULE=config.settings.production python -c "from django.conf import settings; print(settings.LOGGING)"` shows only console handler.
 
-- [ ] **Step 6**: Fix SSL redirect for Traefik proxy.
+- [x] **Step 6**: Fix SSL redirect for Traefik proxy.
     - *File*: `config/settings/production.py`
     - *Task*:
         1. Change `SECURE_SSL_REDIRECT = True` to `SECURE_SSL_REDIRECT = False`.
@@ -39,18 +39,18 @@
         3. Keep all other security settings (`SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE`, HSTS, `X_FRAME_OPTIONS`).
     - *Verification*: Code review confirms no redirect loop risk behind Traefik.
 
-- [ ] **Step 7**: Add `CSRF_TRUSTED_ORIGINS` from environment.
+- [x] **Step 7**: Add `CSRF_TRUSTED_ORIGINS` from environment.
     - *File*: `config/settings/production.py`
     - *Task*: Add `CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])`. This reads a comma-separated list from the env var.
     - *Note*: `env` is already imported from `base.py` via `from .base import *`.
     - *Verification*: Setting is accessible and defaults to empty list when env var is not set.
 
-- [ ] **Step 8**: Verify static files configuration.
+- [x] **Step 8**: Verify static files configuration.
     - *File*: `config/settings/production.py`
     - *Task*: Confirm `STATIC_ROOT = BASE_DIR / "staticfiles"` and `STATIC_URL = "/static/"` are set. The entrypoint's `collectstatic` will populate `STATIC_ROOT`. Gunicorn does not serve static files — they're served from the volume or via Traefik/whitenoise (future consideration).
     - *Verification*: `python manage.py collectstatic --noinput --dry-run` shows expected static file collection.
 
-- [ ] **Step 8a**: Add WhiteNoise for production static file serving.
+- [x] **Step 8a**: Add WhiteNoise for production static file serving.
     - *Files*: `pyproject.toml`, `config/settings/production.py`
     - *Task*:
         1. Add `whitenoise` to the `dependencies` list in `pyproject.toml`.
@@ -75,7 +75,7 @@
     - *Why*: Without WhiteNoise, `DEBUG=False` + Gunicorn means no static files are served. The Django admin UI will be completely broken (no CSS/JS).
     - *Verification*: `python manage.py collectstatic --noinput` succeeds and produces compressed/hashed files in `staticfiles/`. Django admin loads with CSS in a local `DEBUG=False` test.
 
-- [ ] **Step 9**: Remove structlog/Seq from production path.
+- [x] **Step 9**: Remove structlog/Seq from production path.
     - *File*: `config/settings/production.py`
     - *Task*: Confirm `production.py` does NOT add `django_structlog` to `INSTALLED_APPS` or import Seq-related modules. It extends `base.py` which doesn't include them (they're added in `development.py` only). This is a verification step — no changes expected.
     - *Verification*: `INSTALLED_APPS` in production settings does not contain `django_structlog`.
