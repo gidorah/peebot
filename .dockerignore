@@ -237,5 +237,11 @@ cython_debug/
 tests/
 docker/dev/
 docker/scripts/
+# docker/prod/entrypoint.sh IS needed (COPY'd into image by the Dockerfile).
+# Exclude only the infra config files that are not needed inside the app image.
+docker/prod/pgbouncer/
+docker/prod/docker-compose.yml
+docker/prod/Dockerfile
 logs/
 .env.docker
+.env.production.example
