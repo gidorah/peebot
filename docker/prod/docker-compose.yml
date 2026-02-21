@@ -33,6 +33,10 @@ services:
       POSTGRES_HOST_AUTH_METHOD: scram-sha-256
       POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
 
+      # Password for the pgbouncer_auth role created by init-timescale.sh.
+      # Must match the value used in the PgBouncer entrypoint (userlist.txt).
+      PGBOUNCER_AUTH_PASSWORD: ${PGBOUNCER_AUTH_PASSWORD}
+
       # Performance tuning for production (adjust based on server resources)
       POSTGRES_SHARED_BUFFERS: "2GB"           # 25% of system RAM (for 8GB server)
       POSTGRES_EFFECTIVE_CACHE_SIZE: "6GB"     # 75% of system RAM
@@ -48,7 +52,10 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
       # Initialization scripts (runs on first start only)
-      - ../../docker/scripts/init-timescale.sql:/docker-entrypoint-initdb.d/01-init-timescale.sql:ro
+      # NOTE: .sh wrapper is used (not .sql) so PGBOUNCER_AUTH_PASSWORD can be
+      # templated at runtime — PostgreSQL's initdb runner sources .sh files as
+      # Bash, giving access to environment variables.
+      - ../../docker/scripts/init-timescale.sh:/docker-entrypoint-initdb.d/01-init-timescale.sh:ro
 
       # Production PostgreSQL configuration (optional)
       # - ./postgresql.conf:/etc/postgresql/postgresql.conf:ro

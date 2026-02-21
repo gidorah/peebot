@@ -2,24 +2,24 @@
 
 ## Phase 1: Production Dockerfile
 
-- [ ] **Step 1**: Write multi-stage production Dockerfile.
+- [x] **Step 1**: Write multi-stage production Dockerfile.
     - *File*: `docker/prod/Dockerfile`
     - *Task*: Implement two-stage build:
         - **Stage 1 (builder)**: Base `python:3.14-slim`. Install build deps (`build-essential`, `libpq-dev`). Install `uv` via pip. Copy `pyproject.toml` + `uv.lock`. Run `uv sync --frozen` (without `--dev`) into `/opt/venv`.
         - **Stage 2 (runtime)**: Base `python:3.14-slim`. Install `libpq5` only (runtime C library for psycopg). Copy `/opt/venv` from builder. Copy application source code to `/workspace`. Set `ENV PATH="/opt/venv/bin:$PATH"`. Set `ENV DJANGO_SETTINGS_MODULE=config.settings.production`.
     - *Verification*: `docker build -f docker/prod/Dockerfile -t peebot:test .` succeeds from repo root.
 
-- [ ] **Step 2**: Create non-root user in runtime stage.
+- [x] **Step 2**: Create non-root user in runtime stage.
     - *File*: `docker/prod/Dockerfile`
     - *Task*: Add `RUN groupadd -g 1000 python && useradd -u 1000 -g python -m python`. Set `RUN chown -R python:python /workspace`. Add `USER python` before ENTRYPOINT.
     - *Verification*: `docker run peebot:test whoami` outputs `python`.
 
-- [ ] **Step 3**: Create entrypoint script.
+- [x] **Step 3**: Create entrypoint script.
     - *File*: `docker/prod/entrypoint.sh` (copied to `/usr/local/bin/entrypoint.sh` in Dockerfile)
     - *Task*: Write script that runs `python manage.py collectstatic --noinput` then `exec "$@"`. Mark executable (`chmod +x`). Add `ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]` and `CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]` to Dockerfile.
     - *Verification*: `docker run peebot:test` starts Gunicorn and collectstatic runs without error.
 
-- [ ] **Step 4**: Verify `.dockerignore` for production.
+- [x] **Step 4**: Verify `.dockerignore` for production.
     - *File*: `.dockerignore`
     - *Task*: Confirm the following are excluded: `.env`, `.env.local`, `.env.docker`, `.git/`, `docs/`, `_work-tmp/`, `.venv/`, `__pycache__/`, `*.pyc`, `tests/`, `docker/`, `.mypy_cache/`, `.ruff_cache/`, `.pytest_cache/`, `celerybeat-schedule*`, `logs/`, `*.md` (except code files). The existing `.dockerignore` (235 lines) is likely comprehensive — review and adjust if needed.
     - *Verification*: Build context size is reasonable (check `docker build` output for context size).
