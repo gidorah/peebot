@@ -188,12 +188,22 @@ services:
 
     # Env vars injected by Coolify UI (no env_file).
     # Internal service URLs use Docker DNS names — not secrets, set here directly.
+    # ${VAR} references below ensure Coolify detects and surfaces them in its UI.
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.production
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:6432/${POSTGRES_DB}?application_name=django-web
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       REDIS_URL: redis://redis:6379/0
+      # Django config — set in Coolify UI
+      SECRET_KEY: ${SECRET_KEY}
+      DEBUG: ${DEBUG:-False}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-}
+      # Optional API integrations — set in Coolify UI
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      BLUESKY_HANDLE: ${BLUESKY_HANDLE:-}
+      BLUESKY_APP_PASSWORD: ${BLUESKY_APP_PASSWORD:-}
 
     volumes:
       # collectstatic (run by entrypoint.sh) writes here; WhiteNoise serves from here.
@@ -250,6 +260,15 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       REDIS_URL: redis://redis:6379/0
+      # Django config — set in Coolify UI
+      SECRET_KEY: ${SECRET_KEY}
+      DEBUG: ${DEBUG:-False}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-}
+      # Optional API integrations — set in Coolify UI
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      BLUESKY_HANDLE: ${BLUESKY_HANDLE:-}
+      BLUESKY_APP_PASSWORD: ${BLUESKY_APP_PASSWORD:-}
 
     depends_on:
       pgbouncer:
@@ -293,6 +312,15 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       REDIS_URL: redis://redis:6379/0
+      # Django config — set in Coolify UI
+      SECRET_KEY: ${SECRET_KEY}
+      DEBUG: ${DEBUG:-False}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-}
+      # Optional API integrations — set in Coolify UI
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      BLUESKY_HANDLE: ${BLUESKY_HANDLE:-}
+      BLUESKY_APP_PASSWORD: ${BLUESKY_APP_PASSWORD:-}
 
     depends_on:
       pgbouncer:
@@ -334,6 +362,15 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       REDIS_URL: redis://redis:6379/0
+      # Django config — set in Coolify UI
+      SECRET_KEY: ${SECRET_KEY}
+      DEBUG: ${DEBUG:-False}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-}
+      # Optional API integrations — set in Coolify UI
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      BLUESKY_HANDLE: ${BLUESKY_HANDLE:-}
+      BLUESKY_APP_PASSWORD: ${BLUESKY_APP_PASSWORD:-}
 
     depends_on:
       pgbouncer:

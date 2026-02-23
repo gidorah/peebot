@@ -39,7 +39,7 @@ CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
-    *[m for m in MIDDLEWARE[1:]],  # rest of middleware from base.py
+    *MIDDLEWARE[1:],  # rest of middleware from base.py
 ]
 
 # ==============================================================================
@@ -76,7 +76,7 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "json": {
+        "verbose": {
             "()": "django.utils.log.ServerFormatter",
             "format": "{levelname} {asctime} {module} {message}",
             "style": "{",
@@ -86,7 +86,7 @@ LOGGING = {
         "console": {
             "level": "INFO",
             "class": "logging.StreamHandler",
-            "formatter": "json",
+            "formatter": "verbose",
         },
     },
     "root": {

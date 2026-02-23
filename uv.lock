@@ -606,6 +606,18 @@ wheels = [
 ]
 
 [[package]]
+name = "gunicorn"
+version = "25.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/66/13/ef67f59f6a7896fdc2c1d62b5665c5219d6b0a9a1784938eb9a28e55e128/gunicorn-25.1.0.tar.gz", hash = "sha256:1426611d959fa77e7de89f8c0f32eed6aa03ee735f98c01efba3e281b1c47616", size = 594377, upload-time = "2026-02-13T11:09:58.989Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/da/73/4ad5b1f6a2e21cf1e85afdaad2b7b1a933985e2f5d679147a1953aaa192c/gunicorn-25.1.0-py3-none-any.whl", hash = "sha256:d0b1236ccf27f72cfe14bce7caadf467186f19e865094ca84221424e839b8b8b", size = 197067, upload-time = "2026-02-13T11:09:57.146Z" },
+]
+
+[[package]]
 name = "h11"
 version = "0.16.0"
 source = { registry = "https://pypi.org/simple" }
@@ -945,31 +957,32 @@ dependencies = [
     { name = "django" },
     { name = "django-celery-beat" },
     { name = "django-environ" },
-    { name = "django-structlog" },
     { name = "djangorestframework" },
-    { name = "flower" },
+    { name = "gunicorn" },
     { name = "lightstreamer-client-lib" },
     { name = "openai" },
     { name = "psycopg", extra = ["binary", "pool"] },
     { name = "pydantic" },
     { name = "redis" },
-    { name = "rich" },
-    { name = "seqlog" },
-    { name = "structlog" },
     { name = "whitenoise" },
 ]
 
 [package.dev-dependencies]
 dev = [
     { name = "debugpy" },
+    { name = "django-structlog" },
     { name = "django-stubs" },
+    { name = "flower" },
     { name = "model-bakery" },
     { name = "mypy" },
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-django" },
+    { name = "rich" },
     { name = "ruff" },
+    { name = "seqlog" },
+    { name = "structlog" },
     { name = "types-defusedxml" },
     { name = "types-python-dateutil" },
     { name = "types-redis" },
@@ -985,31 +998,32 @@ requires-dist = [
     { name = "django", specifier = ">=5.2.7" },
     { name = "django-celery-beat", specifier = ">=2.8.1" },
     { name = "django-environ", specifier = ">=0.12.0" },
-    { name = "django-structlog", specifier = ">=10.0.0" },
     { name = "djangorestframework", specifier = ">=3.16.1" },
-    { name = "flower", specifier = ">=2.0.1" },
+    { name = "gunicorn", specifier = ">=23.0.0" },
     { name = "lightstreamer-client-lib", specifier = ">=2.2.2" },
     { name = "openai", specifier = ">=1.60.0" },
     { name = "psycopg", extras = ["binary", "pool"], specifier = ">=3.2.11" },
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "redis", specifier = ">=6.4.0" },
-    { name = "rich", specifier = ">=14.2.0" },
-    { name = "seqlog", specifier = ">=0.4.3" },
-    { name = "structlog", specifier = ">=25.5.0" },
     { name = "whitenoise", specifier = ">=6.9.0" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "debugpy", specifier = ">=1.8.18" },
+    { name = "django-structlog", specifier = ">=10.0.0" },
     { name = "django-stubs", specifier = ">=5.2.9" },
+    { name = "flower", specifier = ">=2.0.1" },
     { name = "model-bakery", specifier = ">=1.20.5" },
     { name = "mypy", specifier = ">=1.18.2" },
     { name = "pre-commit", specifier = ">=4.5.1" },
     { name = "pytest", specifier = ">=8.4.2" },
     { name = "pytest-asyncio", specifier = ">=1.2.0" },
     { name = "pytest-django", specifier = ">=4.11.1" },
+    { name = "rich", specifier = ">=14.2.0" },
     { name = "ruff", specifier = ">=0.14.1" },
+    { name = "seqlog", specifier = ">=0.4.3" },
+    { name = "structlog", specifier = ">=25.5.0" },
     { name = "types-defusedxml", specifier = ">=0.7.0.20250822" },
     { name = "types-python-dateutil", specifier = ">=2.9.0.20260124" },
     { name = "types-redis", specifier = ">=4.6.0.20241004" },
