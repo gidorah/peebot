@@ -204,8 +204,6 @@ services:
       CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-}
 
     volumes:
-      # collectstatic (run by entrypoint.sh) writes here; WhiteNoise serves from here.
-      - static_files:/workspace/staticfiles
       - media_files:/workspace/media
 
     depends_on:
@@ -370,10 +368,6 @@ volumes:
 
   redis_data:
     name: peebot_redis_data_prod
-    driver: local
-
-  static_files:
-    name: peebot_static_files_prod
     driver: local
 
   media_files:
