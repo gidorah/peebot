@@ -8,8 +8,7 @@
 FROM edoburu/pgbouncer:v1.24.1-p1
 
 COPY pgbouncer.ini /etc/pgbouncer/pgbouncer.ini
-COPY entrypoint.sh /usr/local/bin/pgbouncer-entrypoint.sh
-RUN chmod +x /usr/local/bin/pgbouncer-entrypoint.sh
+COPY --chmod=0755 entrypoint.sh /usr/local/bin/pgbouncer-entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/pgbouncer-entrypoint.sh"]
 CMD ["/etc/pgbouncer/pgbouncer.ini"]
