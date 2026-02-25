@@ -3,7 +3,7 @@ set shell := ["bash", "-c"]
 set dotenv-load := true
 
 dev-compose := "docker compose -f docker/dev/docker-compose.yml"
-prod-compose := "docker compose -f docker/prod/docker-compose.yml"
+prod-compose := "docker compose --project-directory . -f docker/prod/docker-compose.yml"
 
 # Show available recipes
 default:

@@ -2,7 +2,7 @@
 # PeeBot - Production Environment
 # Django Modular Monolith with TimescaleDB
 # ==============================================================================
-# Usage: docker compose -f docker/prod/docker-compose.yml up -d
+# Usage: docker compose --project-directory . -f docker/prod/docker-compose.yml up -d
 #
 # Deployment model (Coolify):
 #   - Coolify clones the repo and builds the image from docker/prod/Dockerfile.
@@ -49,7 +49,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       # .sh wrapper is sourced by the PostgreSQL entrypoint as Bash, giving
       # access to environment variables for pgbouncer_auth role creation.
-      - ../../docker/scripts/init-timescale.sh:/docker-entrypoint-initdb.d/01-init-timescale.sh:ro
+      - ./docker/scripts/init-timescale.sh:/docker-entrypoint-initdb.d/01-init-timescale.sh:ro
 
     # No external port — accessible only via Docker DNS within peebot_network_prod.
 
@@ -101,9 +101,9 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
 
     volumes:
-      - ../../docker/prod/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ./docker/prod/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
       # NOTE: userlist.txt is NOT mounted — generated at runtime by entrypoint.sh
-      - ../../docker/prod/pgbouncer/entrypoint.sh:/usr/local/bin/pgbouncer-entrypoint.sh:ro
+      - ./docker/prod/pgbouncer/entrypoint.sh:/usr/local/bin/pgbouncer-entrypoint.sh:ro
 
     # No external port — accessible only via Docker DNS within peebot_network_prod.
 
@@ -166,7 +166,7 @@ services:
   # ----------------------------------------------------------------------------
   web:
     build:
-      context: ../..
+      context: .
       dockerfile: docker/prod/Dockerfile
     container_name: peebot_web_prod
     restart: unless-stopped
@@ -237,7 +237,7 @@ services:
   # ----------------------------------------------------------------------------
   worker:
     build:
-      context: ../..
+      context: .
       dockerfile: docker/prod/Dockerfile
     container_name: peebot_worker_prod
     restart: unless-stopped
@@ -289,7 +289,7 @@ services:
   # ----------------------------------------------------------------------------
   beat:
     build:
-      context: ../..
+      context: .
       dockerfile: docker/prod/Dockerfile
     container_name: peebot_beat_prod
     restart: unless-stopped
@@ -334,7 +334,7 @@ services:
   # ----------------------------------------------------------------------------
   ingestion:
     build:
-      context: ../..
+      context: .
       dockerfile: docker/prod/Dockerfile
     container_name: peebot_ingestion_prod
     restart: unless-stopped
