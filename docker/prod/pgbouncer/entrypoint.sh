@@ -24,10 +24,9 @@ fi
 # mode: it needs the plaintext credential to complete SCRAM-SHA-256
 # challenge-response with PostgreSQL on behalf of the connecting client.
 # See: https://www.pgbouncer.org/config.html#auth_file
-echo "\"pgbouncer_auth\" \"${PGBOUNCER_AUTH_PASSWORD}\"" > /etc/pgbouncer/userlist.txt
-
-# Restrict access — only the pgbouncer process needs to read this file.
-chmod 600 /etc/pgbouncer/userlist.txt
+# Write with umask 177 so the file is created at mode 0600 atomically;
+# no subsequent chmod is needed and there is no window of world-readability.
+(umask 177; echo "\"pgbouncer_auth\" \"${PGBOUNCER_AUTH_PASSWORD}\"" > /etc/pgbouncer/userlist.txt)
 
 echo "Generated /etc/pgbouncer/userlist.txt for pgbouncer_auth user"
 
