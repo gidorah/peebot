@@ -23,6 +23,9 @@ set -e
 if [ "$1" = "gunicorn" ]; then
     echo "Running database migrations..."
     python manage.py migrate --noinput
+
+    echo "Seeding telemetry channels..."
+    python manage.py seed_channels
 fi
 
 # Hand off to the container's CMD (gunicorn, celery worker, beat, or management command).
