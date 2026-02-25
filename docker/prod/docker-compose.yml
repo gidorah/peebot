@@ -9,7 +9,7 @@
 #   - Environment variables are injected by Coolify UI (no .env file needed).
 #   - Internal service URLs use Docker DNS names (pgbouncer, redis, timescaledb).
 #   - TLS termination is handled by Coolify's Traefik proxy; Django trusts it.
-#   - Only port 8000 (web) is exposed to the host; all other ports are internal.
+#   - No ports are bound to the host; Traefik routes to containers via Docker network.
 # ==============================================================================
 
 services:
@@ -207,9 +207,6 @@ services:
       # collectstatic (run by entrypoint.sh) writes here; WhiteNoise serves from here.
       - static_files:/workspace/staticfiles
       - media_files:/workspace/media
-
-    ports:
-      - "8000:8000" # Traefik proxies to this; only externally-exposed port.
 
     depends_on:
       pgbouncer:
