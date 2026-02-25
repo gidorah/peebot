@@ -3,6 +3,7 @@ set shell := ["bash", "-c"]
 set dotenv-load := true
 
 dev-compose := "docker compose -f docker/dev/docker-compose.yml"
+prod-compose := "docker compose -f docker/prod/docker-compose.yml"
 
 # Show available recipes
 default:
@@ -119,3 +120,25 @@ dev-pgbouncer-password password:
 	@echo ""
 	@echo "4. Restart containers:"
 	@echo "   just dev-down && just dev-up"
+
+# ─── Production ───────────────────────────────────────────────────────────────
+
+# Build the production Docker image locally (tagged peebot:local)
+prod-build:
+	docker build -f docker/prod/Dockerfile -t peebot:local .
+
+# Run pending database migrations against the running production web container
+prod-migrate:
+	docker exec peebot_web_prod python manage.py migrate
+
+# Open an interactive Django shell inside the production web container
+prod-shell:
+	docker exec -it peebot_web_prod python manage.py shell
+
+# Seed telemetry channels into the production database
+prod-seed:
+	docker exec peebot_web_prod python manage.py seed_channels
+
+# Tail logs for all production services (Ctrl+C to stop)
+prod-logs:
+	{{prod-compose}} logs -f

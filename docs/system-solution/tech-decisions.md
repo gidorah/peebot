@@ -90,3 +90,39 @@
     *   Migration `0004_fix_unique_constraint`: Drop `unique_id_timestamp`, add `unique_channel_timestamp`.
     *   `apps/telemetry_ingestion/management/commands/run_lightstreamer.py`: Add `ignore_conflicts=True` to `abulk_create()` call.
 *   **Alternative Rejected**: Application-layer deduplication (checking for existing readings before insert) was rejected. It adds latency, introduces race conditions under concurrent ingestion, and provides weaker guarantees than a database-enforced constraint.
+
+## ADR-012: Baked Docker Images for Production
+*   **Decision**: Use multi-stage Docker builds that bake all application code and dependencies into the image at build time. No volume mounts or runtime `uv sync`.
+*   **Status**: Accepted.
+*   **Context**: The dev environment mounts the repo as a volume (`../../:/workspace`) and runs `uv sync --frozen --dev` on every container start for rapid iteration. For production, this pattern creates startup latency (~30s for dependency resolution), exposes source code on the host filesystem, and makes deployments non-reproducible (runtime depends on host state and network availability for package downloads).
+*   **Rationale**:
+    *   **Reproducibility**: A built image is immutable and tagged. The same image runs identically in any environment (CI, staging, production). There is no risk of dependency resolution differences between builds.
+    *   **Security**: Source code and `.env` files are not present on the host. The attack surface is limited to the runtime dependencies in the image. The non-root user (`python`, UID 1000) cannot modify application code.
+    *   **Startup Time**: Containers boot in <2 seconds (vs. 30s+ with `uv sync`). This matters for restarts, scaling, and health check responsiveness.
+    *   **Coolify Compatibility**: Coolify's Docker Compose deployment naturally builds images from Dockerfiles. Baked images align with Coolify's clone-build-deploy pipeline without requiring host-side setup.
+    *   **Image Reuse**: All 4 application services (web, worker, beat, ingestion) share the same image, differing only in `command:`. This reduces build time and storage.
+*   **Alternative Rejected**: Keeping volume mounts with `uv sync` at runtime was considered for "parity with dev" but rejected due to the security, reliability, and performance drawbacks in production.
+
+## ADR-013: Stdout-only Logging in Production
+*   **Decision**: All production logs go to stdout/stderr using plain Django logging. No Seq, no structlog, no file handlers.
+*   **Status**: Accepted.
+*   **Context**: The dev environment uses structlog with Rich console formatting and Seq (CLEF over HTTP) for centralized structured log search. The initial production settings used file-based logging to `logs/django.log`, which is problematic in containers (files are lost on restart, require volume mounts, and aren't accessible via Coolify's log viewer).
+*   **Rationale**:
+    *   **Docker-native**: Docker captures stdout/stderr from containers and makes logs available via `docker logs`, which Coolify's UI surfaces directly. No additional log infrastructure is needed.
+    *   **Zero overhead**: No Seq container (saves ~500MB RAM), no HTTP log shipping (saves network/CPU), no structlog processing pipeline.
+    *   **Resource constraints**: The 4 vCPU / 8 GB VPS is shared with other services. Seq would consume significant memory for marginal benefit on a single-app deployment.
+    *   **Simplicity**: Plain Django `logging.StreamHandler` is well-understood, debuggable, and has zero dependencies beyond the standard library.
+    *   **Future upgrade path**: If structured log search becomes necessary, Coolify supports log drains to external services (Loki, CloudWatch). This can be added without changing application code.
+*   **Alternative Rejected**: Deploying Seq in production was considered but rejected due to memory cost (~500MB-1GB) on a constrained VPS. Structlog with JSON formatting to stdout was considered but rejected in favor of plain Django logging for simplicity — the project has a single developer and Coolify's log viewer is sufficient.
+
+## ADR-014: Coolify Docker Compose Deployment
+*   **Decision**: Deploy PeeBot as a single Docker Compose stack managed by Coolify, with environment variables injected via the Coolify UI.
+*   **Status**: Accepted.
+*   **Context**: PeeBot runs on a single Hetzner VPS (4 vCPU, 8 GB RAM) managed by Coolify. Coolify supports multiple deployment modes: Dockerfile, Docker Compose, Nixpacks, and static builds. The project already has a `docker/prod/docker-compose.yml` with all required services.
+*   **Rationale**:
+    *   **All-in-one management**: Docker Compose deploys all 7 services (TimescaleDB, PgBouncer, Redis, web, worker, beat, ingestion) as a single stack with defined dependencies, health checks, and networking. Coolify monitors the entire stack as one unit.
+    *   **Environment variables via UI**: Coolify injects env vars into all containers, eliminating `env_file` directives and the need to manage `.env` files on the server. Secrets are stored in Coolify's encrypted storage.
+    *   **TLS termination**: Coolify's built-in Traefik proxy handles TLS certificates (Let's Encrypt) and domain routing. Django does not need to manage certificates or SSL redirects.
+    *   **Git-driven deploys**: Coolify watches the connected Git repo and triggers builds on push (or manual trigger). The compose file path (`docker/prod/docker-compose.yml`) is configured in Coolify's project settings.
+    *   **Compose file location**: The compose file stays at `docker/prod/docker-compose.yml` rather than the repo root, maintaining the existing directory structure and separation of dev/prod configurations.
+*   **Alternative Rejected**: Deploying each service as a separate Coolify resource was considered for independent scaling, but rejected because it adds operational complexity (7 separate Coolify resources, manual dependency management) without benefit for a single-VPS deployment with fixed resource limits.
