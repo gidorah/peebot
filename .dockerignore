@@ -236,12 +236,11 @@ cython_debug/
 # Added for T005
 tests/
 docker/dev/
-docker/scripts/
 # docker/prod/entrypoint.sh IS needed (COPY'd into image by the Dockerfile).
-# Exclude only the infra config files that are not needed inside the app image.
-docker/prod/pgbouncer/
+# docker/scripts/ and docker/prod/pgbouncer/ are NOT excluded — they are small
+# and needed by the timescaledb and pgbouncer build contexts respectively.
+# Excluding them here would break those builds since .dockerignore is global.
 docker/prod/docker-compose.yml
-docker/prod/Dockerfile
 logs/
 .env.docker
 .env.production.example
