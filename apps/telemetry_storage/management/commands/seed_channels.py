@@ -22,7 +22,7 @@ class Command(BaseCommand):
             return
 
         try:
-            with open(xml_path, encoding="utf-16") as f:
+            with open(xml_path, encoding="utf-8") as f:
                 tree = ET.parse(f)
 
             root = tree.getroot()

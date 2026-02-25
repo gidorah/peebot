@@ -1,3 +1,6 @@
 
 # Use bd merge for beads JSONL files
 .beads/issues.jsonl merge=beads
+
+# Ensure XML data files are not mangled by line-ending normalization
+docs/PUIList.xml text eol=lf
