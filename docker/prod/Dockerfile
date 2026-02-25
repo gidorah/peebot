@@ -61,7 +61,16 @@ RUN groupadd -g 1000 python && \
 WORKDIR /workspace
 COPY . /workspace/
 
-# Transfer workspace ownership to the non-root user
+# Collect static files at build time so the image is self-contained.
+# WhiteNoise serves pre-collected files — no runtime filesystem writes needed.
+# Dummy env vars satisfy Django init; collectstatic never connects to the DB.
+RUN SECRET_KEY="build-only-dummy-key" \
+    DATABASE_URL="sqlite:///dev-null" \
+    CELERY_BROKER_URL="memory://" \
+    DJANGO_SETTINGS_MODULE="config.settings.production" \
+    python manage.py collectstatic --noinput
+
+# Transfer workspace ownership (including generated staticfiles/) to non-root user
 RUN chown -R python:python /workspace
 
 # Copy entrypoint script to /usr/local/bin so it is never shadowed by volume mounts.
