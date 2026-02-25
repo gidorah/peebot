@@ -17,7 +17,9 @@ services:
   # TimescaleDB - PostgreSQL with Time-Series Extension
   # ----------------------------------------------------------------------------
   timescaledb:
-    image: timescale/timescaledb:latest-pg15
+    build:
+      context: .
+      dockerfile: docker/prod/timescaledb/Dockerfile
     container_name: peebot_timescaledb_prod
     restart: unless-stopped
 
@@ -47,9 +49,8 @@ services:
 
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # .sh wrapper is sourced by the PostgreSQL entrypoint as Bash, giving
-      # access to environment variables for pgbouncer_auth role creation.
-      - ./docker/scripts/init-timescale.sh:/docker-entrypoint-initdb.d/01-init-timescale.sh:ro
+      # Init script is baked into the image by docker/prod/timescaledb/Dockerfile.
+      # No bind mount needed.
 
     # No external port — accessible only via Docker DNS within peebot_network_prod.
 
@@ -80,7 +81,9 @@ services:
   # PgBouncer - Connection Pooler (Session Mode)
   # ----------------------------------------------------------------------------
   pgbouncer:
-    image: edoburu/pgbouncer:v1.24.1-p1
+    build:
+      context: ./docker/prod/pgbouncer
+      dockerfile: Dockerfile
     container_name: peebot_pgbouncer_prod
     restart: unless-stopped
 
@@ -88,10 +91,9 @@ services:
       timescaledb:
         condition: service_healthy
 
-    # The custom entrypoint generates /etc/pgbouncer/userlist.txt at startup
-    # from PGBOUNCER_AUTH_PASSWORD — userlist.txt is never committed to git.
-    entrypoint: ["/usr/local/bin/pgbouncer-entrypoint.sh"]
-    command: ["/etc/pgbouncer/pgbouncer.ini"]
+    # Entrypoint and command are defined in docker/prod/pgbouncer/Dockerfile.
+    # The entrypoint generates /etc/pgbouncer/userlist.txt at startup from
+    # PGBOUNCER_AUTH_PASSWORD — userlist.txt is never committed to git.
 
     environment:
       # Required: entrypoint generates /etc/pgbouncer/userlist.txt from this.
@@ -99,11 +101,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-peebot}
       POSTGRES_USER: ${POSTGRES_USER:-peebot_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-
-    volumes:
-      - ./docker/prod/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
-      # NOTE: userlist.txt is NOT mounted — generated at runtime by entrypoint.sh
-      - ./docker/prod/pgbouncer/entrypoint.sh:/usr/local/bin/pgbouncer-entrypoint.sh:ro
 
     # No external port — accessible only via Docker DNS within peebot_network_prod.
 
