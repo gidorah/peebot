@@ -104,16 +104,17 @@
 *   **Alternative Rejected**: Keeping volume mounts with `uv sync` at runtime was considered for "parity with dev" but rejected due to the security, reliability, and performance drawbacks in production.
 
 ## ADR-013: Stdout-only Logging in Production
-*   **Decision**: All production logs go to stdout/stderr using plain Django logging. No Seq, no structlog, no file handlers.
-*   **Status**: Accepted.
+*   **Decision**: All production logs go to stdout/stderr. No Seq, no file handlers. Structlog is used as the application logging API with a plain stdout renderer.
+*   **Status**: Amended (see below).
 *   **Context**: The dev environment uses structlog with Rich console formatting and Seq (CLEF over HTTP) for centralized structured log search. The initial production settings used file-based logging to `logs/django.log`, which is problematic in containers (files are lost on restart, require volume mounts, and aren't accessible via Coolify's log viewer).
 *   **Rationale**:
     *   **Docker-native**: Docker captures stdout/stderr from containers and makes logs available via `docker logs`, which Coolify's UI surfaces directly. No additional log infrastructure is needed.
-    *   **Zero overhead**: No Seq container (saves ~500MB RAM), no HTTP log shipping (saves network/CPU), no structlog processing pipeline.
+    *   **Zero overhead**: No Seq container (saves ~500MB RAM), no HTTP log shipping (saves network/CPU), no SeqHandler processing pipeline.
     *   **Resource constraints**: The 4 vCPU / 8 GB VPS is shared with other services. Seq would consume significant memory for marginal benefit on a single-app deployment.
-    *   **Simplicity**: Plain Django `logging.StreamHandler` is well-understood, debuggable, and has zero dependencies beyond the standard library.
+    *   **Simplicity**: Plain stdout via `logging.StreamHandler` is well-understood, debuggable, and has zero dependencies beyond the standard library.
     *   **Future upgrade path**: If structured log search becomes necessary, Coolify supports log drains to external services (Loki, CloudWatch). This can be added without changing application code.
-*   **Alternative Rejected**: Deploying Seq in production was considered but rejected due to memory cost (~500MB-1GB) on a constrained VPS. Structlog with JSON formatting to stdout was considered but rejected in favor of plain Django logging for simplicity — the project has a single developer and Coolify's log viewer is sufficient.
+*   **Amendment**: The original ADR stated "No Seq, no structlog, no file handlers." This was revised to keep `structlog` as the application logging API in production. The codebase uses `structlog.get_logger()` and `logger.bind()` throughout `apps/event_processors/` for structured context propagation (attaching `processor_name`, `event_id`, `channel_id` to every log line in a run). Replacing this with stdlib `logging` would require `LoggerAdapter` boilerplate or manual `extra={}` dicts on every call, with no meaningful benefit. The `structlog` library is ~70KB with zero additional dependencies. The production configuration uses `structlog.stdlib.LoggerFactory()` + `ConsoleRenderer(colors=False)` to render key=value output to stdout — no Seq, no HTTP shipping, no Rich. The original intent (eliminating logging infrastructure overhead) is fully preserved.
+*   **Alternative Rejected**: Deploying Seq in production was considered but rejected due to memory cost (~500MB-1GB) on a constrained VPS.
 
 ## ADR-014: Coolify Docker Compose Deployment
 *   **Decision**: Deploy PeeBot as a single Docker Compose stack managed by Coolify, with environment variables injected via the Coolify UI.

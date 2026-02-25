@@ -964,6 +964,7 @@ dependencies = [
     { name = "psycopg", extra = ["binary", "pool"] },
     { name = "pydantic" },
     { name = "redis" },
+    { name = "structlog" },
     { name = "whitenoise" },
 ]
 
@@ -982,7 +983,6 @@ dev = [
     { name = "rich" },
     { name = "ruff" },
     { name = "seqlog" },
-    { name = "structlog" },
     { name = "types-defusedxml" },
     { name = "types-python-dateutil" },
     { name = "types-redis" },
@@ -1005,6 +1005,7 @@ requires-dist = [
     { name = "psycopg", extras = ["binary", "pool"], specifier = ">=3.2.11" },
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "redis", specifier = ">=6.4.0" },
+    { name = "structlog", specifier = ">=25.5.0" },
     { name = "whitenoise", specifier = ">=6.9.0" },
 ]
 
@@ -1023,7 +1024,6 @@ dev = [
     { name = "rich", specifier = ">=14.2.0" },
     { name = "ruff", specifier = ">=0.14.1" },
     { name = "seqlog", specifier = ">=0.4.3" },
-    { name = "structlog", specifier = ">=25.5.0" },
     { name = "types-defusedxml", specifier = ">=0.7.0.20250822" },
     { name = "types-python-dateutil", specifier = ">=2.9.0.20260124" },
     { name = "types-redis", specifier = ">=4.6.0.20241004" },

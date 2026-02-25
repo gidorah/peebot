@@ -2,6 +2,8 @@
 Production settings for peebot project.
 """
 
+import structlog
+
 from .base import *
 
 # DEBUG and ALLOWED_HOSTS are set via environment variables and loaded by base.py
@@ -72,21 +74,41 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 # Logging (stdout-only — Docker/Coolify captures natively; no Seq, no file handler)
 # ==============================================================================
 
+# Structlog routes through Django's stdlib LoggerFactory so all output goes
+# through the LOGGING handlers below. ConsoleRenderer without colors produces
+# clean human-readable key=value lines that Coolify's log viewer handles well.
+# django-structlog (request middleware) is dev-only; the configure() call here
+# is the minimum needed to make structlog.get_logger() work in production.
+structlog.configure(
+    processors=[
+        structlog.contextvars.merge_contextvars,
+        structlog.stdlib.filter_by_level,
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.PositionalArgumentsFormatter(),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+        structlog.processors.UnicodeDecoder(),
+        structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+    ],
+    logger_factory=structlog.stdlib.LoggerFactory(),
+    cache_logger_on_first_use=True,
+)
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        "verbose": {
-            "()": "django.utils.log.ServerFormatter",
-            "format": "{levelname} {asctime} {module} {message}",
-            "style": "{",
+        "structlog_console": {
+            "()": structlog.stdlib.ProcessorFormatter,
+            "processor": structlog.dev.ConsoleRenderer(colors=False),
         },
     },
     "handlers": {
         "console": {
             "level": "INFO",
             "class": "logging.StreamHandler",
-            "formatter": "verbose",
+            "formatter": "structlog_console",
         },
     },
     "root": {
