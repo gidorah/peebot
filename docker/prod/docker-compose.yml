@@ -28,7 +28,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-peebot}
       POSTGRES_USER: ${POSTGRES_USER:-peebot_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}  # Required — no default in prod
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} # Required — no default in prod
       POSTGRES_HOST_AUTH_METHOD: scram-sha-256
       POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
       # Passed to init-timescale.sh for creating the pgbouncer_auth role.
@@ -54,7 +54,11 @@ services:
     # No external port — accessible only via Docker DNS within peebot_network_prod.
 
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-peebot_user} -d ${POSTGRES_DB:-peebot}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-peebot_user} -d ${POSTGRES_DB:-peebot}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -63,10 +67,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.5'
+          cpus: "1.5"
           memory: 2G
         reservations:
-          cpus: '0.75'
+          cpus: "0.75"
           memory: 1G
 
     networks:
@@ -113,10 +117,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.25'
+          cpus: "0.25"
           memory: 256M
         reservations:
-          cpus: '0.1'
+          cpus: "0.1"
           memory: 128M
 
     networks:
@@ -148,10 +152,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.25'
+          cpus: "0.25"
           memory: 256M
         reservations:
-          cpus: '0.1'
+          cpus: "0.1"
           memory: 128M
 
     networks:
@@ -192,18 +196,15 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.production
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:6432/${POSTGRES_DB}?application_name=django-web
+      # Celery vars kept so the broker URL is correct in Docker DNS even though
+      # Gunicorn itself doesn't connect to Redis today (default falls back to localhost).
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
-      REDIS_URL: redis://redis:6379/0
       # Django config — set in Coolify UI
       SECRET_KEY: ${SECRET_KEY}
       DEBUG: ${DEBUG:-False}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS}
       CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-}
-      # Optional API integrations — set in Coolify UI
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
-      BLUESKY_HANDLE: ${BLUESKY_HANDLE:-}
-      BLUESKY_APP_PASSWORD: ${BLUESKY_APP_PASSWORD:-}
 
     volumes:
       # collectstatic (run by entrypoint.sh) writes here; WhiteNoise serves from here.
@@ -211,7 +212,7 @@ services:
       - media_files:/workspace/media
 
     ports:
-      - "8000:8000"  # Traefik proxies to this; only externally-exposed port.
+      - "8000:8000" # Traefik proxies to this; only externally-exposed port.
 
     depends_on:
       pgbouncer:
@@ -222,10 +223,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 512M
         reservations:
-          cpus: '0.25'
+          cpus: "0.25"
           memory: 256M
 
     networks:
@@ -259,12 +260,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:6432/${POSTGRES_DB}?application_name=django-worker
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
-      REDIS_URL: redis://redis:6379/0
-      # Django config — set in Coolify UI
       SECRET_KEY: ${SECRET_KEY}
-      DEBUG: ${DEBUG:-False}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
-      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-}
       # Optional API integrations — set in Coolify UI
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       BLUESKY_HANDLE: ${BLUESKY_HANDLE:-}
@@ -279,10 +275,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 512M
         reservations:
-          cpus: '0.25'
+          cpus: "0.25"
           memory: 256M
 
     networks:
@@ -308,19 +304,12 @@ services:
 
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.production
+      # DATABASE_URL is required even though beat never queries the DB directly —
+      # env.db() in base.py has no default and will raise ImproperlyConfigured if absent.
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:6432/${POSTGRES_DB}?application_name=django-beat
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
-      REDIS_URL: redis://redis:6379/0
-      # Django config — set in Coolify UI
       SECRET_KEY: ${SECRET_KEY}
-      DEBUG: ${DEBUG:-False}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
-      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-}
-      # Optional API integrations — set in Coolify UI
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
-      BLUESKY_HANDLE: ${BLUESKY_HANDLE:-}
-      BLUESKY_APP_PASSWORD: ${BLUESKY_APP_PASSWORD:-}
 
     depends_on:
       pgbouncer:
@@ -331,10 +320,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.25'
+          cpus: "0.25"
           memory: 256M
         reservations:
-          cpus: '0.1'
+          cpus: "0.1"
           memory: 128M
 
     networks:
@@ -359,18 +348,7 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.production
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:6432/${POSTGRES_DB}?application_name=django-ingestion
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/0
-      REDIS_URL: redis://redis:6379/0
-      # Django config — set in Coolify UI
       SECRET_KEY: ${SECRET_KEY}
-      DEBUG: ${DEBUG:-False}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
-      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-}
-      # Optional API integrations — set in Coolify UI
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
-      BLUESKY_HANDLE: ${BLUESKY_HANDLE:-}
-      BLUESKY_APP_PASSWORD: ${BLUESKY_APP_PASSWORD:-}
 
     depends_on:
       pgbouncer:
@@ -379,10 +357,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 512M
         reservations:
-          cpus: '0.25'
+          cpus: "0.25"
           memory: 256M
 
     networks:
