@@ -1,6 +1,6 @@
 # PeeBot Architecture Specification
 
-**Last Updated**: 2026-01-18
+**Last Updated**: 2026-02-27
 
 ---
 
@@ -41,7 +41,7 @@ All versions are **MANDATORY**. Do not upgrade without RFC.
 | :--- | :--- | :--- | :--- |
 | **Runtime** | Python | `3.14+` | Latest stable CPython with GIL improvements. |
 | **Framework** | Django | `5.2+` | LTS release. |
-| **API** | Django REST Framework | `3.15+` | Standard validation/serialization layer. |
+| **API** | Django REST Framework | `3.16+` | Standard validation/serialization layer. |
 | **Async** | Django Channels (Daphne) | `4.0+` | WebSocket support for dashboard. |
 | **Database** | PostgreSQL + TimescaleDB | `16` / `2.13` | Time-series optimization. |
 | **Ingestion** | lightstreamer-client-lib | `2.2.2` | Official SDK (Sync/Threaded). |
@@ -148,7 +148,7 @@ peebot/
 
 Each database model is owned by exactly one module:
 -   **telemetry_storage** owns: `TelemetryReading`, `TelemetryChannel`
--   **event_processors** owns: `DetectedEvent`, `ProcessorState`
+-   **event_processors** owns: `DetectedEvent`, `ProcessorState`, `SocialPost`
 -   **core** owns: Abstract base models
 
 ### 6.2 Module Dependency Flow
@@ -165,7 +165,7 @@ Each database model is owned by exactly one module:
         | imports models            | queries database (via Repository)
         |                           |
     telemetry_ingestion        event_processors
-    (no models)                (owns: DetectedEvent, ProcessorState)
+    (no models)                (owns: DetectedEvent, ProcessorState, SocialPost)
                                     ^
                                     |
                                     | queries database
@@ -253,7 +253,7 @@ The single source of truth for all ISS telemetry data, optimized as a TimescaleD
 | `updated_at` | DateTime | System-level update timestamp (from `TimeStampedModel`). |
 
 **Indexes & Constraints**:
-- **Unique Constraint**: Composite key of `(id, timestamp)` for hypertable partitioning integrity.
+- **Unique Constraint**: Composite key of `(channel, timestamp)` for deterministic deduplication (see ADR-011).
 - **Query Index**: Optimized for `(channel, -timestamp)` for trend analysis.
 - **Audit Index**: `(created_at, timestamp)` for ingestion performance monitoring.
 
@@ -349,6 +349,22 @@ Maintains the state for each analytics processor to support resumption and histo
 | `state_data` | JSON | Processor-specific state (e.g., sliding window buffers). |
 | `updated_at` | DateTime | Last time the state was updated (from `TimeStampedModel`). |
 
+**Model: `SocialPost`**
+
+Tracks social media posts generated from detected events, supporting multi-platform posting with status tracking.
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `id` | UUIDv7 | Primary key, time-sortable (from `UUID7Model`). |
+| `event` | ForeignKey | Reference to the `DetectedEvent` that triggered the post. |
+| `platform` | String | Target platform (e.g., 'bluesky', 'twitter'). |
+| `content` | Text | The generated post content. |
+| `external_id` | String | Platform-specific post identifier (nullable). |
+| `posted_at` | DateTime | Timestamp when the post was published (nullable). |
+| `status` | String | Post status: `PENDING`, `SUCCESS`, or `FAILED`. |
+| `error_message` | Text | Error details if posting failed (nullable). |
+| `created_at` | DateTime | Timestamp of record creation (from `TimeStampedModel`). |
+
 **Architecture**: Polling Pattern with Jitter.
 
 ```
@@ -371,6 +387,10 @@ Maintains the state for each analytics processor to support resumption and histo
 -   **Logic**: Detect increasing trend over 5-10 minutes.
 -   **Cooldown**: **30 Minutes** between tweets (Incoming Doc standard).
 -   **AI**: DeepSeek V3 (via OpenRouter) for "Dry, scientific, slightly absurd" humor.
+
+**Services**:
+-   **`BlueskyClient`** (`services/bluesky_client.py`): AT Protocol SDK client for posting to Bluesky. Handles session management, post creation, and enforces a configurable cooldown period (default 30 minutes) between posts.
+-   **`JokeGenerator`** (`services/joke_generator.py`): Integrates with OpenRouter (DeepSeek V3) to generate contextual humorous content for social media posts. Includes retry logic with exponential backoff.
 
 ### 8.5 Dashboards (`apps/dashboards`)
 
@@ -500,3 +520,33 @@ The project follows a three-tiered testing approach to ensure reliability from i
 
 ### 11.3 Test Database
 A dedicated TimescaleDB instance must be used for testing, with migrations configured to automatically create hypertables for the `TelemetryReading` model.
+
+---
+
+## 12. Production Deployment
+
+### 12.1 Docker Strategy
+
+Production uses **baked Docker images** (multi-stage build, no runtime `uv sync`) for reproducibility and fast startup (<2s vs 30s+ with runtime install). The Dockerfile uses a builder stage to install dependencies into `/opt/venv`, then copies only the runtime artifacts into a slim final image running as a non-root `python` user.
+
+### 12.2 Service Composition
+
+The production stack runs as a **7-service Docker Compose** deployment managed by **Coolify**:
+
+| Service | Image | Purpose |
+| :--- | :--- | :--- |
+| `web` | peebot (baked) | Gunicorn WSGI server (3 workers) |
+| `celery-worker` | peebot (baked) | Celery task worker |
+| `celery-beat` | peebot (baked) | Celery Beat scheduler |
+| `ingestion` | peebot (baked) | `run_lightstreamer` management command |
+| `redis` | redis:7.2 | Celery broker and result backend |
+| `timescaledb` | timescaledb:latest-pg16 | PostgreSQL + TimescaleDB |
+| `pgbouncer` | pgbouncer | Connection pooling (session mode) |
+
+### 12.3 Key Production Decisions
+
+-   **Logging**: Stdout-only via structlog (no Seq in production — saves ~500MB RAM). Logs collected via `docker logs`.
+-   **Static Files**: WhiteNoise middleware serves static assets directly from the application (no Nginx required for static files).
+-   **TLS**: Traefik (via Coolify) handles TLS termination; Django trusts `X-Forwarded-Proto` header.
+-   **Secrets**: All environment variables injected by Coolify UI — no `.env` files in production.
+-   **PgBouncer Auth**: `userlist.txt` generated at runtime from `PGBOUNCER_AUTH_PASSWORD` env var via entrypoint script.

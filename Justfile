@@ -67,6 +67,10 @@ dev-test *args:
 test *args:
 	DOTENV_PATH=.env.local uv run pytest {{args}}
 
+# Run linting locally
+lint:
+	uv run ruff check .
+
 # Run linting and type checks inside the web container
 dev-check:
 	{{dev-compose}} run --rm web uv run ruff check .

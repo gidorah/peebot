@@ -1,6 +1,6 @@
 # PeeBot - ISS Telemetry Data Analytics System
 
-A Django modular monolith that ingests real-time ISS telemetry data from Lightstreamer, stores it in TimescaleDB, and runs independent analytics modules to detect events. The primary module (PeeBot) detects when astronauts use the Urine Processor Assembly and posts humorous tweets.
+A Django modular monolith that ingests real-time ISS telemetry data from Lightstreamer, stores it in TimescaleDB, and runs independent analytics modules to detect events. The primary module (PeeBot) detects when astronauts use the Urine Processor Assembly and posts humorous updates to Bluesky.
 
 ## Overview
 
@@ -37,29 +37,22 @@ peebot/
 |   |
 |   |-- telemetry_storage/         # Data persistence layer
 |   |   |-- models.py              # TelemetryReading, TelemetryChannel
-|   |   |-- repositories.py        # Data access layer
-|   |   +-- managers.py            # Custom QuerySet managers
+|   |   +-- repositories.py        # Data access layer
 |   |
 |   |-- telemetry_ingestion/       # Lightstreamer data ingestion
 |   |   |-- services/              # Client, validators, enrichers
-|   |   |-- views.py               # Manual injection endpoints
 |   |   +-- management/commands/   # run_lightstreamer.py
 |   |
 |   |-- event_processors/          # Analytics and event detection
-|   |   |-- models.py              # DetectedEvent, ProcessorState
+|   |   |-- models.py              # DetectedEvent, ProcessorState, SocialPost
 |   |   |-- processors/            # PeeBot and other detectors
 |   |   |-- services/              # Bluesky client, joke generator
 |   |   +-- tasks.py               # Celery periodic tasks
 |   |
-|   +-- dashboards/                # Web interface
-|       |-- views.py               # Dashboard views
-|       |-- consumers.py           # WebSocket consumers
-|       +-- templates/             # HTML templates
+|   +-- dashboards/                # Web interface (planned)
+|       +-- views.py               # Dashboard views
 |
-|-- static/                        # Static files (CSS, JS)
-|-- templates/                     # Project-level templates
 |-- tests/                         # Project-wide integration tests
-|-- logs/                          # Application logs
 |-- .env                           # Environment variables (not in git)
 |-- .env.example                   # Environment variables template
 |-- pyproject.toml                 # Python dependencies (uv)
@@ -80,7 +73,7 @@ telemetry_storage (owns: TelemetryReading, TelemetryChannel)
   | imports models            | queries database
   |                           |
 telemetry_ingestion       event_processors
-(writes telemetry)        (owns: DetectedEvent, ProcessorState)
+(writes telemetry)        (owns: DetectedEvent, ProcessorState, SocialPost)
                               ^
                               |
                               | queries all data
@@ -102,7 +95,7 @@ telemetry_ingestion       event_processors
 - **Python 3.14+**
 - **uv** (fast Python package manager)
 - **PostgreSQL** with TimescaleDB extension (for production)
-- **Redis** (for Celery and Django Channels)
+- **Redis** (for Celery task queue)
 
 ### Installation
 
@@ -140,6 +133,22 @@ telemetry_ingestion       event_processors
    ```
 
 The application will be available at `http://localhost:8000`
+
+### Task Runner (`just`)
+
+This project uses [`just`](https://github.com/casey/just) as its task runner. Key commands:
+
+| Command | Description |
+|---------|-------------|
+| `just dev-up` | Start the full development stack (Docker Compose) |
+| `just dev-down` | Stop the development stack |
+| `just test` | Run tests locally (uses `.env.local` for direct DB connection) |
+| `just dev-test` | Run tests in Docker container |
+| `just dev-migrate` | Run migrations via PgBouncer |
+| `just dev-migrate-direct` | Run migrations directly (for heavy operations) |
+| `just lint` | Run linting |
+
+Run `just` with no arguments to see all available recipes, or see the [Justfile](Justfile) for the full list.
 
 ## Containerized Development (PgBouncer pooling)
 
@@ -331,6 +340,8 @@ BLUESKY_APP_PASSWORD=your-app-password
 BLUESKY_COOLDOWN_MINUTES=30
 ```
 
+> **`.env.local`**: Local development commands like `just test` use `.env.local` for a direct database connection that bypasses PgBouncer. This is necessary because pytest needs to create and drop test databases, which PgBouncer cannot route. Copy `.env` to `.env.local` and set `DATABASE_URL` to the direct TimescaleDB connection (port `5432`).
+
 ## Settings Management
 
 This project uses Django's standard settings pattern with environment-specific files:
@@ -441,10 +452,6 @@ uv run celery -A config worker --loglevel=info
 # Run Celery Beat scheduler
 uv run celery -A config beat --loglevel=info
 
-# Run Flower monitoring dashboard
-uv run celery -A config flower
-# Dashboard available at http://localhost:5555
-
 # Inspect scheduled tasks
 uv run celery -A config inspect scheduled
 
@@ -452,22 +459,22 @@ uv run celery -A config inspect scheduled
 
 ### Testing
 
+> **Important**: Do not run `pytest` directly. Use `just` commands to ensure
+> correct environment setup (database connection, env files, Docker services).
+
 ```bash
-# Run all tests
-uv run pytest
+# Run tests locally (requires .env.local with direct DB connection)
+just test
 
-# Note: Unit tests are located in apps/<module>/tests/
-# Integration tests are in tests/
+# Run tests in Docker container
+just dev-test
 
-# Run specific test file
-uv run pytest tests/test_processors.py
-
-# Run with coverage
-uv run pytest --cov=apps
-
-# Run async tests
-uv run pytest -v --asyncio-mode=auto
+# Pass additional pytest arguments
+just test -k "test_ingestion"
+just dev-test --cov=apps
 ```
+
+Unit tests are located in `apps/<module>/tests/`, integration tests in `tests/`.
 
 ### Code Quality
 
@@ -502,7 +509,7 @@ Database models are owned by specific modules:
 |--------|-------------|---------|
 | `core` | Abstract base models | Reusable model mixins (timestamps, UUIDs, soft-delete) |
 | `telemetry_storage` | `TelemetryReading`, `TelemetryChannel` | ISS telemetry data persistence |
-| `event_processors` | `DetectedEvent`, `ProcessorState` | Analytics results and state |
+| `event_processors` | `DetectedEvent`, `ProcessorState`, `SocialPost` | Analytics results, state, and social posts |
 | `dashboards` | No models | Queries data from other modules |
 | `telemetry_ingestion` | No models | Writes to `telemetry_storage` models |
 
@@ -596,24 +603,38 @@ Metadata for ~400 ISS telemetry channels:
 
 Analytics results from event processors:
 
-- `id`: AutoField
+- `id`: UUIDField (UUIDv7)
 - `event_type`: CharField (e.g., 'urination')
-- `channel_id`: CharField
+- `channel_pui`: CharField (PUI of the source channel)
 - `detected_at`: DateTimeField
 - `confidence`: DecimalField (0.0-1.0)
 - `metadata`: JSONField
+- `created_at`, `updated_at`: DateTimeField
+
+### SocialPost
+
+Social media posts linked to detected events:
+
+- `id`: UUIDField (UUIDv7)
+- `event`: ForeignKey -> DetectedEvent
+- `platform`: CharField (e.g., 'bluesky')
+- `content`: TextField
+- `external_id`: CharField (nullable, platform post ID)
 - `posted_at`: DateTimeField (nullable)
-- `tweet_id`: CharField (nullable)
+- `status`: CharField (`PENDING`, `SUCCESS`, `FAILED`)
+- `error_message`: TextField (nullable)
+- `created_at`, `updated_at`: DateTimeField
 
 ### ProcessorState
 
 State tracking for analytics modules:
 
-- `id`: AutoField
-- `processor_name`: CharField (e.g., 'PeeBot')
+- `id`: UUIDField (UUIDv7)
+- `processor_name`: CharField (unique, e.g., 'PeeBot')
 - `last_processed_timestamp`: DateTimeField
 - `last_run_at`: DateTimeField
 - `state_data`: JSONField
+- `created_at`, `updated_at`: DateTimeField
 
 ## Performance Targets
 
@@ -638,7 +659,7 @@ State tracking for analytics modules:
 ### Development Workflow
 
 - Use `ruff` for code formatting and linting
-- Run tests before committing: `uv run pytest`
+- Run tests before committing: `just test`
 - Follow Django best practices
 - Keep modules independent and loosely coupled
 - Document new features in code and README

@@ -51,7 +51,7 @@ The **PeeBot ISS Telemetry Data Analytics System** is a unified, modular monolit
 *   **Feature: Event Processing - PeeBot (Module: `event_processors`)**
     *   **FR-PROC-001:** The system shall execute analytics modules independently via a polling mechanism (Celery Beat) rather than event streams.
     *   **FR-PROC-002:** The PeeBot processor shall query the `TelemetryReading` table every 30 seconds for new data on channel `NODE3000005` (UPA Tank Level).
-    *   **FR-PROC-003:** The processor shall detect a "Fill Event" by analyzing the sliding window of the last 10 minutes for a consistent increasing trend.
+    *   **FR-PROC-003:** The processor shall detect a "Fill Event" using a two-phase algorithm: (1) within a 10-minute observation window, identify a ≥2% net increase in tank level over any 30-second sub-window, then (2) verify the reading remains stable (≤1% fluctuation) over a subsequent 60-second stability window before confirming the event.
     *   **FR-PROC-004:** Upon detection, the system shall generate "dry, scientific, slightly absurd" humorous text using an integration with an external LLM API.
     *   **FR-PROC-005:** The system shall post the generated text to Bluesky via the AT Protocol API, subject to a minimum 30-minute cooldown period between posts.
 

@@ -1,6 +1,6 @@
 # Project Roadmap: PeeBot System
 
-**Status**: Phase 1 Refactoring (Stability & Architecture Alignment).
+**Status**: All phases complete. Production deployed.
 
 ## Refactoring Tasks (Priority)
 
@@ -11,15 +11,15 @@ These tasks address architectural changes and bugs in the **currently implemente
     - *Files*: `apps/telemetry_storage/models.py`.
     - **Completion Date**: 2026-02-18 (T004 — Phases 1–3 complete)
 
-- [ ] **Fix (Core)**: Resolve `timezone.datetime` attribute error.
+- [x] **Fix (Core)**: Resolve `timezone.datetime` attribute error.
     - *Goal*: Replace incorrect `timezone.datetime` usage with `timezone.now()` or `datetime` module.
     - *Files*: `apps/core/models.py`.
 
-- [ ] **Fix (Core)**: Resolve `deleted_at` field obscuration.
+- [x] **Fix (Core)**: Resolve `deleted_at` field obscuration.
     - *Goal*: Fix duplicate/conflicting field definitions in base models.
     - *Files*: `apps/core/models.py`.
 
-- [ ] **Fix (Storage)**: Resolve `Meta` class inheritance conflicts.
+- [x] **Fix (Storage)**: Resolve `Meta` class inheritance conflicts.
     - *Goal*: Ensure `TelemetryReading.Meta` correctly overrides/inherits from base model Meta classes to satisfy MRO.
     - *Files*: `apps/telemetry_storage/models.py`.
 

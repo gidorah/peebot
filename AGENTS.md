@@ -2,12 +2,12 @@
 
 **Generated:** 2026-01-02
 **Architecture:** Django Modular Monolith (TimescaleDB)
-**State:** INGESTION_READY (Ingestion pipeline verified, Validation & Enrichment active)
+**State:** OPERATIONAL (Ingestion pipeline active, Event Detection deployed, Bluesky posting integrated)
 
 ## OVERVIEW
-PeeBot is a modular monolith for ISS telemetry analytics. It ingests real-time data from Lightstreamer, stores it in TimescaleDB (`TelemetryReading`), and uses polling-based analytics to detect events (e.g., UPA activity) and trigger actions (tweets).
+PeeBot is a modular monolith for ISS telemetry analytics. It ingests real-time data from Lightstreamer, stores it in TimescaleDB (`TelemetryReading`), and uses polling-based analytics to detect events (e.g., UPA activity) and trigger actions (Bluesky posts).
 
-**Key Tech**: Python 3.14+, Django 5.2, TimescaleDB, Celery/Redis, Seq (Logging), `uv` (pkg manager), `just` (runner), Pydantic (Validation).
+**Key Tech**: Python 3.14+, Django 5.2, TimescaleDB, Celery/Redis, Seq (Logging), `uv` (pkg manager), `just` (runner), Pydantic (Validation), atproto (Bluesky), OpenRouter/DeepSeek (AI humor generation).
 
 ## STRUCTURE
 ```
@@ -16,7 +16,7 @@ peebot/
 │   ├── core/              # Shared utils, BaseModels (TimeStamped, UUID)
 │   ├── telemetry_storage/ # OWNS Data (Readings, Channels). Repository Pattern.
 │   ├── telemetry_ingestion/# Ingestion Service. NO Models. Imports from storage.
-│   ├── event_processors/  # Analytics Logic. OWNS DetectedEvent. Polling tasks.
+│   ├── event_processors/  # Analytics Logic. OWNS DetectedEvent, ProcessorState, SocialPost. Polling tasks.
 │   └── dashboards/        # UI/WebSockets. Reads all, owns none.
 ├── config/                # Django Settings (Base, Dev, Prod)
 ├── docker/                # Infrastructure (PgBouncer, Timescale, Redis)
@@ -29,16 +29,17 @@ peebot/
 | **Core Logic** | `apps/core` | Base classes, shared utils |
 | **Storage** | `apps/telemetry_storage` | DB Models, Repositories |
 | **Ingestion** | `apps/telemetry_ingestion` | Lightstreamer client, Validation |
-| **Analytics** | `apps/event_processors` | Event detection, Polling tasks |
+| **Analytics** | `apps/event_processors` | Event detection, Polling tasks, Bluesky/social posting |
+| **Integrations** | `apps/event_processors/services/` | `BlueskyClient` (AT Protocol posting w/ cooldown), `JokeGenerator` (OpenRouter/DeepSeek humor API) |
 | **UI** | `apps/dashboards` | Frontend, WebSockets |
 
 ## STRICT LAWS (NON-NEGOTIABLE)
 1.  **Module Ownership**:
     - `telemetry_ingestion` MUST NOT define models. It imports from `telemetry_storage`.
-    - `event_processors` OWNS `DetectedEvent`.
-    - `telemetry_storage` OWNS `TelemetryReading`.
+    - `event_processors` OWNS `DetectedEvent`, `ProcessorState`, `SocialPost`.
+    - `telemetry_storage` OWNS `TelemetryReading`, `TelemetryChannel`.
 2.  **Data Access**:
-    - Use `apps.telemetry_storage.repositories` for DB ops (Future).
+    - Use `apps.telemetry_storage.repositories` for DB ops.
     - Ingestion MUST use Async ORM / Bulk creates.
 3.  **Ingestion Pattern**:
     - **Bridge**: `LightstreamerClient` (Sync) → `asyncio.Queue` → Consumer Task → `abulk_create`.
@@ -55,15 +56,15 @@ peebot/
     - MUST use `_work-tmp/` for temporary scripts, logs, or intermediate docs.
     - These files are ephemeral and will be deleted at the end of the session.
 8.  **Testing**:
-    - ALWAYS use `just test` (or `just test-pooled`) for running tests.
+    - ALWAYS use `just test` for running tests.
     - NEVER run `pytest` directly - the Justfile ensures proper environment setup (Docker, DB, etc.).
 
 ## DEV COMMANDS
 ```bash
 just dev-up        # Start full stack (Docker + Seq + Ingestion)
 just dev-down      # Stop stack
-just test          # Run tests (pytest)
-just test-pooled   # Run tests with pgbouncer (pytest)
+just test          # Run tests locally (direct DB via .env.local)
+just dev-test      # Run tests in Docker container
 uv run python manage.py runserver # Dev server (Logs to Console + Seq)
 uv run python manage.py run_lightstreamer # Ingestion (Manual run)
 # Seq Dashboard: http://localhost:5341 (admin/password)
