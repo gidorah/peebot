@@ -17,27 +17,33 @@ This system implements a **modular monolith architecture** using Django, where e
 ```
 peebot/
 |-- manage.py                      # Django management script
+|-- Justfile                       # Task runner recipes (just)
+|-- pyproject.toml                 # Python dependencies (uv)
 |-- config/                        # Django project configuration
 |   |-- __init__.py
+|   |-- celery.py                  # Celery app configuration
 |   |-- settings/                  # Split settings for environments
 |   |   |-- __init__.py
 |   |   |-- base.py                # Shared settings
 |   |   |-- development.py         # Local development
-|   |   +-- production.py          # Production deployment
-|   |-- asgi.py                    # ASGI application (WebSocket support)
+|   |   |-- production.py          # Production deployment
+|   |   +-- testing.py             # Test environment
+|   |-- asgi.py                    # ASGI application
 |   |-- wsgi.py                    # WSGI application
 |   +-- urls.py                    # URL routing
 |
 |-- apps/                          # All Django application modules
 |   |-- core/                      # Shared utilities and base models
-|   |   |-- models.py              # Abstract base models
+|   |   |-- models.py              # Abstract base models (UUID7, TimeStamped, SoftDelete)
+|   |   |-- logging.py             # Custom SeqHandler for structured logging
 |   |   |-- serializers.py         # DRF base serializers
 |   |   |-- utils.py               # Helper functions
 |   |   +-- exceptions.py          # Custom exceptions
 |   |
 |   |-- telemetry_storage/         # Data persistence layer
 |   |   |-- models.py              # TelemetryReading, TelemetryChannel
-|   |   +-- repositories.py        # Data access layer
+|   |   |-- repositories.py        # Data access layer
+|   |   +-- management/commands/   # seed_channels.py
 |   |
 |   |-- telemetry_ingestion/       # Lightstreamer data ingestion
 |   |   |-- services/              # Client, validators, enrichers
@@ -47,16 +53,21 @@ peebot/
 |   |   |-- models.py              # DetectedEvent, ProcessorState, SocialPost
 |   |   |-- processors/            # PeeBot and other detectors
 |   |   |-- services/              # Bluesky client, joke generator
+|   |   |-- tests/                 # Unit tests for processors and services
 |   |   +-- tasks.py               # Celery periodic tasks
 |   |
 |   +-- dashboards/                # Web interface (planned)
 |       +-- views.py               # Dashboard views
 |
+|-- docker/                        # Container infrastructure
+|   |-- dev/                       # Development Docker Compose, Dockerfile, PgBouncer
+|   |-- prod/                      # Production Docker Compose, Dockerfile, entrypoint
+|   +-- scripts/                   # TimescaleDB init scripts
+|
 |-- tests/                         # Project-wide integration tests
 |-- .env                           # Environment variables (not in git)
 |-- .env.example                   # Environment variables template
-|-- pyproject.toml                 # Python dependencies (uv)
-+-- uv.lock                        # Locked dependencies
++-- .env.production.example        # Production environment template (Coolify)
 ```
 
 ## Module Dependencies
@@ -138,15 +149,45 @@ The application will be available at `http://localhost:8000`
 
 This project uses [`just`](https://github.com/casey/just) as its task runner. Key commands:
 
+**Development:**
+
 | Command | Description |
 |---------|-------------|
-| `just dev-up` | Start the full development stack (Docker Compose) |
-| `just dev-down` | Stop the development stack |
-| `just test` | Run tests locally (uses `.env.local` for direct DB connection) |
-| `just dev-test` | Run tests in Docker container |
+| `just dev-up` | Start the full development stack (Docker Compose). Accepts optional service names. |
+| `just dev-down` | Stop and remove development containers |
+| `just dev-stop` | Stop containers without removing them |
+| `just dev-logs [service]` | Tail logs for a service (default: `web`) |
+| `just dev-shell [service]` | Open interactive shell in container (default: `web`) |
+| `just dev-django-shell` | Open Django shell in web container |
+| `just dev-python <args>` | Run Python script/command in web container |
 | `just dev-migrate` | Run migrations via PgBouncer |
-| `just dev-migrate-direct` | Run migrations directly (for heavy operations) |
-| `just lint` | Run linting |
+| `just dev-migrate-direct` | Run migrations directly (bypasses PgBouncer — for heavy ops) |
+| `just dev-createsuperuser` | Create Django superuser in container |
+| `just dev-test [args]` | Run pytest suite in Docker container |
+| `just dev-check` | Run `ruff check` and `mypy` in container |
+| `just dev-psql` | Quick `psql` access to TimescaleDB |
+| `just dev-pgbouncer` | Show PgBouncer pool statistics (quick view) |
+| `just dev-pgbouncer-stats` | Detailed PgBouncer stats (pools, stats, servers, clients) |
+| `just dev-pgbouncer-admin` | Interactive PgBouncer admin console |
+| `just dev-pgbouncer-reload` | Reload PgBouncer configuration without restart |
+| `just dev-pgbouncer-password <pw>` | Update `pgbouncer_auth` password across all config files |
+
+**Local (no Docker):**
+
+| Command | Description |
+|---------|-------------|
+| `just test [args]` | Run tests locally (uses `.env.local` for direct DB connection) |
+| `just lint` | Run linting locally |
+
+**Production:**
+
+| Command | Description |
+|---------|-------------|
+| `just prod-build` | Build production Docker image (`peebot:local`) |
+| `just prod-migrate` | Run pending migrations in production container |
+| `just prod-shell` | Open Django shell in production container |
+| `just prod-seed` | Seed telemetry channels in production database |
+| `just prod-logs` | Tail logs for all production services |
 
 Run `just` with no arguments to see all available recipes, or see the [Justfile](Justfile) for the full list.
 
@@ -322,12 +363,24 @@ DEBUG=True
 # Allowed hosts (comma-separated)
 ALLOWED_HOSTS=localhost,127.0.0.1
 
-# Database URL
+# Database
 DATABASE_URL=postgresql://user:password@localhost:5432/peebot
+POSTGRES_DB=peebot
+POSTGRES_USER=peebot_user
+POSTGRES_PASSWORD=password
 
-# Celery Configuration
+# PgBouncer
+PGBOUNCER_AUTH_PASSWORD=password
+
+# Redis / Celery
+REDIS_URL=redis://localhost:6379/0
 CELERY_BROKER_URL=redis://localhost:6379/0
 CELERY_RESULT_BACKEND=redis://localhost:6379/0
+
+# Seq Logging (development)
+SEQ_SERVER_URL=http://localhost:5341
+SEQ_API_KEY=
+SERVICE_NAME=peebot
 
 # Event processor integrations
 OPENROUTER_API_KEY=your-openrouter-key
@@ -340,15 +393,18 @@ BLUESKY_APP_PASSWORD=your-app-password
 BLUESKY_COOLDOWN_MINUTES=30
 ```
 
-> **`.env.local`**: Local development commands like `just test` use `.env.local` for a direct database connection that bypasses PgBouncer. This is necessary because pytest needs to create and drop test databases, which PgBouncer cannot route. Copy `.env` to `.env.local` and set `DATABASE_URL` to the direct TimescaleDB connection (port `5432`).
+> **`.env.local`**: Local development commands like `just test` use `.env.local` for a direct database connection that bypasses PgBouncer. This is necessary because pytest needs to create and drop test databases, which PgBouncer cannot route. Copy `.env` to `.env.local` and set `DATABASE_URL` to the direct TimescaleDB connection (port `5432`). You can also set `TEST_DATABASE_URL` to override the test database connection independently.
+
+> **`.env.production.example`**: A comprehensive production environment template is provided at `.env.production.example`. It includes Coolify-specific guidance, password constraints, and distinguishes between variables set in the Coolify UI versus Docker Compose. Copy it and fill in secrets before deploying.
 
 ## Settings Management
 
 This project uses Django's standard settings pattern with environment-specific files:
 
 - **`config/settings/base.py`**: Shared settings for all environments
-- **`config/settings/development.py`**: Local development settings
-- **`config/settings/production.py`**: Production deployment settings
+- **`config/settings/development.py`**: Local development settings (Seq logging, `django-structlog`)
+- **`config/settings/production.py`**: Production deployment settings (Gunicorn, WhiteNoise, security headers)
+- **`config/settings/testing.py`**: Test environment (inherits development, disables Seq, uses faster password hasher)
 
 ### Switching Environments
 
@@ -368,37 +424,45 @@ DJANGO_SETTINGS_MODULE=config.settings.testing uv run pytest
 ### Core Framework
 - **Django 5.2+** - Web framework with ORM, admin, authentication
 - **Django REST Framework** - API development and serialization
-- **Django Channels** - WebSocket and async support
+- **django-environ** - Environment variable parsing (12-factor app support)
 
 ### Database
 - **TimescaleDB** - PostgreSQL extension for time-series data
-- **PostgreSQL 15+** - Relational database
+- **psycopg 3** - PostgreSQL adapter with connection pooling (`psycopg[binary,pool]`)
 
 ### Task Queue
 - **Celery** - Distributed task queue
-- **Celery Beat** - Periodic task scheduler
+- **django-celery-beat** - Database-backed periodic task scheduler
 - **Redis** - Celery broker and result backend
 
 ### External APIs
 - **Lightstreamer Client** - ISS telemetry ingestion
 - **atproto** - Bluesky AT Protocol SDK for social media posting
+- **OpenAI client** - Used via OpenRouter for AI-generated jokes (DeepSeek model)
 
 ### Data Validation
 - **Pydantic V2** - High-performance data validation for ingestion
+- **defusedxml** - Secure XML parsing for PUI channel list
+
+### Production
+- **Gunicorn** - WSGI HTTP server
+- **WhiteNoise** - Static file serving (with compression)
+
+### Logging
+- **Structlog** - Structured logging instrumentation
+- **Seq** - Centralized structured log dashboard (development)
 
 ### Package Management
 - **uv** - Fast Python package manager and virtual environment tool
 
 ### Development Tools
-- **pytest** - Testing framework
-- **pytest-django** - Django testing utilities
-- **pytest-asyncio** - Async testing support
+- **pytest** / **pytest-django** / **pytest-asyncio** - Testing framework
 - **model-bakery** - Test data factories
-- **ruff** - Fast Python linter
-- **mypy** - Static type checker
-- **django-stubs** - Type stubs for Django
-- **Seq** - Centralized structured logging
-- **Structlog** - Structured logging instrumentation
+- **ruff** - Fast Python linter and formatter
+- **mypy** / **django-stubs** - Static type checking
+- **pre-commit** - Pre-commit hook framework
+- **Flower** - Celery monitoring web UI
+- **debugpy** - Remote debugging support
 
 ## Development Commands
 
@@ -535,7 +599,7 @@ ISS Lightstreamer Feed
    (Single Source)
          |
          v
-[Analytics Modules] <- Poll every 30-60s
+[Analytics Modules] <- Poll every 30s
          |
          v
 [DetectedEvent Table]
@@ -559,9 +623,18 @@ Analytics modules use a **polling pattern**:
 
 The `event_processors` module runs polling-based analytics over recent telemetry
 windows. The initial processor, `PeeBotProcessor`, detects UPA tank fill events
-and can publish a short Bluesky post with a generated joke when a valid event is
+using a **net-change-over-window algorithm** against the `NODE3000005` channel
+and can publish a short Bluesky post with an AI-generated joke when a valid event is
 found. Processor state is stored in `ProcessorState` to ensure safe resumption
 after restarts.
+
+### Celery Task Configuration
+
+- **Schedule**: Every 30 seconds via Celery Beat
+- **Task**: `apps.event_processors.tasks.run_peebot_processor`
+- **Reliability**: `acks_late=True`, auto-retry on `OperationalError` (3 retries, exponential backoff)
+- **Jitter**: Random 0-5s delay to prevent thundering herd on multi-worker deployments
+- **Async bridge**: Task wraps async processor logic via `async_to_sync`
 
 To run processors locally, start a Celery worker and beat scheduler, then
 monitor scheduled tasks (see the Celery section above).
@@ -576,28 +649,33 @@ Stores individual telemetry readings with time-based partitioning:
 - `channel`: ForeignKey -> TelemetryChannel
 - `timestamp`: DateTimeField (indexed)
 - `value`: DecimalField
-- `calibrated_data`: DecimalField
-- `created_at`: DateTimeField (Ingestion time)
+- `calibrated_data`: DecimalField (nullable)
+- `status_class`: CharField (nullable) - Telemetry status classification
+- `status_indicator`: CharField (nullable) - Status indicator value
+- `status_color`: CharField (nullable) - Status color code
 - `metadata`: JSONField
+- `created_at`, `updated_at`: DateTimeField
 
 **Optimizations**:
 - Automatic time partitioning (1-day chunks)
 - Automatic compression after 7 days
 - Retention policy: drop chunks > 30 days
-- Primary index: `(channel, timestamp DESC)`
+- Indexes: `(channel, timestamp DESC)`, `(created_at, timestamp)`
+- Unique constraint: `(channel, timestamp)` — prevents duplicate readings
 
 ### TelemetryChannel
 
 Metadata for ~400 ISS telemetry channels:
 
-- `id`: AutoField
 - `public_pui`: CharField (unique, e.g., "NODE3000005")
-- `description`: TextField
+- `description`: CharField
 - `ops_nom`: CharField
 - `eng_nom`: CharField
 - `unit`: CharField
 - `deleted_at`: DateTimeField (Soft-delete for active state)
 - `created_at`, `updated_at`: DateTimeField
+
+Channels are seeded via the `seed_channels` management command from `PUIList.xml`.
 
 ### DetectedEvent
 
@@ -605,9 +683,9 @@ Analytics results from event processors:
 
 - `id`: UUIDField (UUIDv7)
 - `event_type`: CharField (e.g., 'urination')
-- `channel_pui`: CharField (PUI of the source channel)
+- `channel_id`: CharField (PUI of the source channel, e.g., 'NODE3000005')
 - `detected_at`: DateTimeField
-- `confidence`: DecimalField (0.0-1.0)
+- `confidence`: DecimalField (0.00-1.00, nullable)
 - `metadata`: JSONField
 - `created_at`, `updated_at`: DateTimeField
 
@@ -619,10 +697,10 @@ Social media posts linked to detected events:
 - `event`: ForeignKey -> DetectedEvent
 - `platform`: CharField (e.g., 'bluesky')
 - `content`: TextField
-- `external_id`: CharField (nullable, platform post ID)
+- `external_id`: CharField (blank, default empty string — platform post ID)
 - `posted_at`: DateTimeField (nullable)
-- `status`: CharField (`PENDING`, `SUCCESS`, `FAILED`)
-- `error_message`: TextField (nullable)
+- `status`: CharField (`pending`, `success`, `failed`)
+- `error_message`: TextField (blank, default empty string)
 - `created_at`, `updated_at`: DateTimeField
 
 ### ProcessorState
@@ -635,6 +713,49 @@ State tracking for analytics modules:
 - `last_run_at`: DateTimeField
 - `state_data`: JSONField
 - `created_at`, `updated_at`: DateTimeField
+
+## Production Deployment
+
+The project is designed for deployment on [Coolify](https://coolify.io/) with Traefik TLS termination and Docker Compose orchestration. All images are **baked** (no runtime volume mounts for code).
+
+### Production Architecture
+
+| Service | Image | Purpose |
+|---------|-------|---------|
+| `web` | `peebot:local` | Gunicorn WSGI server (runs migrations + `seed_channels` on start) |
+| `worker` | `peebot:local` | Celery worker for async tasks |
+| `beat` | `peebot:local` | Celery Beat scheduler |
+| `ingestion` | `peebot:local` | Lightstreamer telemetry ingestion |
+| `timescaledb` | Custom (baked init scripts) | TimescaleDB with PgBouncer auth user |
+| `pgbouncer` | `bitnami/pgbouncer` | Connection pooling |
+| `redis` | `redis:7-alpine` | Celery broker |
+
+### Build & Deploy
+
+```bash
+# Build production image
+just prod-build
+
+# Run migrations
+just prod-migrate
+
+# Seed telemetry channels
+just prod-seed
+
+# Tail production logs
+just prod-logs
+```
+
+### Production Configuration
+
+Key production settings (`config/settings/production.py`):
+- **WhiteNoise** for static file serving with compressed manifests
+- **Security headers**: HSTS, secure cookies, `X-Frame-Options`, `X-Content-Type-Options`
+- **`CSRF_TRUSTED_ORIGINS`** required (set in environment)
+- **Gunicorn** as WSGI server (non-root user in container)
+- Static files collected at Docker build time via multi-stage build
+
+See `.env.production.example` for the full list of required environment variables.
 
 ## Performance Targets
 
@@ -671,3 +792,6 @@ State tracking for analytics modules:
 - **TimescaleDB**: https://docs.timescale.com/
 - **Celery**: https://docs.celeryproject.org/
 - **uv Package Manager**: https://github.com/astral-sh/uv
+- **Structlog**: https://www.structlog.org/
+- **AT Protocol (Bluesky)**: https://atproto.com/
+- **Coolify**: https://coolify.io/docs
