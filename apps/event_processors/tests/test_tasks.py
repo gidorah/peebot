@@ -372,7 +372,7 @@ class TestSocialDryRun:
     """
 
     @pytest.fixture(autouse=True)
-    def setup_method(self, request: Any) -> None:
+    def auto_suppress_jitter(self, request: Any) -> None:
         """Suppress jitter for all dry-run tests."""
         self.jitter_patch = patch(
             "apps.event_processors.processors.base.BaseProcessor.apply_jitter",
