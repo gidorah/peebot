@@ -1,0 +1,50 @@
+name: Close Old Issues
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Run daily at midnight UTC
+  workflow_dispatch:       # Allow manual trigger
+
+permissions:
+  issues: write
+
+jobs:
+  close-old-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close issues older than 1 month
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Subtract 30 days in ms to avoid setMonth() day-overflow edge cases
+            const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+            const cutoffDate = new Date(Date.now() - THIRTY_DAYS_MS);
+
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100,
+            });
+
+            for (const issue of issues) {
+              // Skip pull requests
+              if (issue.pull_request) continue;
+
+              const createdAt = new Date(issue.created_at);
+              if (createdAt < cutoffDate) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: 'This issue has been automatically closed because it has been open for more than 30 days. If this is still relevant, please open a new issue or reopen this one with updated context.',
+                });
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  state: 'closed',
+                });
+                console.log(`Closed issue #${issue.number}: ${issue.title}`);
+              }
+            }
