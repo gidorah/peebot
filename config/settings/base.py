@@ -10,12 +10,14 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import logging
 import os
 from pathlib import Path
 
 import environ
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
+from sentry_sdk.integrations.logging import LoggingIntegration
 
 # Initialize django-environ
 env = environ.Env(
@@ -214,12 +216,32 @@ SOCIAL_DRY_RUN = env.bool("SOCIAL_DRY_RUN", default=False)
 SENTRY_DSN = env("SENTRY_DSN", default=None)
 SENTRY_ENVIRONMENT = env("SENTRY_ENVIRONMENT", default="development")
 
+SENTRY_LOGS_LEVEL = env("SENTRY_LOGS_LEVEL", default="INFO")
+
+_VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+if SENTRY_LOGS_LEVEL not in _VALID_LOG_LEVELS:
+    raise ValueError(
+        f"SENTRY_LOGS_LEVEL must be one of {sorted(_VALID_LOG_LEVELS)}, "
+        f"got: {SENTRY_LOGS_LEVEL!r}"
+    )
+
 if SENTRY_DSN:
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         environment=SENTRY_ENVIRONMENT,
-        integrations=[DjangoIntegration()],
+        integrations=[
+            DjangoIntegration(),
+            # Controls breadcrumb capture (level) and automatic issue creation
+            # (event_level) from Python log records — separate from Sentry Logs.
+            LoggingIntegration(
+                level=logging.INFO,  # Capture INFO+ as breadcrumbs
+                event_level=logging.ERROR,  # Send ERROR+ as Sentry issues
+                sentry_logs_level=getattr(logging, SENTRY_LOGS_LEVEL),
+            ),
+        ],
         # Capture 100% of transactions in development; tune down in production.
         traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=1.0),
         send_default_pii=False,
+        # Enable Sentry Logs — forwards Python log records to Sentry's Logs UI.
+        enable_logs=True,
     )
