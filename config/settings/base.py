@@ -14,6 +14,8 @@ import os
 from pathlib import Path
 
 import environ
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
 
 # Initialize django-environ
 env = environ.Env(
@@ -204,3 +206,20 @@ BLUESKY_COOLDOWN_MINUTES = env.int("BLUESKY_COOLDOWN_MINUTES", default=30)
 # external_id="dry-run://mock") for observability. Set to True in
 # preview/staging environments.
 SOCIAL_DRY_RUN = env.bool("SOCIAL_DRY_RUN", default=False)
+
+# ==============================================================================
+# Sentry Configuration
+# ==============================================================================
+
+SENTRY_DSN = env("SENTRY_DSN", default=None)
+SENTRY_ENVIRONMENT = env("SENTRY_ENVIRONMENT", default="development")
+
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        environment=SENTRY_ENVIRONMENT,
+        integrations=[DjangoIntegration()],
+        # Capture 100% of transactions in development; tune down in production.
+        traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=1.0),
+        send_default_pii=False,
+    )
