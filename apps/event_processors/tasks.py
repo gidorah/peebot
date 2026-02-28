@@ -245,20 +245,29 @@ async def _try_post_to_bluesky(event: DetectedEvent, log: Any) -> bool:
             f"[DRY RUN] Mock post for {event.event_type} event "
             f"detected at {event.detected_at.isoformat()}"
         )
-        await SocialPost.objects.acreate(
-            event=event,
-            platform="bluesky",
-            content=placeholder,
-            status=SocialPost.Status.SUCCESS,
-            posted_at=timezone.now(),
-            external_id="dry-run://mock",
-        )
-        log.info(
-            "social_dry_run_post",
-            platform="bluesky",
-            content=placeholder,
-            event_id=str(event.id),
-        )
+        try:
+            await SocialPost.objects.acreate(
+                event=event,
+                platform="bluesky",
+                content=placeholder,
+                status=SocialPost.Status.SUCCESS,
+                posted_at=timezone.now(),
+                external_id="dry-run://mock",
+            )
+            log.info(
+                "social_dry_run_post",
+                platform="bluesky",
+                content=placeholder,
+                event_id=str(event.id),
+            )
+        except Exception as e:
+            log.error(
+                "social_dry_run_record_failed",
+                error=str(e),
+                event_id=str(event.id),
+                social_dry_run=True,
+                exc_info=True,
+            )
         return True
 
     try:
