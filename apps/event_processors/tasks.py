@@ -13,10 +13,11 @@ from typing import Any
 import structlog
 from asgiref.sync import async_to_sync
 from celery import shared_task
+from django.conf import settings
 from django.db import OperationalError
 from django.utils import timezone
 
-from apps.event_processors.models import DetectedEvent, ProcessorState
+from apps.event_processors.models import DetectedEvent, ProcessorState, SocialPost
 from apps.event_processors.processors.base import BaseProcessor, DetectionResult
 from apps.event_processors.processors.pee_bot import PeeBotProcessor
 from apps.event_processors.services.bluesky_client import (
@@ -228,13 +229,46 @@ async def _try_post_to_bluesky(event: DetectedEvent, log: Any) -> bool:
     Handles all errors gracefully - failures here should not affect
     the main processing flow.
 
+    When SOCIAL_DRY_RUN is enabled, the Bluesky API call is skipped entirely.
+    No credentials are required. A SocialPost record is still created for
+    observability (status=SUCCESS, external_id="dry-run://mock").
+
     Args:
         event: The DetectedEvent to post about
         log: Bound structlog logger
 
     Returns:
-        True if post was successful, False otherwise
+        True if post was successful (or dry-run simulated), False otherwise
     """
+    if getattr(settings, "SOCIAL_DRY_RUN", False):
+        placeholder = (
+            f"[DRY RUN] Mock post for {event.event_type} event "
+            f"detected at {event.detected_at.isoformat()}"
+        )
+        try:
+            await SocialPost.objects.acreate(
+                event=event,
+                platform="bluesky",
+                content=placeholder,
+                status=SocialPost.Status.SUCCESS,
+                posted_at=timezone.now(),
+                external_id="dry-run://mock",
+            )
+            log.info(
+                "social_dry_run_post",
+                platform="bluesky",
+                content=placeholder,
+                event_id=str(event.id),
+            )
+        except Exception as e:
+            log.error(
+                "social_dry_run_record_failed",
+                error=str(e),
+                event_id=str(event.id),
+                social_dry_run=True,
+                exc_info=True,
+            )
+        return True
 
     try:
         bluesky = BlueskyClient()
