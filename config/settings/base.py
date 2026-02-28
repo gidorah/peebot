@@ -16,6 +16,7 @@ from pathlib import Path
 
 import environ
 import sentry_sdk
+from sentry_sdk.integrations.celery import CeleryIntegration
 from sentry_sdk.integrations.django import DjangoIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
 
@@ -238,6 +239,9 @@ if SENTRY_DSN:
                 event_level=logging.ERROR,  # Send ERROR+ as Sentry issues
                 sentry_logs_level=getattr(logging, SENTRY_LOGS_LEVEL),
             ),
+            # Instruments Celery tasks as Sentry spans and enables Sentry Crons
+            # check-in monitoring for Celery Beat periodic tasks.
+            CeleryIntegration(monitor_beat_tasks=True),
         ],
         # Capture 100% of transactions in development; tune down in production.
         traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=1.0),

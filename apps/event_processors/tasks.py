@@ -16,6 +16,7 @@ from celery import shared_task
 from django.conf import settings
 from django.db import OperationalError
 from django.utils import timezone
+from sentry_sdk import metrics as sentry_metrics
 
 from apps.event_processors.models import DetectedEvent, ProcessorState, SocialPost
 from apps.event_processors.processors.base import BaseProcessor, DetectionResult
@@ -96,6 +97,17 @@ async def _run_peebot_processor_async() -> dict[str, Any]:
         readings = await _query_readings(processor, state)
         log.info("readings_queried", count=len(readings))
 
+        sentry_metrics.count(
+            "processor.run",
+            1,
+            attributes={"processor": processor.processor_name},
+        )
+        sentry_metrics.distribution(
+            "processor.readings",
+            len(readings),
+            attributes={"processor": processor.processor_name},
+        )
+
         if not readings:
             log.info("no_readings_to_process")
             await processor.update_state_cursor(state)
@@ -124,10 +136,27 @@ async def _run_peebot_processor_async() -> dict[str, Any]:
         event = await _create_detected_event(processor, detection)
         log = log.bind(event_id=str(event.id), event_type=event.event_type)
         log.info("detected_event_created")
+        sentry_metrics.count(
+            "processor.event_detected",
+            1,
+            attributes={
+                "processor": processor.processor_name,
+                "event_type": detection.event_type,
+            },
+        )
 
         # Step 6: Try to post to Bluesky (with cooldown and joke generation)
         post_success = await _try_post_to_bluesky(event, log)
         result["post_published"] = post_success
+        if post_success:
+            sentry_metrics.count(
+                "processor.post_published",
+                1,
+                attributes={
+                    "processor": processor.processor_name,
+                    "event_type": event.event_type,
+                },
+            )
 
         # Step 7: Update processor state cursor (advance past processed readings)
         latest_timestamp = max(r.timestamp for r in readings)
