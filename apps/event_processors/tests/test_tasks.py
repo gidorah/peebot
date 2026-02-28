@@ -468,3 +468,38 @@ class TestSocialDryRun:
         mock_joke_gen_cls.assert_called_once()
         # No dry-run SocialPost created; BlueskyClient.post() was called instead
         assert not SocialPost.objects.filter(external_id="dry-run://mock").exists()
+
+    @override_settings(SOCIAL_DRY_RUN=True)
+    def test_dry_run_db_failure_is_non_fatal(self) -> None:
+        """DB failure during dry-run SocialPost creation does not interrupt the flow.
+
+        If acreate() raises (e.g. transient DB error), _try_post_to_bluesky must
+        still return True so the caller updates the processor state cursor normally.
+        """
+        baker.make(ProcessorState, processor_name="pee_bot")
+        channel: Any = baker.make(
+            "telemetry_storage.TelemetryChannel", public_pui="NODE3000005"
+        )
+        _make_fill_readings(channel)
+
+        with (
+            patch("apps.event_processors.tasks.BlueskyClient") as mock_bluesky_cls,
+            patch("apps.event_processors.tasks.JokeGenerator") as mock_joke_gen_cls,
+            patch(
+                "apps.event_processors.tasks.SocialPost.objects.acreate",
+                side_effect=Exception("DB timeout"),
+            ),
+        ):
+            result = run_peebot_processor()
+
+        # Task still reports post_published=True — dry-run failure is non-fatal
+        assert result["event_detected"] is True
+        assert result["post_published"] is True
+        assert result["error"] is None
+
+        # External service constructors were still never called
+        mock_bluesky_cls.assert_not_called()
+        mock_joke_gen_cls.assert_not_called()
+
+        # No SocialPost was persisted (acreate raised)
+        assert SocialPost.objects.count() == 0
