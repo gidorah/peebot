@@ -4,3 +4,6 @@
 
 # Ensure XML data files are not mangled by line-ending normalization
 docs/PUIList.xml text eol=lf
+
+# Mark lock.yml as generated (do not diff it by default)
+.github/workflows/*.lock.yml linguist-generated=true
