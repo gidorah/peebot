@@ -127,3 +127,18 @@
     *   **Git-driven deploys**: Coolify watches the connected Git repo and triggers builds on push (or manual trigger). The compose file path (`docker/prod/docker-compose.yml`) is configured in Coolify's project settings.
     *   **Compose file location**: The compose file stays at `docker/prod/docker-compose.yml` rather than the repo root, maintaining the existing directory structure and separation of dev/prod configurations.
 *   **Alternative Rejected**: Deploying each service as a separate Coolify resource was considered for independent scaling, but rejected because it adds operational complexity (7 separate Coolify resources, manual dependency management) without benefit for a single-VPS deployment with fixed resource limits.
+
+## ADR-015: Sentry Metrics and Celery Crons Integration
+*   **Decision**: Add `CeleryIntegration(monitor_beat_tasks=True)` to the Sentry SDK init and emit custom metrics from the event processor pipeline via `sentry_sdk.metrics`.
+*   **Status**: Accepted.
+*   **Context**: The existing Sentry setup (ADR integrated via previous PRs) covered error tracking, performance monitoring, and log forwarding. The processor pipeline had no operational visibility into Celery Beat health or business-level throughput (readings processed, events detected, posts published).
+*   **Rationale**:
+    *   **Celery Crons (check-in monitoring)**: `CeleryIntegration(monitor_beat_tasks=True)` automatically wraps every Celery Beat periodic task as a Sentry Cron check-in. Sentry raises an alert if `run_peebot_processor` misses its 30-second schedule, providing dead-man's-switch monitoring for free with zero application-code changes.
+    *   **Custom metrics for business observability**: Four targeted metrics cover the full processor execution funnel without instrumenting every internal function:
+        *   `processor.run` (counter) — confirms the task ran and reached the readings query, even with zero readings.
+        *   `processor.readings` (distribution) — tracks how many readings are available per window, surfacing data ingestion gaps.
+        *   `processor.event_detected` (counter, tagged by `event_type`) — tracks detection frequency.
+        *   `processor.post_published` (counter) — confirms the end-to-end pipeline (detect → joke → post) succeeded.
+    *   **No-op safety**: `sentry_sdk.metrics` calls are silent no-ops when `SENTRY_DSN` is unset (development, CI). No guard conditions needed in application code.
+    *   **Zero new env vars**: `CeleryIntegration` derives the monitor slug from the Celery Beat schedule key automatically. No `SENTRY_MONITOR_SLUG` or additional configuration required.
+*   **Alternative Rejected**: Manually emitting Prometheus metrics was considered but rejected — it requires a separate metrics server, scrape configuration, and Grafana dashboards. Sentry metrics reuse the existing DSN connection and surface directly in the Sentry UI alongside errors and logs.
