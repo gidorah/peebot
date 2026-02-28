@@ -72,6 +72,10 @@ module = "atproto.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
+module = "sentry_sdk.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
 module = "django.contrib.gis.*"
 ignore_errors = false
 

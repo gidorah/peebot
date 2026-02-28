@@ -14,6 +14,8 @@ import os
 from pathlib import Path
 
 import environ
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
 
 # Initialize django-environ
 env = environ.Env(
@@ -196,3 +198,20 @@ JOKE_GENERATOR_BASE_DELAY = env.float("JOKE_GENERATOR_BASE_DELAY", default=1.0)
 BLUESKY_HANDLE = env("BLUESKY_HANDLE", default=None)
 BLUESKY_APP_PASSWORD = env("BLUESKY_APP_PASSWORD", default=None)
 BLUESKY_COOLDOWN_MINUTES = env.int("BLUESKY_COOLDOWN_MINUTES", default=30)
+
+# ==============================================================================
+# Sentry Configuration
+# ==============================================================================
+
+SENTRY_DSN = env("SENTRY_DSN", default=None)
+SENTRY_ENVIRONMENT = env("SENTRY_ENVIRONMENT", default="development")
+
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        environment=SENTRY_ENVIRONMENT,
+        integrations=[DjangoIntegration()],
+        # Capture 100% of transactions in development; tune down in production.
+        traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=1.0),
+        send_default_pii=False,
+    )
