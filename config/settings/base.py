@@ -196,3 +196,10 @@ JOKE_GENERATOR_BASE_DELAY = env.float("JOKE_GENERATOR_BASE_DELAY", default=1.0)
 BLUESKY_HANDLE = env("BLUESKY_HANDLE", default=None)
 BLUESKY_APP_PASSWORD = env("BLUESKY_APP_PASSWORD", default=None)
 BLUESKY_COOLDOWN_MINUTES = env.int("BLUESKY_COOLDOWN_MINUTES", default=30)
+
+# Social Dry-Run Mode
+# When True, the full event detection and joke generation pipeline runs BUT
+# no posts are sent to Bluesky or any other social platform. A SocialPost
+# record is still created (status=SUCCESS, external_id="dry-run://mock") for
+# observability. Set to True in preview/staging environments.
+SOCIAL_DRY_RUN = env.bool("SOCIAL_DRY_RUN", default=False)

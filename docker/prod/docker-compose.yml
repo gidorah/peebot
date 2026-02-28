@@ -257,6 +257,10 @@ services:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       BLUESKY_HANDLE: ${BLUESKY_HANDLE:-}
       BLUESKY_APP_PASSWORD: ${BLUESKY_APP_PASSWORD:-}
+      # Preview/staging: set SOCIAL_DRY_RUN=true to detect events and record
+      # would-be posts (SocialPost.external_id="dry-run://mock") without hitting
+      # Bluesky or OpenRouter. Bluesky credentials are not required when enabled.
+      SOCIAL_DRY_RUN: ${SOCIAL_DRY_RUN:-false}
 
     depends_on:
       pgbouncer:
