@@ -236,6 +236,7 @@ if SENTRY_DSN:
             LoggingIntegration(
                 level=logging.INFO,  # Capture INFO+ as breadcrumbs
                 event_level=logging.ERROR,  # Send ERROR+ as Sentry issues
+                sentry_logs_level=getattr(logging, SENTRY_LOGS_LEVEL),
             ),
         ],
         # Capture 100% of transactions in development; tune down in production.
@@ -243,5 +244,4 @@ if SENTRY_DSN:
         send_default_pii=False,
         # Enable Sentry Logs — forwards Python log records to Sentry's Logs UI.
         enable_logs=True,
-        sentry_logs_level=getattr(logging, SENTRY_LOGS_LEVEL),
     )
