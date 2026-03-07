@@ -19,8 +19,14 @@ def _check_database() -> str:
     return "ok"
 
 
+READINESS_TIMEOUT_SECONDS = 0.5
+
 def _check_redis() -> str:
-    client = redis.from_url(settings.CELERY_BROKER_URL)
+    client = redis.from_url(
+        settings.CELERY_BROKER_URL,
+        socket_connect_timeout=READINESS_TIMEOUT_SECONDS,
+        socket_timeout=READINESS_TIMEOUT_SECONDS,
+    )
     try:
         client.ping()
     finally:
