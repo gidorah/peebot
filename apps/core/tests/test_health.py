@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import pytest
 from django.test import Client
 
 
-@pytest.mark.django_db
 def test_healthz_returns_200() -> None:
     client = Client()
 
@@ -16,7 +14,6 @@ def test_healthz_returns_200() -> None:
     assert response.json() == {"status": "ok"}
 
 
-@pytest.mark.django_db
 @patch("apps.core.health.redis.from_url")
 @patch("apps.core.health.connection.cursor")
 def test_readyz_returns_200_when_healthy(
@@ -41,7 +38,6 @@ def test_readyz_returns_200_when_healthy(
     redis_client.close.assert_called_once_with()
 
 
-@pytest.mark.django_db
 @patch("apps.core.health.sentry_sdk.add_breadcrumb")
 @patch("apps.core.health.redis.from_url")
 @patch("apps.core.health.connection.cursor")
@@ -63,15 +59,32 @@ def test_readyz_returns_503_when_db_down(
     assert response.json() == {
         "status": "not_ready",
         "checks": {
-            "database": "error: db unavailable",
+            "database": "error",
             "redis": "ok",
         },
     }
-    mock_add_breadcrumb.assert_called_once()
+    assert "db unavailable" not in response.content.decode()
+    mock_add_breadcrumb.assert_called_once_with(
+        category="healthcheck",
+        message="Readiness check failed",
+        level="warning",
+        data={
+            "path": "/readyz",
+            "checks": {
+                "database": "error",
+                "redis": "ok",
+            },
+            "failures": {
+                "database": {
+                    "detail": "db unavailable",
+                    "type": "RuntimeError",
+                }
+            },
+        },
+    )
     redis_client.ping.assert_called_once_with()
 
 
-@pytest.mark.django_db
 @patch("apps.core.health.sentry_sdk.add_breadcrumb")
 @patch("apps.core.health.redis.from_url")
 @patch("apps.core.health.connection.cursor")
@@ -92,14 +105,31 @@ def test_readyz_returns_503_when_redis_down(
         "status": "not_ready",
         "checks": {
             "database": "ok",
-            "redis": "error: redis unavailable",
+            "redis": "error",
         },
     }
-    mock_add_breadcrumb.assert_called_once()
+    assert "redis unavailable" not in response.content.decode()
+    mock_add_breadcrumb.assert_called_once_with(
+        category="healthcheck",
+        message="Readiness check failed",
+        level="warning",
+        data={
+            "path": "/readyz",
+            "checks": {
+                "database": "ok",
+                "redis": "error",
+            },
+            "failures": {
+                "redis": {
+                    "detail": "redis unavailable",
+                    "type": "RuntimeError",
+                }
+            },
+        },
+    )
     redis_client.close.assert_called_once_with()
 
 
-@pytest.mark.django_db
 @patch("apps.core.health.sentry_sdk.add_breadcrumb")
 @patch("apps.core.health.redis.from_url")
 @patch("apps.core.health.connection.cursor")
@@ -122,8 +152,32 @@ def test_readyz_reports_both_failures(
     assert response.json() == {
         "status": "not_ready",
         "checks": {
-            "database": "error: db unavailable",
-            "redis": "error: redis unavailable",
+            "database": "error",
+            "redis": "error",
         },
     }
-    mock_add_breadcrumb.assert_called_once()
+    response_body = response.content.decode()
+    assert "db unavailable" not in response_body
+    assert "redis unavailable" not in response_body
+    mock_add_breadcrumb.assert_called_once_with(
+        category="healthcheck",
+        message="Readiness check failed",
+        level="warning",
+        data={
+            "path": "/readyz",
+            "checks": {
+                "database": "error",
+                "redis": "error",
+            },
+            "failures": {
+                "database": {
+                    "detail": "db unavailable",
+                    "type": "RuntimeError",
+                },
+                "redis": {
+                    "detail": "redis unavailable",
+                    "type": "RuntimeError",
+                },
+            },
+        },
+    )

@@ -5,5 +5,5 @@ from apps.telemetry_storage.serializers import TelemetryChannelSerializer
 
 
 class TelemetryChannelViewSet(ReadOnlyModelViewSet):
-    queryset = TelemetryChannel.objects.all()
+    queryset = TelemetryChannel.objects.order_by("public_pui")
     serializer_class = TelemetryChannelSerializer

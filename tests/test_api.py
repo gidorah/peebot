@@ -85,8 +85,17 @@ def test_events_ordered_by_detected_at_desc() -> None:
 
 @pytest.mark.django_db
 def test_channels_pagination() -> None:
-    baker.make(TelemetryChannel, _quantity=51)
     client = APIClient()
+
+    for index in range(51, 0, -1):
+        baker.make(
+            TelemetryChannel,
+            public_pui=f"NODE{index:04d}",
+            description=f"Channel {index}",
+            ops_nom=f"OPS {index}",
+            eng_nom=f"ENG {index}",
+            unit="%",
+        )
 
     response = client.get("/api/v1/channels/")
 
@@ -95,6 +104,21 @@ def test_channels_pagination() -> None:
     assert payload["count"] == 51
     assert len(payload["results"]) == 50
     assert payload["next"] is not None
+    assert payload["previous"] is None
+    assert [result["public_pui"] for result in payload["results"]] == [
+        f"NODE{index:04d}" for index in range(1, 51)
+    ]
+
+    page_2_response = client.get("/api/v1/channels/?page=2")
+
+    assert page_2_response.status_code == 200
+    page_2_payload = page_2_response.json()
+    assert page_2_payload["count"] == 51
+    assert page_2_payload["next"] is None
+    assert page_2_payload["previous"] is not None
+    assert [result["public_pui"] for result in page_2_payload["results"]] == [
+        "NODE0051"
+    ]
 
 
 @pytest.mark.django_db
