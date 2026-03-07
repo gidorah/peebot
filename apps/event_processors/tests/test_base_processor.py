@@ -70,54 +70,63 @@ class MissingChannelProcessor(BaseProcessor):
         return None
 
     def get_confidence(self, readings: list[TelemetryReading]) -> Decimal:
+        """
+        Return the confidence score for a set of telemetry readings.
+        
+        Parameters:
+            readings (list[TelemetryReading]): The telemetry readings to evaluate.
+        
+        Returns:
+            Decimal: Confidence value between 0.0 and 1.0. This implementation always returns Decimal("0.0").
+        """
         return Decimal("0.0")
 
 
-# Test-specific processor classes for state helper tests (unique names for DB isolation)
-class TestProcessorLoadStateCreatesNew(ConcreteProcessor):
-    """Processor for test_load_state_creates_new."""
+# Stub processor classes for state helper tests (unique names for DB isolation)
+class StubProcessorLoadStateCreatesNew(ConcreteProcessor):
+    """Stub processor for test_load_state_creates_new."""
 
     processor_name = "test_load_state_creates_new"
 
 
-class TestProcessorLoadStateReturnsExisting(ConcreteProcessor):
-    """Processor for test_load_state_returns_existing."""
+class StubProcessorLoadStateReturnsExisting(ConcreteProcessor):
+    """Stub processor for test_load_state_returns_existing."""
 
     processor_name = "test_load_state_returns_existing"
 
 
-class TestProcessorUpdateStateCursor(ConcreteProcessor):
-    """Processor for test_update_state_cursor_updates_timestamps."""
+class StubProcessorUpdateStateCursor(ConcreteProcessor):
+    """Stub processor for test_update_state_cursor_updates_timestamps."""
 
     processor_name = "test_update_state_cursor"
 
 
-class TestProcessorUpdateStateCursorNoProcessed(ConcreteProcessor):
-    """Processor for test_update_state_cursor_without_processed_at."""
+class StubProcessorUpdateStateCursorNoProcessed(ConcreteProcessor):
+    """Stub processor for test_update_state_cursor_without_processed_at."""
 
     processor_name = "test_update_state_cursor_without_processed_at"
 
 
-class TestProcessorGetStateData(ConcreteProcessor):
-    """Processor for test_get_state_data_returns_data."""
+class StubProcessorGetStateData(ConcreteProcessor):
+    """Stub processor for test_get_state_data_returns_data."""
 
     processor_name = "test_get_state_data_returns_data"
 
 
-class TestProcessorGetStateDataNone(ConcreteProcessor):
-    """Processor for test_get_state_data_returns_none_when_empty."""
+class StubProcessorGetStateDataNone(ConcreteProcessor):
+    """Stub processor for test_get_state_data_returns_none_when_empty."""
 
     processor_name = "test_get_state_data_returns_none"
 
 
-class TestProcessorSetStateData(ConcreteProcessor):
-    """Processor for test_set_state_data_persists_data."""
+class StubProcessorSetStateData(ConcreteProcessor):
+    """Stub processor for test_set_state_data_persists_data."""
 
     processor_name = "test_set_state_data_persists"
 
 
-class TestProcessorSetStateDataUpdate(ConcreteProcessor):
-    """Processor for test_set_state_data_updates_existing."""
+class StubProcessorSetStateDataUpdate(ConcreteProcessor):
+    """Stub processor for test_set_state_data_updates_existing."""
 
     processor_name = "test_set_state_data_updates"
 
@@ -200,7 +209,7 @@ class TestBaseProcessorStateHelpers:
 
     async def test_load_state_creates_new(self) -> None:
         """load_state creates new ProcessorState if none exists."""
-        processor = TestProcessorLoadStateCreatesNew()
+        processor = StubProcessorLoadStateCreatesNew()
         processor_name = processor.processor_name
 
         # Ensure state doesn't exist
@@ -217,7 +226,7 @@ class TestBaseProcessorStateHelpers:
 
     async def test_load_state_returns_existing(self) -> None:
         """load_state returns existing ProcessorState if present."""
-        processor = TestProcessorLoadStateReturnsExisting()
+        processor = StubProcessorLoadStateReturnsExisting()
         processor_name = processor.processor_name
 
         # Create existing state
@@ -237,7 +246,7 @@ class TestBaseProcessorStateHelpers:
 
     async def test_update_state_cursor_updates_timestamps(self) -> None:
         """update_state_cursor updates both last_run_at and last_processed_timestamp."""
-        processor = TestProcessorUpdateStateCursor()
+        processor = StubProcessorUpdateStateCursor()
         processor_name = processor.processor_name
         state = await ProcessorState.objects.acreate(processor_name=processor_name)
 
@@ -252,7 +261,7 @@ class TestBaseProcessorStateHelpers:
 
     async def test_update_state_cursor_without_processed_at(self) -> None:
         """update_state_cursor only updates last_run_at when processed_at is None."""
-        processor = TestProcessorUpdateStateCursorNoProcessed()
+        processor = StubProcessorUpdateStateCursorNoProcessed()
         processor_name = processor.processor_name
         state = await ProcessorState.objects.acreate(
             processor_name=processor_name,
@@ -268,7 +277,7 @@ class TestBaseProcessorStateHelpers:
 
     async def test_get_state_data_returns_data(self) -> None:
         """get_state_data returns processor-specific state data."""
-        processor = TestProcessorGetStateData()
+        processor = StubProcessorGetStateData()
         processor_name = processor.processor_name
         state = await ProcessorState.objects.acreate(
             processor_name=processor_name,
@@ -281,7 +290,7 @@ class TestBaseProcessorStateHelpers:
 
     async def test_get_state_data_returns_none_when_empty(self) -> None:
         """get_state_data returns None when state_data is None."""
-        processor = TestProcessorGetStateDataNone()
+        processor = StubProcessorGetStateDataNone()
         processor_name = processor.processor_name
         state = await ProcessorState.objects.acreate(
             processor_name=processor_name, state_data=None
@@ -293,7 +302,7 @@ class TestBaseProcessorStateHelpers:
 
     async def test_set_state_data_persists_data(self) -> None:
         """set_state_data persists processor-specific state data."""
-        processor = TestProcessorSetStateData()
+        processor = StubProcessorSetStateData()
         processor_name = processor.processor_name
         state = await ProcessorState.objects.acreate(processor_name=processor_name)
 
@@ -304,7 +313,7 @@ class TestBaseProcessorStateHelpers:
 
     async def test_set_state_data_updates_existing(self) -> None:
         """set_state_data overwrites existing state data."""
-        processor = TestProcessorSetStateDataUpdate()
+        processor = StubProcessorSetStateDataUpdate()
         processor_name = processor.processor_name
         state = await ProcessorState.objects.acreate(
             processor_name=processor_name,
@@ -317,10 +326,10 @@ class TestBaseProcessorStateHelpers:
         assert state.state_data == {"new_key": "new_value"}
 
 
-@pytest.mark.asyncio
 class TestBaseProcessorAbstractMethods:
     """Tests for abstract method implementation contract."""
 
+    @pytest.mark.asyncio
     async def test_analyze_returns_detection_result(self) -> None:
         """analyze returns dict with detection metadata."""
         processor = ConcreteProcessor()
@@ -333,6 +342,7 @@ class TestBaseProcessorAbstractMethods:
         assert result.event_type == "test_event"
         assert result.metadata["readings_count"] == 1
 
+    @pytest.mark.asyncio
     async def test_analyze_returns_none_when_no_event(self) -> None:
         """analyze returns None when no event detected."""
         processor = ConcreteProcessor()
