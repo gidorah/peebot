@@ -79,13 +79,13 @@ The remaining work falls into three categories:
 
 | Component | Specified In | Status |
 |:---|:---|:---|
-| Health check endpoints | Architecture §9.2 (Monitoring) | ❌ Not implemented |
-| REST API (`/api/channels/`, `/api/events/`, etc.) | System Overview §Communication | ❌ Not implemented |
+| Health check endpoints | Architecture §9.2 (Monitoring) | ✅ Implemented (`/healthz`, `/readyz`) |
+| REST API (`/api/v1/channels/`, `/api/v1/events/`) | System Overview §Communication | ✅ Implemented |
 | ~~Prometheus / Grafana~~ | ~~Architecture §9.2, System Overview §Monitoring~~ | ⊘ **CANCELLED** (Decision #3: Sentry-only) |
 | Sentry error tracking | Architecture §9.2 | ✅ Implemented (ADR-015) |
 | Django Channels + Daphne (ASGI) | Architecture §3, §8.5 | ❌ Not implemented |
 | Continuous Aggregates | System Overview §TimescaleDB Optimizations | ❌ Not implemented |
-| OpenAPI/Swagger docs | Product Guidelines §Documentation | ❌ Not implemented |
+| OpenAPI/Swagger docs | Product Guidelines §Documentation | ✅ Implemented (`/api/schema/`, `/api/docs/`) |
 
 ---
 
@@ -93,11 +93,11 @@ The remaining work falls into three categories:
 
 | Issue | Location | Severity |
 |:---|:---|:---|
-| 8 `PytestCollectionWarning` — test classes with `__init__` | `test_base_processor.py` L77-119 | Low (cosmetic) |
-| 2 sync tests marked `@pytest.mark.asyncio` | `test_base_processor.py` L344, L354 | Low (warning noise) |
+| 8 `PytestCollectionWarning` — test classes with `__init__` | `test_base_processor.py` L77-119 | ✅ Resolved in T006 |
+| 2 sync tests marked `@pytest.mark.asyncio` | `test_base_processor.py` L344, L354 | ✅ Resolved in T006 |
 | 1 teardown `OperationalError` (DB still accessed) | `test_validator.py` | Low (intermittent) |
 | `django-celery-beat` installed but unused | `pyproject.toml` | Low (dead dependency, keep per ADR-009) |
-| `djangorestframework` in INSTALLED_APPS but no views | `config/settings/base.py` | Neutral (needed for upcoming API) |
+| `djangorestframework` in INSTALLED_APPS but no views | `config/settings/base.py` | ✅ Resolved in T006 |
 
 ---
 
