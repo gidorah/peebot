@@ -23,6 +23,7 @@ def _payload() -> dict[str, str]:
 
 
 @pytest.mark.django_db
+@override_settings(DEBUG=True)
 def test_inject_success_201() -> None:
     channel = baker.make(TelemetryChannel, public_pui="NODE3000005")
     client = APIClient()
@@ -36,6 +37,7 @@ def test_inject_success_201() -> None:
 
 
 @pytest.mark.django_db
+@override_settings(DEBUG=True)
 def test_inject_unknown_pui_404() -> None:
     client = APIClient()
 
@@ -46,6 +48,7 @@ def test_inject_unknown_pui_404() -> None:
 
 
 @pytest.mark.django_db
+@override_settings(DEBUG=True)
 def test_inject_missing_field_400() -> None:
     baker.make(TelemetryChannel, public_pui="NODE3000005")
     client = APIClient()

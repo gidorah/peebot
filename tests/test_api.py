@@ -29,7 +29,7 @@ def test_channels_list_200() -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload["count"] == 1
-    assert payload["results"][0]["id"] == str(channel.id)
+    assert payload["results"][0]["id"] == channel.id
     assert payload["results"][0]["public_pui"] == "NODE3000005"
 
 
