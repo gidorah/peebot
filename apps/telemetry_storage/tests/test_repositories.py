@@ -6,12 +6,21 @@ from django.utils import timezone
 from model_bakery import baker
 
 from apps.telemetry_storage.models import TelemetryChannel, TelemetryReading
-from apps.telemetry_storage.repositories import DjangoTelemetryRepository, ReadingData
+from apps.telemetry_storage.repositories import (
+    DjangoTelemetryRepository,
+    ReadingData,
+    get_telemetry_channel_queryset,
+)
 
 
 @pytest.mark.django_db
 def test_get_active_channels() -> None:
-    active_channel = baker.make(TelemetryChannel, deleted_at=None, public_pui="ACTIVE")
+    first_active_channel = baker.make(
+        TelemetryChannel, deleted_at=None, public_pui="ACTIVE_B"
+    )
+    second_active_channel = baker.make(
+        TelemetryChannel, deleted_at=None, public_pui="ACTIVE_A"
+    )
     baker.make(
         TelemetryChannel,
         deleted_at=datetime.datetime(2024, 1, 1, tzinfo=datetime.UTC),
@@ -19,10 +28,19 @@ def test_get_active_channels() -> None:
     )
 
     repo = DjangoTelemetryRepository()
-    channels = repo.get_active_channels()
+    channels = list(repo.get_active_channels())
 
-    assert channels.count() == 1
-    assert channels.first() == active_channel
+    assert channels == [second_active_channel, first_active_channel]
+
+
+@pytest.mark.django_db
+def test_get_telemetry_channel_queryset() -> None:
+    first_channel = baker.make(TelemetryChannel, public_pui="NODE3000005")
+    second_channel = baker.make(TelemetryChannel, public_pui="NODE0000001")
+
+    channels = list(get_telemetry_channel_queryset())
+
+    assert channels == [second_channel, first_channel]
 
 
 @pytest.mark.django_db(transaction=True)

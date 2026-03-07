@@ -35,9 +35,13 @@ class TelemetryRepositoryInterface(ABC):
         pass
 
 
+def get_telemetry_channel_queryset() -> QuerySet[TelemetryChannel]:
+    return DjangoTelemetryRepository().get_active_channels()
+
+
 class DjangoTelemetryRepository(TelemetryRepositoryInterface):
     def get_active_channels(self) -> QuerySet[TelemetryChannel]:
-        return TelemetryChannel.objects.all()
+        return TelemetryChannel.objects.order_by("public_pui")
 
     async def abulk_create_readings(
         self, readings_data: list[ReadingData]
