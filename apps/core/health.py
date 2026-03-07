@@ -56,7 +56,7 @@ def readyz(request: HttpRequest) -> JsonResponse:
     for name, check in (("database", _check_database), ("redis", _check_redis)):
         try:
             checks[name] = check()
-        except Exception as exc:  # pragma: no cover - exercised via tests
+        except Exception as exc:
             checks[name] = READINESS_CHECK_ERROR
             failures[name] = _build_failure_details(exc)
 
