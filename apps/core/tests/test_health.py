@@ -4,6 +4,8 @@ from unittest.mock import MagicMock, patch
 
 from django.test import Client
 
+from apps.core import health
+
 
 def test_healthz_returns_200() -> None:
     client = Client()
@@ -33,6 +35,11 @@ def test_readyz_returns_200_when_healthy(
     }
     mock_cursor.return_value.__enter__.return_value.execute.assert_called_once_with(
         "SELECT 1"
+    )
+    mock_from_url.assert_called_once_with(
+        health.settings.CELERY_BROKER_URL,
+        socket_connect_timeout=health.READINESS_TIMEOUT_SECONDS,
+        socket_timeout=health.READINESS_TIMEOUT_SECONDS,
     )
     redis_client.ping.assert_called_once_with()
     redis_client.close.assert_called_once_with()
@@ -126,6 +133,11 @@ def test_readyz_returns_503_when_redis_down(
                 }
             },
         },
+    )
+    mock_from_url.assert_called_once_with(
+        health.settings.CELERY_BROKER_URL,
+        socket_connect_timeout=health.READINESS_TIMEOUT_SECONDS,
+        socket_timeout=health.READINESS_TIMEOUT_SECONDS,
     )
     redis_client.close.assert_called_once_with()
 
