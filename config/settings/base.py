@@ -13,12 +13,14 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import logging
 import os
 from pathlib import Path
+from typing import Any, cast
 
 import environ
 import sentry_sdk
 from sentry_sdk.integrations.celery import CeleryIntegration
 from sentry_sdk.integrations.django import DjangoIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
+from sentry_sdk.types import Event
 
 # Initialize django-environ
 env = environ.Env(
@@ -67,6 +69,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # Third-party apps
     "rest_framework",
+    "drf_spectacular",
     # Project apps
     "apps.core",
     "apps.telemetry_storage",
@@ -74,6 +77,19 @@ INSTALLED_APPS = [
     "apps.event_processors",
     "apps.dashboards",
 ]
+
+REST_FRAMEWORK = {
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 50,
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "PeeBot API",
+    "DESCRIPTION": "Read-only telemetry and event APIs with manual debug injection.",
+    "VERSION": "1.0.0",
+}
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -226,6 +242,19 @@ if SENTRY_LOGS_LEVEL not in _VALID_LOG_LEVELS:
         f"got: {SENTRY_LOGS_LEVEL!r}"
     )
 
+
+def _sentry_before_send(event: Event, _hint: dict[str, Any]) -> Event | None:
+    request = event.get("request")
+    if not isinstance(request, dict):
+        return event
+
+    url = request.get("url", "")
+    if isinstance(url, str) and (url.endswith("/healthz") or url.endswith("/readyz")):
+        return None
+
+    return event
+
+
 if SENTRY_DSN:
     sentry_sdk.init(
         dsn=SENTRY_DSN,
@@ -248,4 +277,5 @@ if SENTRY_DSN:
         send_default_pii=False,
         # Enable Sentry Logs — forwards Python log records to Sentry's Logs UI.
         enable_logs=True,
+        before_send=cast(Any, _sentry_before_send),
     )

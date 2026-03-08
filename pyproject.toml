@@ -12,6 +12,7 @@ dependencies = [
     "django-celery-beat>=2.8.1",
     "django-environ>=0.12.0",
     "djangorestframework>=3.16.1",
+    "drf-spectacular>=0.28.0",
     "gunicorn>=23.0.0",
     "lightstreamer-client-lib>=2.2.2",
     "openai>=1.60.0",

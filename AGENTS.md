@@ -94,6 +94,7 @@ All agents must adhere to the following folder hierarchy:
 ### `/docs/implementation` (The Hands)
 - **Purpose:** Execution of specific features.
 - **Structure:** One folder per task ID (e.g., `T001 - User Auth`).
+- **Rule:** Use a subagent to review created file to be sure it complies with Source of Truth and The Brain docs. Review should be done immediately after creating the file.
 - **Workflow:**
   1. Create folder `T### - Name`.
   2. Create `requirements.md` (What are we building?).

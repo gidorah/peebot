@@ -11,6 +11,7 @@ This system implements a **modular monolith architecture** using Django, where e
 - **Independence**: Each analytics module operates independently with its own schedule
 - **Async Support**: Leverages Django's ASGI for real-time ingestion
 - **Single Deployment Unit**: One codebase, one deployment, simpler operations
+- **Operational Visibility**: Built-in liveness/readiness probes and OpenAPI docs for HTTP surfaces
 
 ## Project Structure
 
@@ -144,6 +145,20 @@ telemetry_ingestion       event_processors
    ```
 
 The application will be available at `http://localhost:8000`
+
+### HTTP Endpoints
+
+The Django app exposes a small set of operational and API endpoints:
+
+| Endpoint | Purpose |
+|---------|---------|
+| `GET /healthz` | Liveness probe for the web process |
+| `GET /readyz` | Readiness probe that checks PostgreSQL and Redis reachability |
+| `GET /api/v1/channels/` | Paginated, read-only list of telemetry channels |
+| `GET /api/v1/events/` | Paginated, read-only list of detected events |
+| `POST /api/v1/telemetry/inject/` | Manual telemetry injection for debugging/testing (`DEBUG=True` only) |
+| `GET /api/schema/` | OpenAPI schema |
+| `GET /api/docs/` | Swagger UI for the public API |
 
 ### Task Runner (`just`)
 
