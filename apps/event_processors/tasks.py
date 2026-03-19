@@ -11,10 +11,10 @@ from datetime import timedelta
 from typing import Any
 
 import structlog
-from asgiref.sync import async_to_sync
+from asgiref.sync import async_to_sync, sync_to_async
 from celery import shared_task
 from django.conf import settings
-from django.db import OperationalError
+from django.db import OperationalError, close_old_connections
 from django.utils import timezone
 from sentry_sdk import metrics as sentry_metrics
 
@@ -166,13 +166,13 @@ async def _run_peebot_processor_async() -> dict[str, Any]:
         return result
 
     except OperationalError:
-        # Log at warning level before re-raising so that Celery's autoretry
-        # mechanism can schedule a retry without generating a Sentry issue on
-        # every attempt.  Sentry's LoggingIntegration only creates issues for
-        # ERROR+ records (event_level=logging.ERROR), so a WARNING is captured
-        # only as a breadcrumb.  CeleryIntegration will still capture a Sentry
-        # issue if all retries are exhausted and the task ultimately fails.
-        log.warning("database_error", exc_info=True)
+        # Close broken/stale connections in the same thread/Executor that
+        # Django's async ORM uses, so the Celery retry gets a fresh one.
+        await sync_to_async(close_old_connections, thread_sensitive=True)()
+        # Log at warning – this is a transient error that Celery will retry.
+        # Logging at error level would generate a Sentry event for every
+        # routine connection hiccup, creating noise before retries even run.
+        log.warning("database_error_retrying", exc_info=True)
         raise
 
     except Exception as e:
