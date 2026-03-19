@@ -14,7 +14,7 @@ import structlog
 from asgiref.sync import async_to_sync
 from celery import shared_task
 from django.conf import settings
-from django.db import OperationalError
+from django.db import OperationalError, close_old_connections
 from django.utils import timezone
 from sentry_sdk import metrics as sentry_metrics
 
@@ -166,8 +166,12 @@ async def _run_peebot_processor_async() -> dict[str, Any]:
         return result
 
     except OperationalError:
-        # Re-raise DB errors for Celery retry mechanism
-        log.error("database_error", exc_info=True)
+        # Close broken/stale connections so the Celery retry gets a fresh one.
+        close_old_connections()
+        # Log at warning – this is a transient error that Celery will retry.
+        # Logging at error level would generate a Sentry event for every
+        # routine connection hiccup, creating noise before retries even run.
+        log.warning("database_error_retrying", exc_info=True)
         raise
 
     except Exception as e:

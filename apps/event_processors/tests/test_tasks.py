@@ -225,21 +225,21 @@ class TestRunPeeBotProcessor:
         self.mock_bluesky.post.assert_called_once()
 
     def test_run_peebot_processor_db_error_triggers_retry(self) -> None:
-        """OperationalError causes task to retry via exception propagation."""
+        """OperationalError closes connections, logs a warning, and re-raises for Celery retry."""
         baker.make(ProcessorState, processor_name="pee_bot")
 
-        # Mock load_state to raise OperationalError
-        with patch(
-            "apps.event_processors.processors.pee_bot.PeeBotProcessor.load_state",
-            side_effect=OperationalError("DB down"),
+        with (
+            patch(
+                "apps.event_processors.processors.pee_bot.PeeBotProcessor.load_state",
+                side_effect=OperationalError("DB down"),
+            ),
+            patch("apps.event_processors.tasks.close_old_connections") as mock_close,
         ):
-            # When calling task directly or with delay().get(),
-            # it should raise OperationalError if retries are exhausted
-            # or if we don't mock the retry mechanism itself.
-            # pytest-celery can test retries more thoroughly,
-            # but here we just check it raises.
             with pytest.raises(OperationalError):
                 run_peebot_processor()
+
+        # Broken connections must be closed so the retry starts fresh.
+        mock_close.assert_called_once()
 
     def test_run_peebot_processor_general_exception_swallowed(self) -> None:
         """General exceptions are logged but don't crash the task execution cycle."""
