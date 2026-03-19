@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 from decimal import Decimal
+from typing import cast
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -20,14 +21,6 @@ from apps.event_processors.services.bluesky_client import (
     BlueskyClientError,
     BlueskyCooldownError,
 )
-
-
-@pytest_asyncio.fixture(autouse=True)
-async def cleanup_social_posts():
-    """Clean up SocialPost records before and after each test."""
-    await SocialPost.objects.filter(platform="bluesky").adelete()
-    yield
-    await SocialPost.objects.filter(platform="bluesky").adelete()
 
 
 @pytest_asyncio.fixture
@@ -47,9 +40,7 @@ def _create_mock_client() -> BlueskyClient:
         patch(
             "apps.event_processors.services.bluesky_client.settings"
         ) as mock_settings,
-        patch(
-            "apps.event_processors.services.bluesky_client.Client"
-        ) as mock_client,
+        patch("apps.event_processors.services.bluesky_client.Client") as mock_client,
     ):
         mock_settings.BLUESKY_HANDLE = "peebot.bsky.social"
         mock_settings.BLUESKY_APP_PASSWORD = "app-password-123"
@@ -59,6 +50,11 @@ def _create_mock_client() -> BlueskyClient:
         client = BlueskyClient()
         client._authenticated = True
         return client
+
+
+def _get_send_post_mock(client: BlueskyClient) -> MagicMock:
+    """Return the mocked send_post method for assertions and stubbing."""
+    return cast(MagicMock, client.client.send_post)
 
 
 class TestBlueskyClientTruncation:
@@ -107,20 +103,28 @@ class TestBlueskyClientTruncation:
 class TestBlueskyClientPostTruncation:
     """Tests that post() truncates long text before posting."""
 
+    @pytest_asyncio.fixture(autouse=True)
+    async def cleanup_social_posts(self):
+        """Clean up SocialPost records before and after each test."""
+        await SocialPost.objects.filter(platform="bluesky").adelete()
+        yield
+        await SocialPost.objects.filter(platform="bluesky").adelete()
+
     async def test_post_long_text_sends_truncated_text(
         self, detected_event: DetectedEvent
     ) -> None:
         """post() sends truncated text to Bluesky when text exceeds 300 graphemes."""
         mock_client = _create_mock_client()
+        send_post = _get_send_post_mock(mock_client)
         mock_response = MagicMock()
         mock_response.uri = "at://did:plc:xxx/app.bsky.feed.post/yyy"
-        mock_client.client.send_post.return_value = mock_response
+        send_post.return_value = mock_response
 
         long_text = "a" * 350
 
         await mock_client.post(long_text, detected_event)
 
-        call_args = mock_client.client.send_post.call_args
+        call_args = send_post.call_args
         actual_text = call_args.kwargs["text"]
         assert len(actual_text) == 300
         assert actual_text.endswith("\u2026")
@@ -129,10 +133,11 @@ class TestBlueskyClientPostTruncation:
         self, detected_event: DetectedEvent
     ) -> None:
         """post() stores the truncated text in SocialPost.content."""
-        mock_client = self._create_mock_client()
+        mock_client = _create_mock_client()
+        send_post = _get_send_post_mock(mock_client)
         mock_response = MagicMock()
         mock_response.uri = "at://did:plc:xxx/app.bsky.feed.post/yyy"
-        mock_client.client.send_post.return_value = mock_response
+        send_post.return_value = mock_response
 
         long_text = "b" * 350
 
@@ -147,16 +152,17 @@ class TestBlueskyClientPostTruncation:
         self, detected_event: DetectedEvent
     ) -> None:
         """post() sends text unchanged when it is within the 300-grapheme limit."""
-        mock_client = self._create_mock_client()
+        mock_client = _create_mock_client()
+        send_post = _get_send_post_mock(mock_client)
         mock_response = MagicMock()
         mock_response.uri = "at://did:plc:xxx/app.bsky.feed.post/yyy"
-        mock_client.client.send_post.return_value = mock_response
+        send_post.return_value = mock_response
 
         short_text = "Hello, this is a short post!"
 
         await mock_client.post(short_text, detected_event)
 
-        call_args = mock_client.client.send_post.call_args
+        call_args = send_post.call_args
         assert call_args.kwargs["text"] == short_text
 
 
@@ -437,10 +443,11 @@ class TestBlueskyClientPost:
     ) -> None:
         """Successful post creates SocialPost record."""
         mock_client = self._create_mock_client()
+        send_post = _get_send_post_mock(mock_client)
         mock_response = MagicMock()
         mock_response.uri = "at://did:plc:xxx/app.bsky.feed.post/yyy"
         mock_response.cid = "bafyreiabc123"
-        mock_client.client.send_post.return_value = mock_response
+        send_post.return_value = mock_response
 
         post_uri = await mock_client.post("Test post content", detected_event)
 
@@ -479,7 +486,8 @@ class TestBlueskyClientPost:
         from atproto.exceptions import AtProtocolError
 
         mock_client = self._create_mock_client()
-        mock_client.client.send_post.side_effect = AtProtocolError("API Error")
+        send_post = _get_send_post_mock(mock_client)
+        send_post.side_effect = AtProtocolError("API Error")
 
         with pytest.raises(BlueskyClientError):
             await mock_client.post("Test content", detected_event)
@@ -489,9 +497,10 @@ class TestBlueskyClientPost:
     ) -> None:
         """Empty API response returns None and creates failed SocialPost."""
         mock_client = self._create_mock_client()
+        send_post = _get_send_post_mock(mock_client)
         mock_response = MagicMock()
         mock_response.uri = None
-        mock_client.client.send_post.return_value = mock_response
+        send_post.return_value = mock_response
 
         result = await mock_client.post("Test content", detected_event)
 
@@ -510,7 +519,8 @@ class TestBlueskyClientPost:
         from atproto.exceptions import AtProtocolError
 
         mock_client = self._create_mock_client()
-        mock_client.client.send_post.side_effect = AtProtocolError("API Error")
+        send_post = _get_send_post_mock(mock_client)
+        send_post.side_effect = AtProtocolError("API Error")
 
         with pytest.raises(BlueskyClientError):
             await mock_client.post("Test content", detected_event)
@@ -526,9 +536,10 @@ class TestBlueskyClientPost:
     ) -> None:
         """Successful post creates SocialPost with success status."""
         mock_client = self._create_mock_client()
+        send_post = _get_send_post_mock(mock_client)
         mock_response = MagicMock()
         mock_response.uri = "at://did:plc:xxx/app.bsky.feed.post/zzz"
-        mock_client.client.send_post.return_value = mock_response
+        send_post.return_value = mock_response
 
         await mock_client.post("Test post", detected_event)
 
