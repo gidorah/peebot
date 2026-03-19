@@ -22,6 +22,141 @@ from apps.event_processors.services.bluesky_client import (
 )
 
 
+class TestBlueskyClientTruncation:
+    """Tests for the _truncate_to_grapheme_limit static method."""
+
+    def test_short_text_unchanged(self) -> None:
+        """Text within the limit is returned unchanged."""
+        text = "Hello, ISS!"
+        assert BlueskyClient._truncate_to_grapheme_limit(text) == text
+
+    def test_exactly_300_chars_unchanged(self) -> None:
+        """Text of exactly 300 characters is returned unchanged."""
+        text = "x" * 300
+        assert BlueskyClient._truncate_to_grapheme_limit(text) == text
+
+    def test_301_chars_truncated_with_ellipsis(self) -> None:
+        """Text of 301 characters is truncated to 299 chars + ellipsis."""
+        text = "x" * 301
+        result = BlueskyClient._truncate_to_grapheme_limit(text)
+        assert len(result) == 300
+        assert result.endswith("\u2026")
+        assert result == "x" * 299 + "\u2026"
+
+    def test_long_text_truncated_to_300(self) -> None:
+        """Long text is truncated so result has exactly 300 code points."""
+        text = "a" * 500
+        result = BlueskyClient._truncate_to_grapheme_limit(text)
+        assert len(result) == 300
+        assert result.endswith("\u2026")
+
+    def test_empty_string_unchanged(self) -> None:
+        """Empty string is returned unchanged."""
+        assert BlueskyClient._truncate_to_grapheme_limit("") == ""
+
+    def test_truncation_with_unicode_emoji(self) -> None:
+        """Text with simple emoji (single code points) is truncated correctly."""
+        # 😂 is a single code point, so len("😂") == 1
+        text = "😂" * 301
+        result = BlueskyClient._truncate_to_grapheme_limit(text)
+        assert len(result) == 300
+        assert result.endswith("\u2026")
+
+
+@pytest.mark.asyncio
+@pytest.mark.django_db(transaction=True)
+class TestBlueskyClientPostTruncation:
+    """Tests that post() truncates long text before posting."""
+
+    @pytest_asyncio.fixture(autouse=True)
+    async def cleanup_social_posts(self):
+        """Clean up SocialPost records before each test."""
+        await SocialPost.objects.filter(platform="bluesky").adelete()
+        yield
+        await SocialPost.objects.filter(platform="bluesky").adelete()
+
+    def _create_mock_client(self) -> BlueskyClient:
+        """Create BlueskyClient with mocked atproto client."""
+        with (
+            patch(
+                "apps.event_processors.services.bluesky_client.settings"
+            ) as mock_settings,
+            patch(
+                "apps.event_processors.services.bluesky_client.Client"
+            ) as mock_client,
+        ):
+            mock_settings.BLUESKY_HANDLE = "peebot.bsky.social"
+            mock_settings.BLUESKY_APP_PASSWORD = "app-password-123"
+            mock_settings.BLUESKY_COOLDOWN_MINUTES = 30
+            mock_atproto = MagicMock()
+            mock_client.return_value = mock_atproto
+            client = BlueskyClient()
+            client._authenticated = True
+            return client
+
+    @pytest_asyncio.fixture
+    async def detected_event(self) -> DetectedEvent:
+        """Create a DetectedEvent for testing."""
+        return await DetectedEvent.objects.acreate(
+            event_type="urination",
+            channel_id="NODE3000005",
+            detected_at=timezone.now(),
+            confidence=Decimal("0.85"),
+        )
+
+    async def test_post_long_text_sends_truncated_text(
+        self, detected_event: DetectedEvent
+    ) -> None:
+        """post() sends truncated text to Bluesky when text exceeds 300 graphemes."""
+        mock_client = self._create_mock_client()
+        mock_response = MagicMock()
+        mock_response.uri = "at://did:plc:xxx/app.bsky.feed.post/yyy"
+        mock_client.client.send_post.return_value = mock_response
+
+        long_text = "a" * 350
+
+        await mock_client.post(long_text, detected_event)
+
+        call_args = mock_client.client.send_post.call_args
+        actual_text = call_args.kwargs["text"]
+        assert len(actual_text) == 300
+        assert actual_text.endswith("\u2026")
+
+    async def test_post_long_text_stores_truncated_content(
+        self, detected_event: DetectedEvent
+    ) -> None:
+        """post() stores the truncated text in SocialPost.content."""
+        mock_client = self._create_mock_client()
+        mock_response = MagicMock()
+        mock_response.uri = "at://did:plc:xxx/app.bsky.feed.post/yyy"
+        mock_client.client.send_post.return_value = mock_response
+
+        long_text = "b" * 350
+
+        await mock_client.post(long_text, detected_event)
+
+        social_post = await SocialPost.objects.filter(event=detected_event).afirst()
+        assert social_post is not None
+        assert len(social_post.content) == 300
+        assert social_post.content.endswith("\u2026")
+
+    async def test_post_within_limit_sends_unchanged_text(
+        self, detected_event: DetectedEvent
+    ) -> None:
+        """post() sends text unchanged when it is within the 300-grapheme limit."""
+        mock_client = self._create_mock_client()
+        mock_response = MagicMock()
+        mock_response.uri = "at://did:plc:xxx/app.bsky.feed.post/yyy"
+        mock_client.client.send_post.return_value = mock_response
+
+        short_text = "Hello, this is a short post!"
+
+        await mock_client.post(short_text, detected_event)
+
+        call_args = mock_client.client.send_post.call_args
+        assert call_args.kwargs["text"] == short_text
+
+
 class TestBlueskyClientInitialization:
     """Tests for BlueskyClient initialization."""
 
