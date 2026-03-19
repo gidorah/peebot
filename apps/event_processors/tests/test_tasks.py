@@ -226,16 +226,15 @@ class TestRunPeeBotProcessor:
 
     def test_run_peebot_processor_db_error_triggers_retry(self) -> None:
         """OperationalError closes connections, logs a warning, and re-raises for Celery retry."""
-        baker.make(ProcessorState, processor_name="pee_bot")
-
         with (
             patch(
-                "apps.event_processors.models.ProcessorState.objects.get",
+                "apps.event_processors.processors.base.BaseProcessor.load_state",
+                new_callable=AsyncMock,
                 side_effect=OperationalError("DB down"),
             ),
             patch("apps.event_processors.tasks.close_old_connections") as mock_close,
         ):
-            with pytest.raises(OperationalError):
+            with pytest.raises(OperationalError, match="DB down"):
                 run_peebot_processor()
 
         # Broken connections must be closed so the retry starts fresh.
