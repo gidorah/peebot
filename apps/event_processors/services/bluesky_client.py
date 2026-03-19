@@ -45,7 +45,30 @@ class BlueskyClient:
     """
 
     DEFAULT_COOLDOWN_MINUTES = 30
+    MAX_POST_GRAPHEMES = 300
     PLATFORM = "bluesky"
+
+    @staticmethod
+    def _truncate_to_grapheme_limit(text: str) -> str:
+        """Truncate text to fit within Bluesky's 300-grapheme limit.
+
+        Uses Unicode code point count as a safe upper bound for grapheme count:
+        since every grapheme cluster is composed of one or more code points,
+        a string with ≤300 code points is guaranteed to have ≤300 graphemes.
+
+        When truncation is needed, reserves one code point for a trailing
+        ellipsis (…) so the result is at most 300 code points total.
+
+        Args:
+            text: The text to truncate.
+
+        Returns:
+            The original text if it is within the limit, otherwise a truncated
+            version ending in "…".
+        """
+        if len(text) <= BlueskyClient.MAX_POST_GRAPHEMES:
+            return text
+        return text[: BlueskyClient.MAX_POST_GRAPHEMES - 1] + "\u2026"
 
     def __init__(self) -> None:
         """Initialize the BlueskyClient with atproto.
@@ -171,11 +194,20 @@ class BlueskyClient:
         elif not can_post:
             raise BlueskyCooldownError("Cannot post: cooldown active.")
 
+        truncated_text = self._truncate_to_grapheme_limit(text)
+        if truncated_text != text:
+            logger.warning(
+                "bluesky_post_text_truncated",
+                event_id=str(event.id),
+                original_length=len(text),
+                truncated_length=len(truncated_text),
+            )
+
         try:
             loop = asyncio.get_running_loop()
             response = await loop.run_in_executor(
                 None,
-                lambda: self.client.send_post(text=text),
+                lambda: self.client.send_post(text=truncated_text),
             )
 
             if not response or not response.uri:
@@ -184,7 +216,7 @@ class BlueskyClient:
                     event_id=str(event.id),
                 )
                 await self._create_failed_post(
-                    event, text, "No response from Bluesky API"
+                    event, truncated_text, "No response from Bluesky API"
                 )
                 return None
 
@@ -194,7 +226,7 @@ class BlueskyClient:
                 event=event,
                 platform=self.PLATFORM,
                 external_id=post_uri,
-                content=text,
+                content=truncated_text,
                 posted_at=timezone.now(),
                 status=SocialPost.Status.SUCCESS,
             )
@@ -204,7 +236,7 @@ class BlueskyClient:
                 event_id=str(event.id),
                 social_post_id=str(social_post.id),
                 post_uri=post_uri,
-                text_length=len(text),
+                text_length=len(truncated_text),
             )
 
             return post_uri
@@ -217,7 +249,11 @@ class BlueskyClient:
                 error=error_msg,
                 error_type=type(e).__name__,
             )
-            await self._create_failed_post(event, text, f"API error: {error_msg}")
+            await self._create_failed_post(
+                event,
+                truncated_text,
+                f"API error: {error_msg}",
+            )
             raise BlueskyClientError(f"Bluesky API error: {e}") from e
 
         except Exception as e:
@@ -228,7 +264,7 @@ class BlueskyClient:
                 error=error_msg,
                 error_type=type(e).__name__,
             )
-            await self._create_failed_post(event, text, error_msg)
+            await self._create_failed_post(event, truncated_text, error_msg)
             raise BlueskyClientError(f"Failed to post to Bluesky: {e}") from e
 
     async def _create_failed_post(
