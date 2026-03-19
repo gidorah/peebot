@@ -11,7 +11,7 @@ from datetime import timedelta
 from typing import Any
 
 import structlog
-from asgiref.sync import async_to_sync
+from asgiref.sync import async_to_sync, sync_to_async
 from celery import shared_task
 from django.conf import settings
 from django.db import OperationalError, close_old_connections
@@ -166,8 +166,9 @@ async def _run_peebot_processor_async() -> dict[str, Any]:
         return result
 
     except OperationalError:
-        # Close broken/stale connections so the Celery retry gets a fresh one.
-        close_old_connections()
+        # Close broken/stale connections in the same thread/Executor that
+        # Django's async ORM uses, so the Celery retry gets a fresh one.
+        await sync_to_async(close_old_connections, thread_sensitive=True)()
         # Log at warning – this is a transient error that Celery will retry.
         # Logging at error level would generate a Sentry event for every
         # routine connection hiccup, creating noise before retries even run.
