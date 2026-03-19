@@ -22,6 +22,45 @@ from apps.event_processors.services.bluesky_client import (
 )
 
 
+@pytest_asyncio.fixture(autouse=True)
+async def cleanup_social_posts():
+    """Clean up SocialPost records before and after each test."""
+    await SocialPost.objects.filter(platform="bluesky").adelete()
+    yield
+    await SocialPost.objects.filter(platform="bluesky").adelete()
+
+
+@pytest_asyncio.fixture
+async def detected_event() -> DetectedEvent:
+    """Create a DetectedEvent for testing."""
+    return await DetectedEvent.objects.acreate(
+        event_type="urination",
+        channel_id="NODE3000005",
+        detected_at=timezone.now(),
+        confidence=Decimal("0.85"),
+    )
+
+
+def _create_mock_client() -> BlueskyClient:
+    """Create BlueskyClient with mocked atproto client."""
+    with (
+        patch(
+            "apps.event_processors.services.bluesky_client.settings"
+        ) as mock_settings,
+        patch(
+            "apps.event_processors.services.bluesky_client.Client"
+        ) as mock_client,
+    ):
+        mock_settings.BLUESKY_HANDLE = "peebot.bsky.social"
+        mock_settings.BLUESKY_APP_PASSWORD = "app-password-123"
+        mock_settings.BLUESKY_COOLDOWN_MINUTES = 30
+        mock_atproto = MagicMock()
+        mock_client.return_value = mock_atproto
+        client = BlueskyClient()
+        client._authenticated = True
+        return client
+
+
 class TestBlueskyClientTruncation:
     """Tests for the _truncate_to_grapheme_limit static method."""
 
@@ -68,47 +107,11 @@ class TestBlueskyClientTruncation:
 class TestBlueskyClientPostTruncation:
     """Tests that post() truncates long text before posting."""
 
-    @pytest_asyncio.fixture(autouse=True)
-    async def cleanup_social_posts(self):
-        """Clean up SocialPost records before each test."""
-        await SocialPost.objects.filter(platform="bluesky").adelete()
-        yield
-        await SocialPost.objects.filter(platform="bluesky").adelete()
-
-    def _create_mock_client(self) -> BlueskyClient:
-        """Create BlueskyClient with mocked atproto client."""
-        with (
-            patch(
-                "apps.event_processors.services.bluesky_client.settings"
-            ) as mock_settings,
-            patch(
-                "apps.event_processors.services.bluesky_client.Client"
-            ) as mock_client,
-        ):
-            mock_settings.BLUESKY_HANDLE = "peebot.bsky.social"
-            mock_settings.BLUESKY_APP_PASSWORD = "app-password-123"
-            mock_settings.BLUESKY_COOLDOWN_MINUTES = 30
-            mock_atproto = MagicMock()
-            mock_client.return_value = mock_atproto
-            client = BlueskyClient()
-            client._authenticated = True
-            return client
-
-    @pytest_asyncio.fixture
-    async def detected_event(self) -> DetectedEvent:
-        """Create a DetectedEvent for testing."""
-        return await DetectedEvent.objects.acreate(
-            event_type="urination",
-            channel_id="NODE3000005",
-            detected_at=timezone.now(),
-            confidence=Decimal("0.85"),
-        )
-
     async def test_post_long_text_sends_truncated_text(
         self, detected_event: DetectedEvent
     ) -> None:
         """post() sends truncated text to Bluesky when text exceeds 300 graphemes."""
-        mock_client = self._create_mock_client()
+        mock_client = _create_mock_client()
         mock_response = MagicMock()
         mock_response.uri = "at://did:plc:xxx/app.bsky.feed.post/yyy"
         mock_client.client.send_post.return_value = mock_response
