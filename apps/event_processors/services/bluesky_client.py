@@ -249,7 +249,11 @@ class BlueskyClient:
                 error=error_msg,
                 error_type=type(e).__name__,
             )
-            await self._create_failed_post(event, truncated_text, f"API error: {error_msg}")
+            await self._create_failed_post(
+                event,
+                truncated_text,
+                f"API error: {error_msg}",
+            )
             raise BlueskyClientError(f"Bluesky API error: {e}") from e
 
         except Exception as e:
