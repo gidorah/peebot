@@ -166,8 +166,13 @@ async def _run_peebot_processor_async() -> dict[str, Any]:
         return result
 
     except OperationalError:
-        # Re-raise DB errors for Celery retry mechanism
-        log.error("database_error", exc_info=True)
+        # Log at warning level before re-raising so that Celery's autoretry
+        # mechanism can schedule a retry without generating a Sentry issue on
+        # every attempt.  Sentry's LoggingIntegration only creates issues for
+        # ERROR+ records (event_level=logging.ERROR), so a WARNING is captured
+        # only as a breadcrumb.  CeleryIntegration will still capture a Sentry
+        # issue if all retries are exhausted and the task ultimately fails.
+        log.warning("database_error", exc_info=True)
         raise
 
     except Exception as e:
