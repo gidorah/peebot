@@ -230,7 +230,7 @@ class TestRunPeeBotProcessor:
 
         with (
             patch(
-                "apps.event_processors.processors.pee_bot.PeeBotProcessor.load_state",
+                "apps.event_processors.models.ProcessorState.objects.get",
                 side_effect=OperationalError("DB down"),
             ),
             patch("apps.event_processors.tasks.close_old_connections") as mock_close,
