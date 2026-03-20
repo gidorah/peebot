@@ -198,6 +198,12 @@ CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes hard limit
 CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 minutes soft limit
 
+# Retry connecting to the broker on worker startup instead of raising an error.
+# Without this, transient DNS hiccups (e.g. container restarts under
+# `restart: unless-stopped`) produce ERROR-level log lines that are captured
+# by Sentry as issues even though Celery retries the connection automatically.
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
 # Celery Beat uses the default PersistentScheduler (file-based).
 # Schedule is defined statically in config/celery.py via app.conf.beat_schedule.
 # See ADR-009 in docs/system-solution/tech-decisions.md for rationale.
