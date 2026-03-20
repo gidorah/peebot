@@ -1,0 +1,72 @@
+name: PR Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+  workflow_dispatch:
+
+concurrency:
+  group: pr-tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    services:
+      timescaledb:
+        image: timescale/timescaledb:2.23.1-pg15
+        env:
+          POSTGRES_DB: peebot
+          POSTGRES_USER: peebot_user
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U peebot_user -d peebot"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up uv and Python
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.14"
+          enable-cache: true
+
+      - name: Install just
+        run: sudo apt-get update && sudo apt-get install --yes just
+
+      - name: Install project dependencies
+        run: uv sync --frozen --dev
+
+      - name: Create CI environment file
+        run: |
+          cat > .env.ci <<'EOF'
+          SECRET_KEY=django-ci-test-key
+          DEBUG=False
+          ALLOWED_HOSTS=localhost,127.0.0.1
+          DATABASE_URL=postgresql://peebot_user:password@127.0.0.1:5432/peebot?application_name=github-actions
+          TEST_DATABASE_URL=postgresql://peebot_user:password@127.0.0.1:5432/peebot?application_name=github-actions-pytest
+          CELERY_BROKER_URL=redis://localhost:6379/0
+          CELERY_RESULT_BACKEND=redis://localhost:6379/0
+          REDIS_URL=redis://localhost:6379/0
+          SERVICE_NAME=peebot-ci
+          EOF
+
+      - name: Run tests
+        run: just test
+        env:
+          DOTENV_PATH: .env.ci

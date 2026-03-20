@@ -65,7 +65,7 @@ dev-test *args:
 # 2. PgBouncer can't route to non-existent databases
 # 3. This matches production practice where migrations also bypass PgBouncer
 test *args:
-	DOTENV_PATH=.env.local uv run pytest {{args}}
+	DOTENV_PATH="${DOTENV_PATH:-.env.local}" uv run pytest {{args}}
 
 # Run linting locally
 lint:

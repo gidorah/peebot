@@ -555,6 +555,28 @@ just dev-test --cov=apps
 
 Unit tests are located in `apps/<module>/tests/`, integration tests in `tests/`.
 
+### Pull Request CI
+
+GitHub Actions runs the test suite automatically for pull requests targeting `main` when the PR is:
+
+- opened,
+- updated with new commits,
+- reopened.
+
+The workflow uses a TimescaleDB service container and runs the canonical project test command:
+
+```bash
+just test
+```
+
+In CI, `just test` receives a CI-specific `DOTENV_PATH` so the workflow can use an ephemeral `.env.ci` file instead of a developer-local `.env.local`.
+
+To reproduce the CI execution path locally, create a CI-style env file and run:
+
+```bash
+DOTENV_PATH=.env.ci just test
+```
+
 ### Code Quality
 
 ```bash
