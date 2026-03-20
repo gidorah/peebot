@@ -577,6 +577,18 @@ To reproduce the CI execution path locally, create a CI-style env file and run:
 DOTENV_PATH=.env.ci just test
 ```
 
+GitHub Actions also runs PR quality checks for:
+
+- `ruff`
+- `mypy`
+
+To reproduce those checks locally, run:
+
+```bash
+uv run ruff check .
+uv run mypy apps/
+```
+
 ### Code Quality
 
 ```bash

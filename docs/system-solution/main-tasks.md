@@ -94,7 +94,13 @@ These tasks address architectural changes and bugs in the **currently implemente
 
 ## Phase 6: Pull Request Test CI (T007)
 
-- [ ] **T007-1 (Workflow)**: Add a GitHub Actions workflow that runs on PR open, synchronize, and reopen events targeting `main`.
-- [ ] **T007-2 (Database Service)**: Run tests against a TimescaleDB service container with direct test DB access.
-- [ ] **T007-3 (Test Entrypoint Alignment)**: Keep `just test` as the canonical test command while allowing CI to provide its own `DOTENV_PATH`.
-- [ ] **T007-4 (Repo Docs)**: Document the PR CI behavior and local reproduction path in repository docs.
+- [x] **T007-1 (Workflow)**: Add a GitHub Actions workflow that runs on PR open, synchronize, and reopen events targeting `main`.
+- [x] **T007-2 (Database Service)**: Run tests against a TimescaleDB service container with direct test DB access.
+- [x] **T007-3 (Test Entrypoint Alignment)**: Keep `just test` as the canonical test command while allowing CI to provide its own `DOTENV_PATH`.
+- [x] **T007-4 (Repo Docs)**: Document the PR CI behavior and local reproduction path in repository docs.
+
+## Phase 7: Quality CI (T008)
+
+- [x] **T008-1 (Workflow)**: Add a GitHub Actions workflow that runs Ruff and mypy on PR open, synchronize, and reopen events targeting `main`.
+- [x] **T008-2 (Check Separation)**: Expose separate `ruff` and `mypy` check names for branch protection and easier diagnosis.
+- [x] **T008-3 (Repo Docs)**: Document the PR quality checks and local reproduction commands in repository docs.
