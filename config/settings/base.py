@@ -17,6 +17,7 @@ from typing import Any, cast
 
 import environ
 import sentry_sdk
+from django.db import OperationalError
 from sentry_sdk.integrations.celery import CeleryIntegration
 from sentry_sdk.integrations.django import DjangoIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
@@ -243,14 +244,29 @@ if SENTRY_LOGS_LEVEL not in _VALID_LOG_LEVELS:
     )
 
 
-def _sentry_before_send(event: Event, _hint: dict[str, Any]) -> Event | None:
+def _sentry_before_send(event: Event, hint: dict[str, Any]) -> Event | None:
     request = event.get("request")
-    if not isinstance(request, dict):
-        return event
+    if isinstance(request, dict):
+        url = request.get("url", "")
+        if isinstance(url, str) and (url.endswith("/healthz") or url.endswith("/readyz")):
+            return None
 
-    url = request.get("url", "")
-    if isinstance(url, str) and (url.endswith("/healthz") or url.endswith("/readyz")):
-        return None
+    # Suppress transient DB connection errors that originate from a Celery task.
+    # The task already retries on OperationalError (autoretry_for + max_retries=3),
+    # so intermediate captures are noise. A genuine prolonged outage will still
+    # surface through health checks and logging once all retries are exhausted.
+    exc_info = hint.get("exc_info")
+    if exc_info is not None and isinstance(exc_info[1], OperationalError):
+        exception = event.get("exception")
+        values: list[Any] = (
+            exception.get("values", []) if isinstance(exception, dict) else []
+        )
+        last_value = values[-1] if values else None
+        mechanism = (
+            last_value.get("mechanism", {}) if isinstance(last_value, dict) else {}
+        )
+        if isinstance(mechanism, dict) and mechanism.get("type") == "celery":
+            return None
 
     return event
 
@@ -270,12 +286,7 @@ if SENTRY_DSN:
             ),
             # Instruments Celery tasks as Sentry spans and enables Sentry Crons
             # check-in monitoring for Celery Beat periodic tasks.
-            # report_errors_for_retries=False suppresses Sentry issues for
-            # transient OperationalError retries; the error is still reported
-            # once all retries are exhausted (real outage).
-            CeleryIntegration(
-                monitor_beat_tasks=True, report_errors_for_retries=False
-            ),
+            CeleryIntegration(monitor_beat_tasks=True),
         ],
         # Capture 100% of transactions in development; tune down in production.
         traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=1.0),
