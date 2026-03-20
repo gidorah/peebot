@@ -269,6 +269,36 @@ class TestBlueskyClientInitialization:
 
         assert "authenticate" in str(exc_info.value).lower()
 
+    @pytest.mark.asyncio
+    @patch("apps.event_processors.services.bluesky_client.Client")
+    @patch("apps.event_processors.services.bluesky_client.settings")
+    async def test_ensure_authenticated_network_error_raises_client_error(
+        self, mock_settings: MagicMock, mock_client_class: MagicMock
+    ) -> None:
+        """_ensure_authenticated wraps network errors (e.g. DNS failure) as BlueskyClientError.
+
+        Previously, non-AtProtocolError exceptions (such as OSError from a temporary
+        DNS resolution failure) would propagate unhandled and be logged at ERROR level,
+        creating Sentry noise. They must now be wrapped as BlueskyClientError so callers
+        can treat them as ordinary (WARNING-level) service failures.
+        """
+        mock_settings.BLUESKY_HANDLE = "peebot.bsky.social"
+        mock_settings.BLUESKY_APP_PASSWORD = "app-password-123"
+        mock_settings.BLUESKY_COOLDOWN_MINUTES = None
+
+        mock_client = MagicMock()
+        mock_client.login.side_effect = OSError(
+            "[Errno -3] Temporary failure in name resolution"
+        )
+        mock_client_class.return_value = mock_client
+
+        client = BlueskyClient()
+
+        with pytest.raises(BlueskyClientError) as exc_info:
+            await client._ensure_authenticated()
+
+        assert "authenticate" in str(exc_info.value).lower()
+
 
 @pytest.mark.asyncio
 @pytest.mark.django_db(transaction=True)
@@ -395,6 +425,42 @@ class TestBlueskyClientCooldown:
 
         assert can_post is True
         assert remaining is None
+
+    async def test_check_cooldown_db_error_is_non_fatal_and_blocks_post(self) -> None:
+        """A transient DB error in check_cooldown blocks posting but does NOT log at ERROR.
+
+        Logging at ERROR would create a Sentry event via LoggingIntegration(event_level=ERROR)
+        for every DNS hiccup. The method must log at WARNING and return a conservative
+        (block-posting) result so the task can continue safely.
+        """
+        from unittest.mock import patch as mock_patch
+
+        import structlog.testing
+
+        mock_client = self._create_mock_client()
+
+        with (
+            mock_patch(
+                "apps.event_processors.services.bluesky_client.SocialPost.objects.filter",
+                side_effect=Exception("[Errno -3] Temporary failure in name resolution"),
+            ),
+            structlog.testing.capture_logs() as captured,
+        ):
+            can_post, remaining = await mock_client.check_cooldown()
+
+        assert can_post is False
+        assert remaining is not None
+
+        # Must be logged at WARNING, not ERROR, to avoid generating a Sentry event.
+        warning_logs = [e for e in captured if e.get("log_level") == "warning"]
+        assert any(
+            "bluesky_cooldown_check_failed" in e.get("event", "") for e in warning_logs
+        ), "Expected a warning-level log for cooldown check failure"
+
+        error_logs = [e for e in captured if e.get("log_level") == "error"]
+        assert not any(
+            "bluesky_cooldown_check_failed" in e.get("event", "") for e in error_logs
+        ), "cooldown check failure must NOT be logged at error level"
 
 
 @pytest.mark.asyncio

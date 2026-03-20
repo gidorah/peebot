@@ -116,7 +116,7 @@ class BlueskyClient:
                 lambda: self.client.login(self._handle, self._app_password),
             )
             self._authenticated = True
-        except AtProtocolError as e:
+        except Exception as e:
             raise BlueskyClientError(f"Failed to authenticate with Bluesky: {e}") from e
 
     async def check_cooldown(self) -> tuple[bool, timedelta | None]:
@@ -162,7 +162,7 @@ class BlueskyClient:
             return False, max(timedelta(0), remaining)
 
         except Exception as e:
-            logger.error(
+            logger.warning(
                 "bluesky_cooldown_check_failed",
                 error=str(e),
                 error_type=type(e).__name__,
