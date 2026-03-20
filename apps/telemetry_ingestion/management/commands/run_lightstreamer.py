@@ -266,7 +266,7 @@ class Command(BaseCommand):
             # fresh one.  Without this, every subsequent abulk_create reuses
             # the same broken connection and fails indefinitely.
             await sync_to_async(close_old_connections, thread_sensitive=True)()
-            logger.error(f"Error flushing buffer to DB: {e}", exc_info=True)
+            logger.warning(f"Error flushing buffer to DB: {e}", exc_info=True)
         except Exception as e:
             logger.error(f"Error flushing buffer to DB: {e}", exc_info=True)
         finally:

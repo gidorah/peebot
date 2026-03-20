@@ -101,3 +101,32 @@ async def test_flush_buffer_acknowledges_queue_items_on_operational_error() -> N
 
     # queue.join() would block forever if task_done() was not called.
     await asyncio.wait_for(cmd.queue.join(), timeout=1.0)
+
+
+@pytest.mark.asyncio
+async def test_flush_buffer_logs_operational_error_at_warning() -> None:
+    """Transient DB disconnects should stay visible without creating Sentry issues."""
+    cmd = _make_command()
+    buffer = _make_buffer()
+
+    await cmd.queue.put({"NODE3000005": {}})
+
+    with (
+        patch(
+            "apps.telemetry_ingestion.management.commands.run_lightstreamer.TelemetryReading.objects.abulk_create",
+            new_callable=AsyncMock,
+            side_effect=OperationalError("server closed the connection unexpectedly"),
+        ),
+        patch(
+            "apps.telemetry_ingestion.management.commands.run_lightstreamer.close_old_connections"
+        ),
+        patch(
+            "apps.telemetry_ingestion.management.commands.run_lightstreamer.logger"
+        ) as mock_logger,
+    ):
+        await cmd.flush_buffer(buffer, queue_items_to_ack=1)
+
+    mock_logger.warning.assert_called_once()
+    warning_message = mock_logger.warning.call_args.args[0]
+    assert "Error flushing buffer to DB" in warning_message
+    mock_logger.error.assert_not_called()

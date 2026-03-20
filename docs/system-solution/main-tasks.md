@@ -104,3 +104,9 @@ These tasks address architectural changes and bugs in the **currently implemente
 - [x] **T008-1 (Workflow)**: Add a GitHub Actions workflow that runs Ruff and mypy on PR open, synchronize, and reopen events targeting `main`.
 - [x] **T008-2 (Check Separation)**: Expose separate `ruff` and `mypy` check names for branch protection and easier diagnosis.
 - [x] **T008-3 (Repo Docs)**: Document the PR quality checks and local reproduction commands in repository docs.
+
+## Phase 8: Operational Noise Hardening (T009)
+
+- [ ] **T009-1 (Ingestion Sentry Noise)**: Treat transient `OperationalError` in `run_lightstreamer.flush_buffer()` as a retryable warning while still closing stale DB connections.
+    - *Goal*: Prevent routine ingestion DB disconnects from creating Sentry issues via `LoggingIntegration(event_level=ERROR)`.
+    - *Files*: `apps/telemetry_ingestion/management/commands/run_lightstreamer.py`, `apps/telemetry_ingestion/tests/test_run_lightstreamer_command.py`.
