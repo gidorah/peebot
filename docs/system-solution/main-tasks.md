@@ -1,6 +1,6 @@
 # Project Roadmap: PeeBot System
 
-**Status**: All phases complete. Production deployed.
+**Status**: Production deployed. Follow-up hardening and CI work continue in implementation tasks.
 
 ## Refactoring Tasks (Priority)
 
@@ -83,3 +83,18 @@ These tasks address architectural changes and bugs in the **currently implemente
 - [x] **T005-8 (ADRs)**: Record ADR-012 (Baked Images), ADR-013 (Stdout Logging), ADR-014 (Coolify Deployment).
     - [x] Step 26: Update `docs/system-solution/main-tasks.md` with detailed T005 step entries (this update).
     - [x] Step 27: Add ADR-012, ADR-013, ADR-014 to `docs/system-solution/tech-decisions.md`.
+
+## Phase 5: Production Hardening (T006)
+
+- [ ] **T006-1 (Health Checks)**: Add `/healthz` and `/readyz` endpoints plus production container health checks.
+- [ ] **T006-2 (Test Hygiene)**: Remove pytest collection and asyncio warnings from the existing suite.
+- [ ] **T006-3 (REST API Foundation)**: Add read-only API endpoints for channels and detected events.
+- [ ] **T006-4 (Manual Injection)**: Add a debug-only telemetry injection endpoint for testing and operational verification.
+- [ ] **T006-5 (OpenAPI Docs)**: Add schema generation and Swagger UI.
+
+## Phase 6: Pull Request Test CI (T007)
+
+- [ ] **T007-1 (Workflow)**: Add a GitHub Actions workflow that runs on PR open, synchronize, and reopen events targeting `main`.
+- [ ] **T007-2 (Database Service)**: Run tests against a TimescaleDB service container with direct test DB access.
+- [ ] **T007-3 (Test Entrypoint Alignment)**: Keep `just test` as the canonical test command while allowing CI to provide its own `DOTENV_PATH`.
+- [ ] **T007-4 (Repo Docs)**: Document the PR CI behavior and local reproduction path in repository docs.
