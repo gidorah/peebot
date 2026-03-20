@@ -270,7 +270,12 @@ if SENTRY_DSN:
             ),
             # Instruments Celery tasks as Sentry spans and enables Sentry Crons
             # check-in monitoring for Celery Beat periodic tasks.
-            CeleryIntegration(monitor_beat_tasks=True),
+            # report_errors_for_retries=False suppresses Sentry issues for
+            # transient OperationalError retries; the error is still reported
+            # once all retries are exhausted (real outage).
+            CeleryIntegration(
+                monitor_beat_tasks=True, report_errors_for_retries=False
+            ),
         ],
         # Capture 100% of transactions in development; tune down in production.
         traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=1.0),
