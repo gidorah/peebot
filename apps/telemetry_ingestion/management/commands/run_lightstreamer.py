@@ -3,7 +3,9 @@ import logging
 import signal
 from typing import Any
 
+from asgiref.sync import sync_to_async
 from django.core.management.base import BaseCommand
+from django.db import OperationalError, close_old_connections
 
 from apps.telemetry_ingestion.services.enricher import TelemetryEnricher
 from apps.telemetry_ingestion.services.lightstreamer_client import (
@@ -41,9 +43,6 @@ class Command(BaseCommand):
         self.queue = asyncio.Queue(maxsize=50000)
 
         # Step 1: Load channel map (ADR-005)
-        # We need to wrap the sync DB access in sync_to_async
-        from asgiref.sync import sync_to_async
-
         await sync_to_async(self.load_channel_map)()
 
         if not self.channel_map:
@@ -262,6 +261,12 @@ class Command(BaseCommand):
                     f"(Acked {queue_items_to_ack} queue items)."
                 )
 
+        except OperationalError as e:
+            # Close the stale/broken DB connection so the next flush gets a
+            # fresh one.  Without this, every subsequent abulk_create reuses
+            # the same broken connection and fails indefinitely.
+            await sync_to_async(close_old_connections, thread_sensitive=True)()
+            logger.error(f"Error flushing buffer to DB: {e}", exc_info=True)
         except Exception as e:
             logger.error(f"Error flushing buffer to DB: {e}", exc_info=True)
         finally:
