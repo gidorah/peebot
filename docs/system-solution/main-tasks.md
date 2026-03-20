@@ -101,6 +101,6 @@ These tasks address architectural changes and bugs in the **currently implemente
 
 ## Phase 7: Quality CI (T008)
 
-- [ ] **T008-1 (Workflow)**: Add a GitHub Actions workflow that runs Ruff and mypy on PR open, synchronize, and reopen events targeting `main`.
-- [ ] **T008-2 (Check Separation)**: Expose separate `ruff` and `mypy` check names for branch protection and easier diagnosis.
-- [ ] **T008-3 (Repo Docs)**: Document the PR quality checks and local reproduction commands in repository docs.
+- [x] **T008-1 (Workflow)**: Add a GitHub Actions workflow that runs Ruff and mypy on PR open, synchronize, and reopen events targeting `main`.
+- [x] **T008-2 (Check Separation)**: Expose separate `ruff` and `mypy` check names for branch protection and easier diagnosis.
+- [x] **T008-3 (Repo Docs)**: Document the PR quality checks and local reproduction commands in repository docs.

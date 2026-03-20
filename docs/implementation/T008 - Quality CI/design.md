@@ -31,7 +31,7 @@ They run in parallel on `ubuntu-latest` and share the same basic setup:
 
 The `setup-uv` configuration mirrors the existing T007 workflow conventions with:
 
-- `python-version: "3.14"`
+- `python-version`: matching the value configured in `.github/workflows/pr-quality.yml`
 - `enable-cache: true`
 
 No service containers are needed.
