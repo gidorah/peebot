@@ -137,7 +137,3 @@ def test_swagger_ui_returns_200() -> None:
     response = client.get("/api/docs/")
 
     assert response.status_code == 200
-
-
-def test_ci_pipeline_sentinel_failure() -> None:
-    assert False, "intentional failure to verify PR test CI"
