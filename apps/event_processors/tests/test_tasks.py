@@ -7,6 +7,7 @@ triggers, and error handling.
 
 from __future__ import annotations
 
+import logging
 from datetime import timedelta
 from decimal import Decimal
 from typing import Any
@@ -224,21 +225,36 @@ class TestRunPeeBotProcessor:
         assert DetectedEvent.objects.count() == 1
         self.mock_bluesky.post.assert_called_once()
 
-    def test_run_peebot_processor_db_error_triggers_retry(self) -> None:
+    def test_run_peebot_processor_db_error_triggers_retry(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """OperationalError closes connections, logs a warning, and re-raises for Celery retry."""
-        with (
-            patch(
-                "apps.event_processors.processors.base.BaseProcessor.load_state",
-                new_callable=AsyncMock,
-                side_effect=OperationalError("DB down"),
-            ),
-            patch("apps.event_processors.tasks.close_old_connections") as mock_close,
-        ):
-            with pytest.raises(OperationalError, match="DB down"):
-                run_peebot_processor()
+        with caplog.at_level(logging.WARNING, logger="apps.event_processors.tasks"):
+            with (
+                patch(
+                    "apps.event_processors.processors.base.BaseProcessor.load_state",
+                    new_callable=AsyncMock,
+                    side_effect=OperationalError("DB down"),
+                ),
+                patch("apps.event_processors.tasks.close_old_connections") as mock_close,
+            ):
+                with pytest.raises(OperationalError, match="DB down"):
+                    run_peebot_processor()
 
         # Broken connections must be closed so the retry starts fresh.
         mock_close.assert_called_once()
+
+        # Must NOT be logged at ERROR or above — that would create a Sentry event for
+        # every transient connection hiccup before the Celery retry even runs.
+        task_error_records = [
+            r
+            for r in caplog.records
+            if r.name == "apps.event_processors.tasks" and r.levelno >= logging.ERROR
+        ]
+        assert not task_error_records, (
+            "OperationalError must not be logged at ERROR level; "
+            "use WARNING to avoid spurious Sentry noise"
+        )
 
     def test_run_peebot_processor_general_exception_swallowed(self) -> None:
         """General exceptions are logged but don't crash the task execution cycle."""
