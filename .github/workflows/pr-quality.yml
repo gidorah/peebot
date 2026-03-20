@@ -42,6 +42,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      SECRET_KEY: django-ci-mypy-key
+      DATABASE_URL: postgresql://peebot_user:password@127.0.0.1:5432/peebot?application_name=github-actions-mypy
+      ALLOWED_HOSTS: localhost,127.0.0.1
 
     steps:
       - name: Check out repository
