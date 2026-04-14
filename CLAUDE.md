@@ -123,3 +123,6 @@ Agents must follow these phases sequentially:
 ## 3. The Golden Rule
 **"Doc-First, Code-Later."**
 No code is written until the implementation documentation for that specific task is complete and verified against the `/docs/system-solution` directives.
+
+### 3.1 Scheduled Agent Exemption
+PRs opened by the scheduled remote agents (Security Audit, Dependabot PR Review, Sentry Issue Resolution) are exempt from the Doc-First rule. The referenced CVE, Sentry short-id, Dependabot advisory, or GitHub issue stands in for the `requirements.md` / `design.md` / `tasks.md` triplet. The exemption covers hotfix-sized, single-concern PRs only — anything touching migrations, module boundaries, or shared infrastructure must still go through the full SDD workflow (the agents are instructed to add `needs-human` in those cases).
