@@ -80,6 +80,6 @@ Each module is a bounded context with strict model ownership. Modules communicat
 
 ## 7. Related Documents
 
-- **[Architecture Specification](system-solution/architecture.md)** — Full technical design, component specs, infrastructure details.
-- **[High-Level Requirements (SRS)](system-solution/high-level-requirements.md)** — Business objectives, functional/non-functional requirements, constraints.
-- **[Main Tasks](system-solution/main-tasks.md)** — Project roadmap and task decomposition.
+- **[Architecture Specification](architecture.md)** — Full technical design, component specs, infrastructure details.
+- **[High-Level Requirements (SRS)](high-level-requirements.md)** — Business objectives, functional/non-functional requirements, constraints.
+- **[Main Tasks](main-tasks.md)** — Project roadmap and task decomposition.
