@@ -589,6 +589,16 @@ uv run ruff check .
 uv run mypy apps/
 ```
 
+### Dependabot
+
+Dependency updates are automated via Dependabot (`.github/dependabot.yml`). Three ecosystems are scanned **weekly on Mondays**:
+
+- **`uv`** — Python dependencies at the repository root (`pyproject.toml` + `uv.lock`).
+- **`github-actions`** — workflow files under `.github/workflows/`.
+- **`docker`** — all Dockerfiles under `docker/dev`, `docker/prod`, `docker/prod/pgbouncer`, and `docker/prod/timescaledb`.
+
+Minor and patch bumps are grouped into a single PR per ecosystem to reduce review churn; major bumps land as individual PRs. Generated PRs carry a `dependencies` label plus an ecosystem tag (`python`, `github-actions`, or `docker`) and conventional commit prefixes (`deps`, `ci`, or `docker`) for easy filtering.
+
 ### Code Quality
 
 ```bash
