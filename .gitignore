@@ -249,3 +249,6 @@ __marimo__/
 
 # Obsidian Vault
 obsidian
+
+# Claude Code local state (settings, worktrees, session data)
+.claude/
