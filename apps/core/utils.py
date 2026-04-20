@@ -1,7 +1,7 @@
 """Shared utility helpers for the ``core`` module.
 
-Per `ADR-007 (Hybrid Enrichment Strategy)` the production responsibilities
-originally sketched for this module live elsewhere:
+Per ``ADR-007`` (Hybrid Enrichment Strategy) the production
+responsibilities originally sketched for this module live elsewhere:
 
 * Timestamp normalization (UTC / year rollover) is owned by
   ``apps.telemetry_ingestion.services.enricher``.

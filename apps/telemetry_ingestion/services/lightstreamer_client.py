@@ -151,8 +151,8 @@ class LightstreamerClientService:
         Subscription is configured for ``MERGE`` mode with snapshot
         delivery enabled so late subscribers receive the latest known
         value for every item. The SDK's ``setSlowingEnabled(False)``
-        matches FR-ING-001 / NFR-PERF-001 — we prefer dropping stale
-        updates over artificially pacing the feed.
+        matches NFR-PERF-001 — we prefer dropping stale updates over
+        artificially pacing the feed.
         """
         loop = asyncio.get_running_loop()
         sub = Subscription(
