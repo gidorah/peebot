@@ -40,6 +40,7 @@ class FillEvent:
 
     @property
     def duration_seconds(self) -> float:
+        """Return the fill event's detection window duration in seconds."""
         return (self.window_end_time - self.window_start_time).total_seconds()
 
 

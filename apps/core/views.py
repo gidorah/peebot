@@ -1,1 +1,1 @@
-# Create your views here.
+"""Intentionally empty — ``core``'s HTTP surface lives in :mod:`apps.core.health`."""

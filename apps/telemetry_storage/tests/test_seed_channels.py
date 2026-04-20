@@ -1,3 +1,5 @@
+"""Tests for the ``seed_channels`` management command (XML parsing and upsert)."""
+
 import xml.etree.ElementTree as SysET
 from io import StringIO
 from unittest.mock import MagicMock, patch

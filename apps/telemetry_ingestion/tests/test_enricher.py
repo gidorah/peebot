@@ -1,3 +1,5 @@
+"""Tests for ``TelemetryEnricher`` timestamp normalization and year-rollover logic."""
+
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from unittest.mock import patch

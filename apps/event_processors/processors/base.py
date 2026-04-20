@@ -204,7 +204,12 @@ class DetectionResult:
         self.metadata = metadata or {}
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert result to dictionary for model creation."""
+        """Return a dict matching :class:`DetectedEvent` field names.
+
+        Used by the task layer to instantiate a ``DetectedEvent`` row from
+        this detection without having to know the processor's internal
+        attribute names.
+        """
         return {
             "event_type": self.event_type,
             "detected_at": self.detected_at,

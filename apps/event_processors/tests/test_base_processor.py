@@ -322,7 +322,7 @@ class TestBaseProcessorAbstractMethods:
 
     @pytest.mark.asyncio
     async def test_analyze_returns_detection_result(self) -> None:
-        """analyze returns dict with detection metadata."""
+        """Analyze returns dict with detection metadata."""
         processor = ConcreteProcessor()
         mock_reading = MagicMock(spec=TelemetryReading)
 
@@ -335,7 +335,7 @@ class TestBaseProcessorAbstractMethods:
 
     @pytest.mark.asyncio
     async def test_analyze_returns_none_when_no_event(self) -> None:
-        """analyze returns None when no event detected."""
+        """Analyze returns None when no event detected."""
         processor = ConcreteProcessor()
 
         result = await processor.analyze([])

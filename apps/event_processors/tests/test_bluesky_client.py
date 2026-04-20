@@ -442,7 +442,9 @@ class TestBlueskyClientCooldown:
         with (
             mock_patch(
                 "apps.event_processors.services.bluesky_client.SocialPost.objects.filter",
-                side_effect=Exception("[Errno -3] Temporary failure in name resolution"),
+                side_effect=Exception(
+                    "[Errno -3] Temporary failure in name resolution"
+                ),
             ),
             structlog.testing.capture_logs() as captured,
         ):

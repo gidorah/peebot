@@ -117,8 +117,15 @@ target-version = "py313"
 line-length = 88
 
 [tool.ruff.lint]
-select = ["E4", "E7", "F", "I", "UP"]
-ignore = ["E501", "F403"]
+select = ["E4", "E7", "F", "I", "UP", "D"]
+ignore = [
+    "E501",
+    "F403",
+    "D104",  # Missing docstring in public package (__init__.py): noisy, not useful
+    "D105",  # Missing docstring in magic method: __str__ etc. speak for themselves
+    "D106",  # Missing docstring in nested class: Django Meta classes are config, not public API
+    "D107",  # Missing docstring in __init__: Google convention prefers class-level docstring
+]
 exclude = [
     "migrations/**",
     "**/migrations/**",
@@ -130,8 +137,14 @@ exclude = [
     "manage.py",
 ]
 
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
 [tool.ruff.lint.per-file-ignores]
 "config/settings/*" = ["F403", "F405"]
+# Tests don't need per-function docstrings — pytest test names carry the intent.
+"apps/**/tests/**/*.py" = ["D101", "D102", "D103"]
+"tests/**/*.py" = ["D101", "D102", "D103"]
 
 [tool.ruff.lint.isort]
 combine-as-imports = true

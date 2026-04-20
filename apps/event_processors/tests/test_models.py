@@ -76,7 +76,7 @@ class TestDetectedEvent:
         assert event.confidence == Decimal("0.85")
 
     def test_metadata_default(self) -> None:
-        """metadata defaults to empty dict."""
+        """Metadata defaults to empty dict."""
         event = DetectedEvent.objects.create(
             event_type="test_event",
             channel_id="TEST001",

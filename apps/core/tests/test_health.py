@@ -1,3 +1,5 @@
+"""Tests for the liveness (``healthz``) and readiness (``readyz``) probes."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch

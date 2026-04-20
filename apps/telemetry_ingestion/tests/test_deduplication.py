@@ -1,5 +1,4 @@
-"""
-Restart-simulation tests for duplicate ingestion prevention (T004 / FR-DEDUP-002).
+"""Restart-simulation tests for duplicate ingestion prevention (T004 / FR-DEDUP-002).
 
 Tests flush_buffer directly against a real DB to confirm that:
   1. A second flush containing the same (channel, timestamp) reading does not raise.
@@ -42,9 +41,10 @@ def command_with_channel(db):  # type: ignore[no-untyped-def]
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.asyncio
 async def test_restart_simulation_no_exception(command_with_channel) -> None:  # type: ignore[no-untyped-def]
-    """
-    FR-DEDUP-002: Two consecutive flushes of the same (channel, timestamp) reading
-    must not raise any exception.
+    """FR-DEDUP-002: consecutive flushes of the same reading do not raise.
+
+    Two consecutive flushes of the same (channel, timestamp) reading must
+    not raise any exception.
     """
     cmd, _ = command_with_channel
     ts = timezone.now()
@@ -60,9 +60,7 @@ async def test_restart_simulation_no_exception(command_with_channel) -> None:  #
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.asyncio
 async def test_restart_simulation_exactly_one_row(command_with_channel) -> None:  # type: ignore[no-untyped-def]
-    """
-    FR-DEDUP-001/002: After two flushes of the same reading, exactly one DB row exists.
-    """
+    """FR-DEDUP-001/002: after two flushes of the same reading, exactly one DB row exists."""
     cmd, channel = command_with_channel
     ts = timezone.now()
     batch = [_make_enriched("RESTART_TEST", ts, 42.0)]
@@ -81,8 +79,9 @@ async def test_restart_simulation_exactly_one_row(command_with_channel) -> None:
 async def test_restart_simulation_new_readings_still_persisted(
     command_with_channel,
 ) -> None:  # type: ignore[no-untyped-def]
-    """
-    FR-DEDUP-003: A batch that contains both a duplicate and a genuinely new reading
+    """FR-DEDUP-003: mixed batches persist new rows while skipping duplicates.
+
+    A batch that contains both a duplicate and a genuinely new reading
     must persist the new reading while silently skipping the duplicate.
     """
     cmd, channel = command_with_channel

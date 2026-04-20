@@ -1,5 +1,4 @@
-"""
-PeeBot Django configuration package.
+"""PeeBot Django configuration package.
 
 This ensures that the Celery app is always imported when Django starts
 so that the @shared_task decorator will use it.

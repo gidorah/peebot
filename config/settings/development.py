@@ -1,6 +1,4 @@
-"""
-Development settings for peebot project.
-"""
+"""Development settings for the peebot project (local Django + Seq logging)."""
 
 import os
 from typing import Any, cast
@@ -63,6 +61,12 @@ structlog.configure(
 
 # Custom processor to map standard keys to Seq CLEF keys
 def render_to_clef(logger: Any, name: str, event_dict: dict[str, Any]) -> str:
+    """Remap structlog keys to Seq's CLEF schema and return a JSON string.
+
+    Seq expects ``@m`` (message), ``@l`` (level), and ``@t`` (timestamp).
+    Returning a JSON string ensures ``ProcessorFormatter`` hands the handler
+    a valid serialized CLEF document.
+    """
     # Seq expects @t for timestamp, @m for message, @l for level
     event_dict["@m"] = event_dict.pop("event", "")
     event_dict["@l"] = event_dict.pop("level", "info")
