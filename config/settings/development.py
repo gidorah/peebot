@@ -66,6 +66,14 @@ def render_to_clef(logger: Any, name: str, event_dict: dict[str, Any]) -> str:
     Seq expects ``@m`` (message), ``@l`` (level), and ``@t`` (timestamp).
     Returning a JSON string ensures ``ProcessorFormatter`` hands the handler
     a valid serialized CLEF document.
+
+    Args:
+        logger: Ignored; required by the structlog processor signature.
+        name: Ignored; required by the structlog processor signature.
+        event_dict: Structlog event dict; mutated in-place before serialization.
+
+    Returns:
+        A JSON-serialized CLEF event string.
     """
     # Seq expects @t for timestamp, @m for message, @l for level
     event_dict["@m"] = event_dict.pop("event", "")
