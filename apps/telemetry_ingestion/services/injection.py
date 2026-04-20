@@ -41,6 +41,15 @@ class ManualInjectionPayload(BaseModel):
 
         Mirrors the invariant maintained by the live Lightstreamer
         pipeline via :class:`~apps.telemetry_ingestion.services.enricher.TelemetryEnricher`.
+
+        Args:
+            value: The datetime to validate.
+
+        Returns:
+            The original datetime, unchanged, when timezone-aware.
+
+        Raises:
+            ValueError: If ``value.tzinfo`` is ``None``.
         """
         if value.tzinfo is None:
             raise ValueError("timestamp must include timezone information")
