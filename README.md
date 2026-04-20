@@ -2,6 +2,8 @@
 
 A Django modular monolith that ingests real-time ISS telemetry data from Lightstreamer, stores it in TimescaleDB, and runs independent analytics modules to detect events. The primary module (PeeBot) detects when astronauts use the Urine Processor Assembly and posts humorous updates to Bluesky.
 
+> **Live instance:** follow [@pee-bot.bsky.social](https://bsky.app/profile/pee-bot.bsky.social) on Bluesky for real-time posts.
+
 ## Overview
 
 This system implements a **modular monolith architecture** using Django, where each module represents a bounded context with clear responsibilities. The architecture prioritizes:
