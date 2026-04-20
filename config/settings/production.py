@@ -1,6 +1,4 @@
-"""
-Production settings for peebot project.
-"""
+"""Production settings for the peebot project (Gunicorn + stdout logging per ADR-013)."""
 
 import structlog
 

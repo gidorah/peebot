@@ -1,3 +1,16 @@
+"""URL conf for PeeBot's versioned public REST API (``/api/v1/``).
+
+Registered routes:
+
+* ``GET /channels/`` — paginated telemetry channel listing (read-only).
+* ``GET /events/`` — paginated detected events listing (read-only).
+* ``POST /telemetry/inject/`` — manual telemetry injection, gated by
+  ``DEBUG=True`` (FR-ING-006).
+
+The OpenAPI schema and Swagger UI are mounted by the project-level
+``config/urls.py`` at ``/api/schema/`` and ``/api/docs/``.
+"""
+
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 

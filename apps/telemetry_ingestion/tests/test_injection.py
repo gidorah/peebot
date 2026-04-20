@@ -1,3 +1,5 @@
+"""Tests for the ``ManualInjectionPayload`` Pydantic schema and injection endpoint."""
+
 from __future__ import annotations
 
 from decimal import Decimal

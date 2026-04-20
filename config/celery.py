@@ -1,5 +1,4 @@
-"""
-Celery configuration for PeeBot.
+"""Celery configuration for PeeBot.
 
 This module initializes the Celery application and configures it to work
 with Django settings. It auto-discovers tasks from all installed apps.

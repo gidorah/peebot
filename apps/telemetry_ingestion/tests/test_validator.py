@@ -1,3 +1,5 @@
+"""Tests for the hot-path Pydantic validator (``validate_payload`` + ``LightstreamerReading``)."""
+
 from decimal import Decimal
 
 import pytest

@@ -1,5 +1,4 @@
-"""
-Testing settings for peebot project.
+"""Testing settings for peebot project.
 
 Used by pytest to run tests with direct database access (bypasses PgBouncer).
 """

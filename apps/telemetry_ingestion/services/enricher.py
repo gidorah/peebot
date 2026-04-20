@@ -1,3 +1,13 @@
+"""Domain enrichment for validated Lightstreamer readings.
+
+Per ADR-007 (Hybrid Enrichment Strategy), this module owns *domain*
+normalization — specifically the conversion of the ISS feed's non-standard
+"Hours since start-of-year" timestamp into an aware UTC datetime, including
+the New Year's Eve rollover edge case. *System* metadata (``id`` as
+UUIDv7, ``created_at``) is left to Django model defaults and is NOT the
+responsibility of this module.
+"""
+
 import logging
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -10,15 +20,34 @@ logger = logging.getLogger(__name__)
 
 
 class TelemetryEnricher:
-    """
-    Service for enriching validated telemetry data with normalized timestamps
-     and other domain-specific logic.
+    """Stateless service that converts validated readings into persistable dicts.
+
+    Used as a pure function on the ingestion consumer loop: given a
+    :class:`LightstreamerReading`, return a dict whose keys map directly
+    onto :class:`~apps.telemetry_storage.models.TelemetryReading` fields.
     """
 
     @staticmethod
     def enrich(reading: LightstreamerReading) -> dict[str, Any]:
-        """
-        Transform LightstreamerReading into enriched dictionary for persistence.
+        """Normalize the reading's timestamp and return a persistable dict.
+
+        The ISS feed encodes time as floating-point "hours since start of
+        year (Year-1)". This method converts that to a UTC
+        :class:`datetime`, applying a rollover heuristic so that late-year
+        samples arriving just after midnight UTC on Jan 1st are attributed
+        to the previous year rather than appearing 24h in the future.
+
+        If the reading carries no timestamp or cannot be parsed, the
+        enricher falls back to ``timezone.now()`` so downstream persistence
+        never receives a ``None`` timestamp.
+
+        Args:
+            reading: Validated Lightstreamer reading to enrich.
+
+        Returns:
+            A dict with the keys expected by
+            :class:`~apps.telemetry_storage.repositories.ReadingData`
+            downstream.
         """
         now = datetime.now(tz=UTC)
         reading_ts = None
@@ -26,7 +55,7 @@ class TelemetryEnricher:
         if reading.timestamp is not None:
             try:
                 hours_from_soy = reading.timestamp
-                # ADR-010: ISS 'TimeStamp' is Hours from Dec 31 (Year-1).
+                # Per ADR-007: ISS 'TimeStamp' is Hours from Dec 31 (Year-1).
                 # Base date: Dec 31 of the previous year (0.0 hours = Start of Jan 1)
                 base_epoch = datetime(now.year, 1, 1, tzinfo=UTC) - timedelta(days=1)
                 reading_ts = base_epoch + timedelta(hours=hours_from_soy)

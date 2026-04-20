@@ -1,3 +1,5 @@
+"""Integration tests for the public REST API (``/api/v1/...``) and operational endpoints."""
+
 from __future__ import annotations
 
 from datetime import timedelta

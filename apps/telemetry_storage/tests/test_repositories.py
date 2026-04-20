@@ -1,3 +1,5 @@
+"""Tests for ``DjangoTelemetryRepository`` against the repository interface contract."""
+
 import datetime
 
 import pytest
@@ -72,8 +74,10 @@ async def test_repository_bulk_create_async() -> None:
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.asyncio
 async def test_bulk_create_ignores_duplicate() -> None:
-    """FR-DEDUP-002/003: duplicate (channel, timestamp) is silently skipped; the
-    first-written value is kept and no exception is raised."""
+    """FR-DEDUP-002/003: duplicate (channel, timestamp) pairs are silently skipped.
+
+    The first-written value is kept and no exception is raised on conflict.
+    """
     channel = await sync_to_async(baker.make)(TelemetryChannel, public_pui="DEDUP_TEST")
     ts = timezone.now()
 

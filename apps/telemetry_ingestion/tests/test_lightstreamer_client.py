@@ -1,3 +1,5 @@
+"""Tests for the Lightstreamer SDK wrappers (sync→async bridge, listeners, service)."""
+
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -16,9 +18,7 @@ class TestLightstreamerClientService:
     async def test_connect(
         self, mock_subscription: MagicMock, mock_lightstreamer_client: MagicMock
     ) -> None:
-        """
-        Verify that connecting initializes the client and subscription correctly.
-        """
+        """Verify that connecting initializes the client and subscription correctly."""
         # Arrange
         mock_callback = AsyncMock()
         item_names = ["NODE3000005", "AIRLOCK000001"]
@@ -61,9 +61,10 @@ class TestLightstreamerClientService:
 
     @pytest.mark.asyncio
     async def test_listener_callback_execution(self) -> None:
-        """
-        Verify that the SubListener correctly bridges the synchronous onItemUpdate
-        to the asynchronous callback.
+        """Verify that the SubListener bridges onItemUpdate to the async callback.
+
+        The SubListener must correctly forward the synchronous onItemUpdate
+        hook from the Lightstreamer SDK into the asynchronous coroutine callback.
         """
         # Arrange
         mock_callback = AsyncMock()

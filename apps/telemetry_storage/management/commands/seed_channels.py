@@ -1,3 +1,17 @@
+"""Management command that seeds ``TelemetryChannel`` rows from PUIList.xml.
+
+Runs on first deployment (and whenever the PUI list is refreshed) to
+populate the ~400 ISS telemetry channels PeeBot subscribes to. Parsing
+uses :mod:`defusedxml` to harden against malformed/malicious XML.
+
+In development the command intentionally keeps only ``NODE3000005`` (the
+UPA Tank Level channel used by the PeeBot processor) marked active;
+every other channel is soft-deleted at seed time so local ingestion
+focuses on the one channel the processor actually cares about. Production
+seeding is handled the same way today — broaden the active set by
+adjusting ``target_active_pui`` once additional processors are wired up.
+"""
+
 from typing import Any, cast
 
 import defusedxml.ElementTree as ET
@@ -9,9 +23,22 @@ from apps.telemetry_storage.models import TelemetryChannel
 
 
 class Command(BaseCommand):
+    """``seed_channels`` management command.
+
+    Reads ``docs/PUIList.xml``, upserts a :class:`TelemetryChannel` row
+    for every ``<Symbol>`` entry, and soft-deletes channels other than
+    the single currently-targeted active channel.
+    """
+
     help = "Seeds telemetry channels from docs/PUIList.xml"
 
     def handle(self, *args: Any, **options: Any) -> None:
+        """Parse the PUI XML and upsert channel rows.
+
+        Emits progress and verification output via ``self.stdout`` /
+        ``self.stderr``. Re-raises any unexpected exception after logging
+        so calling scripts see a non-zero exit status.
+        """
         self.stdout.write("Seeding telemetry channels...")
 
         # Mypy doesn't see BASE_DIR on LazySettings

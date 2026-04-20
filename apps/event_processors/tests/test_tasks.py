@@ -236,7 +236,9 @@ class TestRunPeeBotProcessor:
                     new_callable=AsyncMock,
                     side_effect=OperationalError("DB down"),
                 ),
-                patch("apps.event_processors.tasks.close_old_connections") as mock_close,
+                patch(
+                    "apps.event_processors.tasks.close_old_connections"
+                ) as mock_close,
             ):
                 with pytest.raises(OperationalError, match="DB down"):
                     run_peebot_processor()

@@ -2,6 +2,8 @@
 
 A Django modular monolith that ingests real-time ISS telemetry data from Lightstreamer, stores it in TimescaleDB, and runs independent analytics modules to detect events. The primary module (PeeBot) detects when astronauts use the Urine Processor Assembly and posts humorous updates to Bluesky.
 
+> **Live instance:** follow [@pee-bot.bsky.social](https://bsky.app/profile/pee-bot.bsky.social) on Bluesky for real-time posts.
+
 ## Overview
 
 This system implements a **modular monolith architecture** using Django, where each module represents a bounded context with clear responsibilities. The architecture prioritizes:
@@ -36,24 +38,31 @@ peebot/
 |-- apps/                          # All Django application modules
 |   |-- core/                      # Shared utilities and base models
 |   |   |-- models.py              # Abstract base models (UUID7, TimeStamped, SoftDelete)
+|   |   |-- health.py              # /healthz and /readyz probe views
 |   |   |-- logging.py             # Custom SeqHandler for structured logging
 |   |   |-- serializers.py         # DRF base serializers
+|   |   |-- permissions.py         # Shared DRF permission classes
 |   |   |-- utils.py               # Helper functions
 |   |   +-- exceptions.py          # Custom exceptions
 |   |
 |   |-- telemetry_storage/         # Data persistence layer
 |   |   |-- models.py              # TelemetryReading, TelemetryChannel
 |   |   |-- repositories.py        # Data access layer
+|   |   |-- serializers.py         # TelemetryChannel serializer
+|   |   |-- views.py               # TelemetryChannelViewSet (read-only API)
 |   |   +-- management/commands/   # seed_channels.py
 |   |
 |   |-- telemetry_ingestion/       # Lightstreamer data ingestion
 |   |   |-- services/              # Client, validators, enrichers
+|   |   |-- views.py               # InjectTelemetryView (DEBUG-only)
 |   |   +-- management/commands/   # run_lightstreamer.py
 |   |
 |   |-- event_processors/          # Analytics and event detection
 |   |   |-- models.py              # DetectedEvent, ProcessorState, SocialPost
 |   |   |-- processors/            # PeeBot and other detectors
 |   |   |-- services/              # Bluesky client, joke generator
+|   |   |-- serializers.py         # DetectedEvent serializer
+|   |   |-- views.py               # DetectedEventViewSet (read-only API)
 |   |   |-- tests/                 # Unit tests for processors and services
 |   |   +-- tasks.py               # Celery periodic tasks
 |   |
@@ -211,15 +220,8 @@ Run `just` with no arguments to see all available recipes, or see the [Justfile]
 To run the full stack in containers with PgBouncer session pooling:
 
 1. Copy `.env.example` to `.env` and adjust credentials if needed. The defaults match the compose setup (TimescaleDB on `localhost:5432`, PgBouncer on `localhost:6432`).
-2. Build and start the services:
-   ```bash
-   docker compose -f docker/dev/docker-compose.yml up --build -d timescaledb pgbouncer redis
-   docker compose -f docker/dev/docker-compose.yml up --build web worker beat ingestion
-   ```
-3. Run database migrations (one-off):
-   ```bash
-   docker compose -f docker/dev/docker-compose.yml run --rm web uv run python manage.py migrate
-   ```
+2. Start the services with `just dev-up` (wraps `docker compose -f docker/dev/docker-compose.yml up --build -d`). Pass service names to start a subset, e.g. `just dev-up timescaledb pgbouncer redis`.
+3. Run database migrations (one-off): `just dev-migrate` (via PgBouncer) or `just dev-migrate-direct` for heavy operations that exceed PgBouncer's query timeout.
 4. The Django dev server listens on `http://localhost:8000`, PgBouncer exposes `localhost:6432`, and TimescaleDB remains reachable directly via `localhost:5432`.
 5. **Logging (Seq)**: Access the centralized log dashboard at `http://localhost:5341`.
    - **Username**: `admin`
@@ -533,7 +535,6 @@ uv run celery -A config beat --loglevel=info
 
 # Inspect scheduled tasks
 uv run celery -A config inspect scheduled
-
 ```
 
 ### Testing
@@ -672,7 +673,7 @@ ISS Lightstreamer Feed
 Analytics modules use a **polling pattern**:
 
 1. Celery Beat triggers periodic task (e.g., every 30 seconds)
-2. Query `ProcessorState` for `last_processed_timestamp` timestamp
+2. Read `ProcessorState.last_processed_timestamp`
 3. Query `TelemetryReading` for new data since last check
 4. Analyze sliding window (e.g., last 10 minutes)
 5. Detect events and store results in `DetectedEvent`
@@ -849,7 +850,7 @@ See `.env.production.example` for the full list of required environment variable
 - **Django Documentation**: https://docs.djangoproject.com/
 - **Django REST Framework**: https://www.django-rest-framework.org/
 - **TimescaleDB**: https://docs.timescale.com/
-- **Celery**: https://docs.celeryproject.org/
+- **Celery**: https://docs.celeryq.dev/
 - **uv Package Manager**: https://github.com/astral-sh/uv
 - **Structlog**: https://www.structlog.org/
 - **AT Protocol (Bluesky)**: https://atproto.com/

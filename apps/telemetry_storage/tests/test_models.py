@@ -1,3 +1,5 @@
+"""Tests for ``TelemetryChannel`` and ``TelemetryReading`` model behavior and constraints."""
+
 import pytest
 from django.db import IntegrityError
 from django.utils import timezone
