@@ -90,8 +90,37 @@ class TestSchedulingErrorFilter:
         assert _sentry_before_send(event, {}) is event
 
 
+class TestCeleryConsumerLogFilter:
+    """Filter Celery consumer log messages (PEEBOT-D, no exception attached)."""
+
+    def test_celery_consumer_log_is_filtered(self) -> None:
+        """Log messages from celery.worker.consumer.consumer are dropped."""
+        event = cast(Event, {"logger": "celery.worker.consumer.consumer"})
+        assert _sentry_before_send(event, {}) is None
+
+    def test_celery_consumer_log_with_logentry_is_filtered(self) -> None:
+        """Log messages with logentry from celery.worker.consumer.consumer are dropped."""
+        event = cast(
+            Event,
+            {
+                "logger": "celery.worker.consumer.consumer",
+                "logentry": {
+                    "message": "consumer: Cannot connect to %s: %s.\n%s\n",
+                    "formatted": "consumer: Cannot connect to redis://redis:6379/0: ...",
+                    "params": ["redis://redis:6379/0", "Error", "Trying again..."],
+                },
+            },
+        )
+        assert _sentry_before_send(event, {}) is None
+
+    def test_other_celery_logger_is_not_filtered(self) -> None:
+        """Log messages from other celery loggers pass through."""
+        event = cast(Event, {"logger": "celery.worker"})
+        assert _sentry_before_send(event, {}) is event
+
+
 class TestKombuOperationalErrorFilter:
-    """Filter OperationalError from kombu.exceptions (PEEBOT-D)."""
+    """Filter OperationalError from kombu.exceptions."""
 
     def test_kombu_operational_error_is_filtered(self) -> None:
         """OperationalError from kombu.exceptions is dropped."""
