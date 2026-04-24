@@ -263,10 +263,14 @@ def _sentry_before_send(event: Event, _hint: dict[str, Any]) -> Event | None:
       deploys prevents Beat from scheduling tasks. Beat retries
       automatically.
     - kombu.exceptions.OperationalError: transient DNS/Redis blips during
-      container restarts. Kombu reconnects automatically. CAUTION: this
-      also suppresses prolonged Redis outages from this logger. Genuine
-      outages surface via task-level OperationalError (autoretry exhaustion)
-      and /readyz health check failures.
+      container restarts. Kombu reconnects automatically.
+    - celery.worker.consumer.consumer log messages: Celery's consumer
+      logs connection failures at ERROR level during reconnect attempts.
+      These are log-message events (no exception attached), so we match
+      on logger name instead of exception type. CAUTION: this also
+      suppresses prolonged Redis outages from this logger. Genuine
+      outages surface via task-level OperationalError (autoretry
+      exhaustion) and /readyz health check failures.
     """
     request = event.get("request")
     if isinstance(request, dict):
@@ -276,13 +280,18 @@ def _sentry_before_send(event: Event, _hint: dict[str, Any]) -> Event | None:
         ):
             return None
 
+    logger_name = event.get("logger", "")
+
+    # PEEBOT-D: Celery consumer log messages (log-message events, no exception).
+    if logger_name == "celery.worker.consumer.consumer":
+        return None
+
     exception = event.get("exception", {}).get("values", [])
     if not exception:
         return event
 
     exc_type = exception[0].get("type", "")
     exc_module = exception[0].get("module", "")
-    logger_name = event.get("logger", "")
 
     if exc_type == "SchedulingError" and logger_name == "celery.beat":
         return None
