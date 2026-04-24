@@ -213,9 +213,15 @@ services:
         condition: service_healthy
 
     healthcheck:
-      test: ["CMD-SHELL", "celery -A config inspect ping --timeout=10 || exit 1"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')",
+        ]
       interval: 30s
-      timeout: 15s
+      timeout: 10s
       retries: 3
       start_period: 60s
 
