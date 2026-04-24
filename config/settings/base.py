@@ -197,6 +197,12 @@ CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes hard limit
 CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 minutes soft limit
 
+# Retry connecting to the broker during steady-state operation (not just startup).
+# Without this, transient Redis blips during normal operation cause the Kombu
+# consumer to log at ERROR level, which Sentry captures as issues even though
+# Kombu reconnects automatically.
+CELERY_BROKER_CONNECTION_RETRY = True
+
 # Retry connecting to the broker on worker startup instead of raising an error.
 # Without this, transient DNS hiccups (e.g. container restarts under
 # `restart: unless-stopped`) produce ERROR-level log lines that are captured
@@ -249,12 +255,39 @@ if SENTRY_LOGS_LEVEL not in _VALID_LOG_LEVELS:
 
 
 def _sentry_before_send(event: Event, _hint: dict[str, Any]) -> Event | None:
+    """Filter transient deploy-restart noise from Sentry.
+
+    Suppresses:
+    - /healthz and /readyz endpoint failures (rolling deploy 503s)
+    - celery.beat SchedulingError: transient Redis unavailability during
+      deploys prevents Beat from scheduling tasks. Beat retries
+      automatically.
+    - kombu.exceptions.OperationalError: transient DNS/Redis blips during
+      container restarts. Kombu reconnects automatically. CAUTION: this
+      also suppresses prolonged Redis outages from this logger. Genuine
+      outages surface via task-level OperationalError (autoretry exhaustion)
+      and /readyz health check failures.
+    """
     request = event.get("request")
-    if not isinstance(request, dict):
+    if isinstance(request, dict):
+        url = request.get("url", "")
+        if isinstance(url, str) and (
+            url.endswith("/healthz") or url.endswith("/readyz")
+        ):
+            return None
+
+    exception = event.get("exception", {}).get("values", [])
+    if not exception:
         return event
 
-    url = request.get("url", "")
-    if isinstance(url, str) and (url.endswith("/healthz") or url.endswith("/readyz")):
+    exc_type = exception[0].get("type", "")
+    exc_module = exception[0].get("module", "")
+    logger_name = event.get("logger", "")
+
+    if exc_type == "SchedulingError" and logger_name == "celery.beat":
+        return None
+
+    if exc_type == "OperationalError" and exc_module == "kombu.exceptions":
         return None
 
     return event
