@@ -290,6 +290,17 @@ def _sentry_before_send(event: Event, _hint: dict[str, Any]) -> Event | None:
     if exc_type == "OperationalError" and exc_module == "kombu.exceptions":
         return None
 
+    # PEEBOT-E: Ingestion flush_buffer handles Postgres disconnects by closing
+    # the stale connection and retrying on the next cycle. The error is caught
+    # and logged with exc_info=True, which Sentry's LoggingIntegration captures
+    # as an exception event despite the WARNING level.
+    if (
+        exc_type == "OperationalError"
+        and logger_name
+        == "apps.telemetry_ingestion.management.commands.run_lightstreamer"
+    ):
+        return None
+
     return event
 
 

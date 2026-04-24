@@ -129,6 +129,28 @@ class TestKombuOperationalErrorFilter:
         assert _sentry_before_send(event, {}) is event
 
 
+class TestIngestionFlushErrorFilter:
+    """Filter ingestion flush_buffer OperationalError (PEEBOT-E)."""
+
+    def test_ingestion_operational_error_is_filtered(self) -> None:
+        """OperationalError from ingestion flush_buffer is dropped."""
+        event = _make_event(
+            exception_type="OperationalError",
+            exception_module="django.db.utils",
+            logger="apps.telemetry_ingestion.management.commands.run_lightstreamer",
+        )
+        assert _sentry_before_send(event, {}) is None
+
+    def test_other_db_operational_error_is_not_filtered(self) -> None:
+        """OperationalError from other loggers passes through."""
+        event = _make_event(
+            exception_type="OperationalError",
+            exception_module="django.db.utils",
+            logger="django.db.backends",
+        )
+        assert _sentry_before_send(event, {}) is event
+
+
 class TestEdgeCases:
     """Boundary conditions for the filter."""
 
