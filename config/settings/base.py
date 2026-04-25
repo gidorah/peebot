@@ -270,8 +270,10 @@ def _sentry_before_send(event: Event, _hint: dict[str, Any]) -> Event | None:
       automatically.
     - kombu.exceptions.OperationalError: transient DNS/Redis blips during
       container restarts. Kombu reconnects automatically.
-    - celery.worker.consumer.consumer log messages: Kombu consumer reconnect
-      noise from runtime broker reconnects (PEEBOT-D).
+    - celery.worker.consumer.consumer log messages: Celery's consumer
+      logs connection failures at ERROR level during reconnect attempts.
+      These are log-message events (no exception attached), so we match
+      on logger name instead of exception type.
     - psycopg.OperationalError from event_processors tasks: terminal retry-
       exhaustion failures from deploy-restart windows (PEEBOT-F).
 
@@ -291,10 +293,7 @@ def _sentry_before_send(event: Event, _hint: dict[str, Any]) -> Event | None:
     # log-message events (event.type == "default", no exception field).
     logger_name = event.get("logger", "")
 
-    # PEEBOT-D: Kombu consumer reconnect log messages from
-    # celery.worker.consumer.consumer. These are pure log-message events
-    # (no exception field) emitted at ERROR level during runtime broker
-    # reconnects. Kombu recovers automatically.
+    # PEEBOT-D: Celery consumer log messages (log-message events, no exception).
     if logger_name == "celery.worker.consumer.consumer":
         return None
 
@@ -323,7 +322,9 @@ def _sentry_before_send(event: Event, _hint: dict[str, Any]) -> Event | None:
         return None
 
     # PEEBOT-E: Ingestion flush_buffer handles Postgres disconnects by closing
-    # the stale connection and retrying on the next cycle.
+    # the stale connection and retrying on the next cycle. The error is caught
+    # and logged with exc_info=True, which Sentry's LoggingIntegration captures
+    # as an exception event despite the WARNING level.
     if (
         exc_type == "OperationalError"
         and logger_name
