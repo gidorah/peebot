@@ -168,6 +168,10 @@ services:
     container_name: peebot_web_prod
     restart: unless-stopped
 
+    # Match Gunicorn's --graceful-timeout so workers can drain requests
+    # before Docker sends SIGKILL.
+    stop_grace_period: 30s
+
     # Direct exec-form invocation — no sh -c, no uv sync.
     # Dependencies are baked into the image at build time.
     # Workers=3: 2 * CPU_limit + 1 = 2 * 0.5 + 1 (memory-constrained ~170MB each).
@@ -281,6 +285,9 @@ services:
       redis:
         condition: service_healthy
 
+    # 60s allows quick deploys while giving in-flight tasks a chance to finish.
+    # Tasks exceeding 60s will be SIGKILL'd — acceptable trade-off for deploy
+    # windows since most tasks complete within a few seconds.
     stop_grace_period: 60s
 
     healthcheck:
@@ -358,6 +365,9 @@ services:
       dockerfile: docker/prod/Dockerfile
     container_name: peebot_ingestion_prod
     restart: unless-stopped
+
+    # Allow Lightstreamer client to close connections gracefully on stop.
+    stop_grace_period: 60s
 
     # Direct exec-form invocation — same image as web/worker/beat, different CMD.
     command:

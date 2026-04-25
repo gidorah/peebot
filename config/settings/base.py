@@ -270,10 +270,9 @@ def _sentry_before_send(event: Event, _hint: dict[str, Any]) -> Event | None:
       automatically.
     - kombu.exceptions.OperationalError: transient DNS/Redis blips during
       container restarts. Kombu reconnects automatically.
-    - celery.worker.consumer.consumer log messages: Celery's consumer
-      logs connection failures at ERROR level during reconnect attempts.
-      These are log-message events (no exception attached), so we match
-      on logger name instead of exception type.
+    - celery.worker.consumer.consumer: Celery's consumer logs connection
+      failures at ERROR level during reconnect attempts. All events from
+      this logger are dropped because Kombu recovers automatically.
     - psycopg.OperationalError from event_processors tasks: terminal retry-
       exhaustion failures from deploy-restart windows (PEEBOT-F).
 
@@ -293,7 +292,9 @@ def _sentry_before_send(event: Event, _hint: dict[str, Any]) -> Event | None:
     # log-message events (event.type == "default", no exception field).
     logger_name = event.get("logger", "")
 
-    # PEEBOT-D: Celery consumer log messages (log-message events, no exception).
+    # PEEBOT-D: Celery consumer reconnect noise. Drops ALL events from this
+    # logger (log-message and exception alike) — typically ERROR-level log
+    # records during runtime broker reconnects, which Kombu recovers from.
     if logger_name == "celery.worker.consumer.consumer":
         return None
 

@@ -13,6 +13,7 @@ def _make_event(
     exception_type: str | None = None,
     exception_module: str | None = None,
     logger: str | None = None,
+    culprit: str | None = None,
 ) -> Event:
     """Build a synthetic Sentry event dict for testing."""
     event: dict[str, Any] = {}
@@ -30,6 +31,8 @@ def _make_event(
         }
     if logger is not None:
         event["logger"] = logger
+    if culprit is not None:
+        event["culprit"] = culprit
     return cast(Event, event)
 
 
@@ -167,10 +170,7 @@ class TestEventProcessorsOperationalErrorFilter:
             exception_type="OperationalError",
             exception_module="psycopg",
             logger="apps.event_processors.tasks",
-        )
-        event = cast(
-            Event,
-            {**event, "culprit": "apps.event_processors.tasks.run_peebot_processor"},
+            culprit="apps.event_processors.tasks.run_peebot_processor",
         )
         assert _sentry_before_send(event, {}) is None
 
@@ -180,8 +180,8 @@ class TestEventProcessorsOperationalErrorFilter:
             exception_type="OperationalError",
             exception_module="psycopg",
             logger="apps.dashboards.views",
+            culprit="apps.dashboards.views.health_check",
         )
-        event = cast(Event, {**event, "culprit": "apps.dashboards.views.health_check"})
         assert _sentry_before_send(event, {}) is event
 
     def test_event_processors_django_db_error_is_not_filtered(self) -> None:
@@ -190,10 +190,7 @@ class TestEventProcessorsOperationalErrorFilter:
             exception_type="OperationalError",
             exception_module="django.db.utils",
             logger="apps.event_processors.tasks",
-        )
-        event = cast(
-            Event,
-            {**event, "culprit": "apps.event_processors.tasks.run_peebot_processor"},
+            culprit="apps.event_processors.tasks.run_peebot_processor",
         )
         assert _sentry_before_send(event, {}) is event
 
