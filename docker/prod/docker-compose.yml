@@ -281,6 +281,8 @@ services:
       redis:
         condition: service_healthy
 
+    stop_grace_period: 60s
+
     healthcheck:
       test: ["CMD-SHELL", "celery -A config inspect ping --timeout=10 || exit 1"]
       interval: 30s
@@ -326,6 +328,8 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       SECRET_KEY: ${SECRET_KEY}
+
+    stop_grace_period: 60s
 
     depends_on:
       pgbouncer:

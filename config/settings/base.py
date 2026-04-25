@@ -55,6 +55,12 @@ DEBUG = env("DEBUG")
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 
+# Allow container-internal healthchecks regardless of external domain config.
+# localhost/127.0.0.1 are only reachable from inside the container.
+for _host in ("localhost", "127.0.0.1"):
+    if _host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_host)
+
 
 # Application definition
 
@@ -263,10 +269,15 @@ def _sentry_before_send(event: Event, _hint: dict[str, Any]) -> Event | None:
       deploys prevents Beat from scheduling tasks. Beat retries
       automatically.
     - kombu.exceptions.OperationalError: transient DNS/Redis blips during
-      container restarts. Kombu reconnects automatically. CAUTION: this
-      also suppresses prolonged Redis outages from this logger. Genuine
-      outages surface via task-level OperationalError (autoretry exhaustion)
-      and /readyz health check failures.
+      container restarts. Kombu reconnects automatically.
+    - celery.worker.consumer.consumer log messages: Kombu consumer reconnect
+      noise from runtime broker reconnects (PEEBOT-D).
+    - psycopg.OperationalError from event_processors tasks: terminal retry-
+      exhaustion failures from deploy-restart windows (PEEBOT-F).
+
+    CAUTION: these filters also suppress prolonged outages from the same
+    loggers/modules. Genuine outages surface via /readyz health check
+    failures and Celery task backlog monitoring.
     """
     request = event.get("request")
     if isinstance(request, dict):
@@ -276,13 +287,23 @@ def _sentry_before_send(event: Event, _hint: dict[str, Any]) -> Event | None:
         ):
             return None
 
+    # Extract logger name before the exception check so we can filter pure
+    # log-message events (event.type == "default", no exception field).
+    logger_name = event.get("logger", "")
+
+    # PEEBOT-D: Kombu consumer reconnect log messages from
+    # celery.worker.consumer.consumer. These are pure log-message events
+    # (no exception field) emitted at ERROR level during runtime broker
+    # reconnects. Kombu recovers automatically.
+    if logger_name == "celery.worker.consumer.consumer":
+        return None
+
     exception = event.get("exception", {}).get("values", [])
     if not exception:
         return event
 
     exc_type = exception[0].get("type", "")
     exc_module = exception[0].get("module", "")
-    logger_name = event.get("logger", "")
 
     if exc_type == "SchedulingError" and logger_name == "celery.beat":
         return None
@@ -290,10 +311,19 @@ def _sentry_before_send(event: Event, _hint: dict[str, Any]) -> Event | None:
     if exc_type == "OperationalError" and exc_module == "kombu.exceptions":
         return None
 
+    # PEEBOT-F: Terminal retry-exhaustion OperationalError from
+    # event_processors tasks. These occur during deploy-restart windows
+    # when PgBouncer is temporarily unreachable. The task already has
+    # autoretry_for=(OperationalError,) and close_old_connections.
+    if (
+        exc_type == "OperationalError"
+        and exc_module == "psycopg"
+        and event.get("culprit") == "apps.event_processors.tasks.run_peebot_processor"
+    ):
+        return None
+
     # PEEBOT-E: Ingestion flush_buffer handles Postgres disconnects by closing
-    # the stale connection and retrying on the next cycle. The error is caught
-    # and logged with exc_info=True, which Sentry's LoggingIntegration captures
-    # as an exception event despite the WARNING level.
+    # the stale connection and retrying on the next cycle.
     if (
         exc_type == "OperationalError"
         and logger_name
