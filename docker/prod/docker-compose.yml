@@ -291,7 +291,7 @@ services:
     stop_grace_period: 60s
 
     healthcheck:
-      test: ["CMD-SHELL", "celery -A config inspect ping --timeout=20 || exit 1"]
+      test: ["CMD-SHELL", "celery -A config inspect ping --timeout=20 --destination=worker@$$(hostname) || exit 1"]
       interval: 30s
       timeout: 30s
       retries: 3
