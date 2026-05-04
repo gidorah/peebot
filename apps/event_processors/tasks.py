@@ -168,6 +168,9 @@ async def _run_peebot_processor_async() -> dict[str, Any]:
     except OperationalError:
         # Close broken/stale connections in the same thread/Executor that
         # Django's async ORM uses, so the Celery retry gets a fresh one.
+        # thread_sensitive=False: Celery is not an ASGI context, so True would
+        # cause asgiref to spawn a dedicated _AsyncThread per call instead of
+        # using the shared executor where the DB connection actually lives.
         await sync_to_async(close_old_connections, thread_sensitive=False)()
         # Log at warning – this is a transient error that Celery will retry.
         # Logging at error level would generate a Sentry event for every
