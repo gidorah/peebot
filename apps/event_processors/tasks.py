@@ -7,12 +7,11 @@ data, runs analysis, and triggers actions on event detection.
 
 from __future__ import annotations
 
-import asyncio
 from datetime import timedelta
 from typing import Any
 
 import structlog
-from asgiref.sync import sync_to_async
+from asgiref.sync import async_to_sync, sync_to_async
 from celery import shared_task
 from django.conf import settings
 from django.db import OperationalError, close_old_connections
@@ -59,7 +58,7 @@ def run_peebot_processor(self: Any) -> dict[str, Any]:
     Returns:
         Dict with execution summary including event detection status
     """
-    return asyncio.run(_run_peebot_processor_async())
+    return async_to_sync(_run_peebot_processor_async)()
 
 
 async def _run_peebot_processor_async() -> dict[str, Any]:
@@ -169,7 +168,7 @@ async def _run_peebot_processor_async() -> dict[str, Any]:
     except OperationalError:
         # Close broken/stale connections in the same thread/Executor that
         # Django's async ORM uses, so the Celery retry gets a fresh one.
-        await sync_to_async(close_old_connections, thread_sensitive=True)()
+        await sync_to_async(close_old_connections, thread_sensitive=False)()
         # Log at warning – this is a transient error that Celery will retry.
         # Logging at error level would generate a Sentry event for every
         # routine connection hiccup, creating noise before retries even run.
