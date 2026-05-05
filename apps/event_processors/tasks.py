@@ -38,6 +38,8 @@ logger = structlog.get_logger(__name__)
 
 @shared_task(
     bind=True,
+    soft_time_limit=120,
+    time_limit=180,
     autoretry_for=(OperationalError,),
     retry_backoff=True,
     retry_backoff_max=60,
