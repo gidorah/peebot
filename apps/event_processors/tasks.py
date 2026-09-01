@@ -312,12 +312,6 @@ async def _try_post_to_bluesky(event: DetectedEvent, log: Any) -> bool:
         return False
 
     try:
-        joke_generator = JokeGenerator()
-    except JokeGeneratorError as e:
-        log.warning("joke_generator_init_failed", error=str(e))
-        return False
-
-    try:
         can_post, remaining = await bluesky.check_cooldown()
         if not can_post:
             log.info(
@@ -330,11 +324,18 @@ async def _try_post_to_bluesky(event: DetectedEvent, log: Any) -> bool:
         return False
 
     try:
-        joke_text = await joke_generator.generate(event)
-        if not joke_text:
-            log.warning("joke_generation_returned_empty")
-            return False
-        log.info("joke_generated", text_length=len(joke_text))
+        joke_generator = JokeGenerator()
+    except JokeGeneratorError as e:
+        log.warning("joke_generator_init_failed", error=str(e))
+        return False
+
+    try:
+        async with joke_generator:
+            joke_text = await joke_generator.generate(event)
+            if not joke_text:
+                log.warning("joke_generation_returned_empty")
+                return False
+            log.info("joke_generated", text_length=len(joke_text))
     except Exception as e:
         log.warning("joke_generation_failed", error=str(e))
         return False

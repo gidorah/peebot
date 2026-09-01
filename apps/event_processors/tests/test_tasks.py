@@ -82,6 +82,8 @@ class TestRunPeeBotProcessor:
 
         self.mock_joke_gen = MagicMock()
         self.mock_joke_gen.generate = AsyncMock(return_value="Test joke")
+        self.mock_joke_gen.__aenter__ = AsyncMock(return_value=self.mock_joke_gen)
+        self.mock_joke_gen.__aexit__ = AsyncMock(return_value=None)
         self.mock_joke_gen_class.return_value = self.mock_joke_gen
 
         self.mock_bluesky = MagicMock()
@@ -153,6 +155,7 @@ class TestRunPeeBotProcessor:
 
         # Verify external calls
         self.mock_joke_gen.generate.assert_called_once()
+        self.mock_joke_gen.__aexit__.assert_awaited_once()
         self.mock_bluesky.post.assert_called_once()
 
     def test_run_peebot_processor_no_event(self) -> None:
@@ -224,6 +227,25 @@ class TestRunPeeBotProcessor:
         assert result["post_published"] is False
         assert DetectedEvent.objects.count() == 1
         self.mock_bluesky.post.assert_called_once()
+
+    def test_initial_cooldown_does_not_create_joke_generator(self) -> None:
+        """A known cooldown avoids allocating an unused OpenAI client."""
+        baker.make(ProcessorState, processor_name="pee_bot")
+        channel: Any = baker.make(
+            "telemetry_storage.TelemetryChannel", public_pui="NODE3000005"
+        )
+        _make_fill_readings(channel)
+        self.mock_bluesky.check_cooldown.return_value = (
+            False,
+            timedelta(minutes=15),
+        )
+
+        result = run_peebot_processor()
+
+        assert result["event_detected"] is True
+        assert result["post_published"] is False
+        self.mock_joke_gen_class.assert_not_called()
+        self.mock_bluesky.post.assert_not_called()
 
     def test_run_peebot_processor_db_error_triggers_retry(
         self, caplog: pytest.LogCaptureFixture
@@ -326,6 +348,25 @@ class TestRunPeeBotProcessor:
 
         assert result["event_detected"] is True
         assert result["post_published"] is False
+        self.mock_joke_gen.__aexit__.assert_awaited_once()
+        self.mock_bluesky.post.assert_not_called()
+
+    def test_run_peebot_processor_closes_generator_after_generation_error(
+        self,
+    ) -> None:
+        """Task closes the OpenAI client when joke generation raises."""
+        baker.make(ProcessorState, processor_name="pee_bot")
+        channel: Any = baker.make(
+            "telemetry_storage.TelemetryChannel", public_pui="NODE3000005"
+        )
+        _make_fill_readings(channel)
+        self.mock_joke_gen.generate.side_effect = RuntimeError("OpenRouter failed")
+
+        result = run_peebot_processor()
+
+        assert result["event_detected"] is True
+        assert result["post_published"] is False
+        self.mock_joke_gen.__aexit__.assert_awaited_once()
         self.mock_bluesky.post.assert_not_called()
 
     def test_run_peebot_processor_cursor_advances_past_burst(self) -> None:
@@ -469,6 +510,8 @@ class TestSocialDryRun:
         )
         mock_joke_gen = MagicMock()
         mock_joke_gen.generate = AsyncMock(return_value="Real joke text")
+        mock_joke_gen.__aenter__ = AsyncMock(return_value=mock_joke_gen)
+        mock_joke_gen.__aexit__ = AsyncMock(return_value=None)
 
         with (
             patch(

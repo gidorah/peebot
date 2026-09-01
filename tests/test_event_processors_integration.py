@@ -70,6 +70,8 @@ def mock_external_services() -> Generator[dict[str, MagicMock]]:
         mock_joke_gen.generate = AsyncMock(
             return_value="Astronaut hydration metrics nominal. Tank levels rising."
         )
+        mock_joke_gen.__aenter__ = AsyncMock(return_value=mock_joke_gen)
+        mock_joke_gen.__aexit__ = AsyncMock(return_value=None)
         joke_gen_class.return_value = mock_joke_gen
 
         mock_bluesky = MagicMock()

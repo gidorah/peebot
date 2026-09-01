@@ -110,3 +110,10 @@ These tasks address architectural changes and bugs in the **currently implemente
 - [ ] **T009-1 (Ingestion Sentry Noise)**: Treat transient `OperationalError` in `run_lightstreamer.flush_buffer()` as a retryable warning while still closing stale DB connections.
     - *Goal*: Prevent routine ingestion DB disconnects from creating Sentry issues via `LoggingIntegration(event_level=ERROR)`.
     - *Files*: `apps/telemetry_ingestion/management/commands/run_lightstreamer.py`, `apps/telemetry_ingestion/tests/test_run_lightstreamer_command.py`.
+
+## Phase 9: Async OpenAI Client Lifecycle (T011)
+
+- [x] **T011-1 (Lifecycle Ownership)**: Make `JokeGenerator` an async context manager that closes its `AsyncOpenAI` client on exit.
+- [x] **T011-2 (Task Orchestration)**: Check Bluesky cooldown before allocating the generator and keep generation inside its managed lifecycle.
+- [x] **T011-3 (Regression Coverage)**: Reproduce the Sentry failure pattern with a real keep-alive transport across separate event loops and cover all cleanup paths.
+- [x] **T011-4 (Verification)**: Run the full test suite, Ruff, and focused mypy checks.

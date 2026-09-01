@@ -12,6 +12,8 @@ of astronaut bodily functions.
 from __future__ import annotations
 
 import asyncio
+from types import TracebackType
+from typing import Self
 
 import structlog
 from django.conf import settings
@@ -69,6 +71,19 @@ class JokeGenerator:
         self.base_delay = getattr(
             settings, "JOKE_GENERATOR_BASE_DELAY", self.DEFAULT_BASE_DELAY
         )
+
+    async def __aenter__(self) -> Self:
+        """Enter the generator's managed OpenAI client lifecycle."""
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        """Close the OpenAI client before its event loop is torn down."""
+        await self.client.close()
 
     async def generate(self, event: DetectedEvent) -> str | None:
         """Generate humorous text about a detected event.
